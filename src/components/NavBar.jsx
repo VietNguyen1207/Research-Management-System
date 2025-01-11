@@ -98,9 +98,9 @@ const NavBar = () => {
   ];
 
   return (
-    <div className="fixed top-16 left-0 h-full z-10">
+    <div className="fixed top-16 left-0 h-[calc(100vh-4rem)] z-10">
       <nav
-        className={`h-[calc(100vh-4rem)] bg-white shadow-lg border-r border-[#FFA50033] flex flex-col transition-all duration-300 ease-in-out ${
+        className={`h-full bg-white shadow-lg border-r border-[#FFA50033] flex flex-col transition-all duration-300 ease-in-out ${
           isNavOpen ? "w-64" : "w-16"
         }`}
       >
@@ -113,7 +113,7 @@ const NavBar = () => {
           </button>
         </div>
 
-        <div className="flex-1 p-4 overflow-hidden">
+        <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-2">
             {navItems.map((item, index) => (
               <div key={index}>

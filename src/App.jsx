@@ -10,23 +10,11 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen">
+      <div className="min-h-screen w-full overflow-auto scrollbar-hide">
         <Header />
         <NavBar isOpen={isNavOpen} setIsOpen={setIsNavOpen} />
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <main
-                className={`transition-all duration-300 pt-16 ${
-                  isNavOpen ? "pl-64" : "pl-0"
-                }`}
-              >
-                <h1>Main Content</h1>
-              </main>
-            }
-          />
         </Routes>
       </div>
     </Router>
