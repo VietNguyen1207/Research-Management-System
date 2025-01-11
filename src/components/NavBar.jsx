@@ -10,19 +10,78 @@ import {
   FileDoneOutlined,
   BuildOutlined,
   DeleteOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  TeamOutlined,
+  FormOutlined,
   ExperimentOutlined,
+  FileSearchOutlined,
+  ProjectOutlined,
   UserOutlined,
-  LogoutOutlined,
 } from "@ant-design/icons";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSubItem, setSelectedSubItem] = useState(null);
+  const [isNavOpen, setIsNavOpen] = useState(true);
 
   const navItems = [
-    { icon: <SearchOutlined />, label: "Quick search" },
-    { icon: <InboxOutlined />, label: "Inbox", badge: "12" },
+    {
+      icon: <TeamOutlined />,
+      label: "Group",
+      subItems: [
+        { icon: <TeamOutlined />, label: "View Groups" },
+        { icon: <FormOutlined />, label: "Create Group" },
+        { icon: <UserOutlined />, label: "Manage Members" },
+      ],
+    },
+    {
+      icon: <FormOutlined />,
+      label: "Register Research",
+      subItems: [
+        { icon: <FormOutlined />, label: "New Registration" },
+        { icon: <FileSearchOutlined />, label: "Draft Registrations" },
+        { icon: <ProjectOutlined />, label: "Registration History" },
+      ],
+    },
+    {
+      icon: <ExperimentOutlined />,
+      label: "Research",
+      subItems: [
+        { icon: <ExperimentOutlined />, label: "Active Research" },
+        { icon: <ProjectOutlined />, label: "Completed Research" },
+        { icon: <FileSearchOutlined />, label: "Research Archive" },
+      ],
+    },
+    {
+      icon: <FileSearchOutlined />,
+      label: "Paper",
+      badge: "3",
+      subItems: [
+        { icon: <FileSearchOutlined />, label: "Pending Approval" },
+        { icon: <FormOutlined />, label: "Submit Paper" },
+        { icon: <ProjectOutlined />, label: "Paper History" },
+      ],
+    },
+    {
+      icon: <ProjectOutlined />,
+      label: "Project",
+      subItems: [
+        { icon: <ProjectOutlined />, label: "Active Projects" },
+        { icon: <FormOutlined />, label: "Create Project" },
+        { icon: <TeamOutlined />, label: "Project Teams" },
+      ],
+    },
+    {
+      icon: <UserOutlined />,
+      label: "User",
+      subItems: [
+        { icon: <UserOutlined />, label: "Profile" },
+        { icon: <TeamOutlined />, label: "My Groups" },
+        { icon: <ProjectOutlined />, label: "My Projects" },
+      ],
+    },
     {
       icon: <AppstoreOutlined />,
       label: "Menu",
@@ -39,104 +98,98 @@ const NavBar = () => {
   ];
 
   return (
-    <nav className="h-[calc(100vh-4rem)] w-64 bg-white shadow-lg fixed left-0 top-16 border-r border-[#FFA50033] flex flex-col">
-      <div className="flex-1 p-4">
-        <div className="space-y-2">
-          {navItems.map((item, index) => (
-            <div key={index}>
-              <button
-                className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 group
-                  ${
-                    selectedItem === index
-                      ? "bg-[#FFA50015] text-[#F2722B]"
-                      : "hover:bg-[#FFA50010]"
+    <div className="fixed top-16 left-0 h-full z-10">
+      <nav
+        className={`h-[calc(100vh-4rem)] bg-white shadow-lg border-r border-[#FFA50033] flex flex-col transition-all duration-300 ease-in-out ${
+          isNavOpen ? "w-64" : "w-16"
+        }`}
+      >
+        <div className="p-4 border-b border-[#FFA50033] flex justify-end">
+          <button
+            onClick={() => setIsNavOpen(!isNavOpen)}
+            className="p-2 rounded-lg hover:bg-[#FFA50015] text-gray-600 hover:text-[#F2722B] transition-all duration-200"
+          >
+            {isNavOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+          </button>
+        </div>
+
+        <div className="flex-1 p-4 overflow-hidden">
+          <div className="space-y-2">
+            {navItems.map((item, index) => (
+              <div key={index}>
+                <button
+                  className={`w-full flex items-center p-2 hover:bg-[#FFA50010] rounded-lg transition-all duration-300 group ${
+                    !isNavOpen ? "justify-center" : ""
                   }`}
-                onClick={() => {
-                  if (item.subItems) {
-                    setIsMenuOpen(!isMenuOpen);
-                  }
-                  setSelectedItem(index);
-                  setSelectedSubItem(null);
-                }}
-              >
-                <span
-                  className={`text-xl transition-colors duration-200
-                  ${
-                    selectedItem === index
-                      ? "text-[#F2722B]"
-                      : "text-gray-600 group-hover:text-[#F2722B]"
-                  }`}
+                  onClick={() => {
+                    if (item.subItems) {
+                      setIsMenuOpen(!isMenuOpen);
+                    }
+                    setSelectedItem(index);
+                    if (!isNavOpen) {
+                      setIsNavOpen(true);
+                    }
+                  }}
                 >
-                  {item.icon}
-                </span>
-                <span
-                  className={`ml-3 flex-1 font-medium transition-colors duration-200
-                  ${
-                    selectedItem === index
-                      ? "text-[#F2722B]"
-                      : "text-gray-600 group-hover:text-[#F2722B]"
-                  }`}
-                >
-                  {item.label}
-                </span>
-                {item.badge && (
-                  <span className="bg-[#FFA50020] text-[#F2722B] px-2 py-0.5 rounded-full text-sm font-medium">
-                    {item.badge}
+                  <span className="text-gray-600 text-xl group-hover:text-[#F2722B] transition-colors duration-200">
+                    {item.icon}
                   </span>
-                )}
-              </button>
+                  <span
+                    className={`ml-3 flex-1 text-gray-600 font-medium group-hover:text-[#F2722B] transition-all duration-300 ${
+                      isNavOpen
+                        ? "opacity-100"
+                        : "opacity-0 w-0 overflow-hidden"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  {isNavOpen && item.badge && (
+                    <span className="bg-[#FFA50020] text-[#F2722B] px-2 py-0.5 rounded-full text-sm font-medium">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
 
-              {item.subItems && isMenuOpen && selectedItem === index && (
-                <div className="ml-4 mt-2 space-y-1">
-                  {item.subItems.map((subItem, subIndex) => (
-                    <button
-                      key={subIndex}
-                      className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 group
-                        ${
-                          selectedSubItem === subIndex && selectedItem === index
-                            ? "bg-[#FFA50015] text-[#F2722B]"
-                            : "hover:bg-[#FFA50010]"
-                        }`}
-                      onClick={() => {
-                        setSelectedSubItem(subIndex);
-                        setSelectedItem(index);
-                      }}
-                    >
-                      <span
-                        className={`text-lg transition-colors duration-200
-                        ${
-                          selectedSubItem === subIndex && selectedItem === index
-                            ? "text-[#F2722B]"
-                            : "text-gray-600 group-hover:text-[#F2722B]"
-                        }`}
-                      >
-                        {subItem.icon}
-                      </span>
-                      <span
-                        className={`ml-3 transition-colors duration-200
-                        ${
-                          selectedSubItem === subIndex && selectedItem === index
-                            ? "text-[#F2722B]"
-                            : "text-gray-600 group-hover:text-[#F2722B]"
-                        }`}
-                      >
-                        {subItem.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                {item.subItems &&
+                  isMenuOpen &&
+                  selectedItem === index &&
+                  isNavOpen && (
+                    <div className="ml-4 mt-2 space-y-1">
+                      {item.subItems.map((subItem, subIndex) => (
+                        <button
+                          key={subIndex}
+                          className="w-full flex items-center p-2 hover:bg-[#FFA50010] rounded-lg transition-all duration-300 group"
+                          onClick={() => {
+                            setSelectedSubItem(subIndex);
+                            setSelectedItem(index);
+                          }}
+                        >
+                          <span className="text-gray-600 text-lg group-hover:text-[#F2722B] transition-colors duration-200">
+                            {subItem.icon}
+                          </span>
+                          <span className="ml-3 text-gray-600 group-hover:text-[#F2722B] transition-colors duration-200">
+                            {subItem.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="p-4 border-t border-[#FFA50033] bg-[#FFA50005]">
-        <div className="text-xs text-gray-500 text-center hover:text-[#F2722B] transition-colors duration-200">
-          Research Management System
+        <div
+          className={`p-4 border-t border-[#FFA50033] bg-[#FFA50005] ${
+            !isNavOpen ? "text-center" : ""
+          }`}
+        >
+          <div className="text-xs text-gray-500 hover:text-[#F2722B] transition-colors duration-200">
+            {isNavOpen ? "Research Management System" : "RMS"}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
 

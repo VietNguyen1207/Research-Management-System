@@ -13,8 +13,11 @@ import {
   ApartmentOutlined,
 } from "@ant-design/icons";
 import { Dropdown, Avatar, Space, Badge } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
+
   const dropdownStyle = {
     dropdownRender: (menu) => (
       <div className="bg-white rounded-lg shadow-lg border border-[#FFA50033] min-w-[240px] overflow-hidden">
@@ -81,7 +84,10 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-3">
-            <button className="px-4 py-2 text-white hover:bg-[#FFFFFF15] rounded-lg transition-colors duration-200 font-semibold text-base">
+            <button
+              onClick={() => navigate("/login")}
+              className="px-4 py-2 text-white hover:bg-[#FFFFFF15] rounded-lg transition-colors duration-200 font-semibold text-base"
+            >
               Login
             </button>
             <button className="px-4 py-2 bg-white text-[#F2722B] hover:bg-[#FFF6E5] font-semibold rounded-lg transition-colors duration-200 text-base">

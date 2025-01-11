@@ -1,0 +1,79 @@
+{
+  "user": [
+    {
+      "user_id": 1,
+      "group_id": 101,
+      "password": "password123",
+      "full_name": "John Doe",
+      "email": "john.doe@student.example.com",
+      "phone": "1234567890",
+      "role_id": 1,
+      "role": "student",
+      "department_id": 1,
+      "status": "active",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "token": "m123"
+    },
+    {
+      "user_id": 2,
+      "group_id": 102,
+      "password": "password456",
+      "full_name": "Dr. Emily Smith",
+      "email": "emily.smith@lecturer.example.com",
+      "phone": "2345678901",
+      "role_id": 2,
+      "role": "lecturer",
+      "department_id": 2,
+      "status": "active",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "token": "st123"
+    },
+    {
+      "user_id": 3,
+      "group_id": 103,
+      "password": "password789",
+      "full_name": "Dr. Michael Johnson",
+      "email": "michael.johnson@departmenthead.example.com",
+      "phone": "3456789012",
+      "role_id": 3,
+      "role": "department_head",
+      "department_id": 3,
+      "status": "active",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "token": "pa123"
+    },
+    {
+      "user_id": 4,
+      "group_id": 104,
+      "password": "password321",
+      "full_name": "Sophia Brown",
+      "email": "sophia.brown@osm.example.com",
+      "phone": "4567890123",
+      "role_id": 4,
+      "role": "office_of_scientific_management",
+      "department_id": 4,
+      "status": "active",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "token": "ps123"
+    },
+    {
+      "user_id": 5,
+      "group_id": 105,
+      "password": "password654",
+      "full_name": "Admin User",
+      "email": "admin@system.example.com",
+      "phone": "5678901234",
+      "role_id": 5,
+      "role": "admin",
+      "department_id": 5,
+      "status": "active",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "token": "pp123"
+    }
+  ]
+}
