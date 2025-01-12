@@ -1,10 +1,24 @@
 import React from "react";
 import { Input, Checkbox, Form } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../auth/authSlice";
+import { message } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const onFinish = (values) => {
-    console.log("Success:", values);
+  const dispatch = useDispatch();
+  const { isLoading, error } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+
+  const onFinish = async (values) => {
+    try {
+      const result = await dispatch(loginUser(values)).unwrap();
+      message.success("Login successful!");
+      navigate("/");
+    } catch (error) {
+      message.error(error || "Login failed");
+    }
   };
 
   return (
