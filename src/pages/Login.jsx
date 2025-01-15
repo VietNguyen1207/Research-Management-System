@@ -51,7 +51,7 @@ const Login = () => {
               <Input
                 prefix={<UserOutlined className="text-gray-400 text-sm mr-1" />}
                 placeholder="Email address"
-                className="h-9 appearance-none rounded-lg relative block w-full border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#F2722B] focus:border-[#F2722B] focus:z-10 text-sm flex items-center"
+                className="h-9 appearance-none rounded-lg relative  w-full border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#F2722B] focus:border-[#F2722B] focus:z-10 text-sm flex items-center"
                 size="large"
               />
             </Form.Item>
@@ -66,7 +66,7 @@ const Login = () => {
               <Input.Password
                 prefix={<LockOutlined className="text-gray-400 text-sm mr-1" />}
                 placeholder="Password"
-                className="h-9 appearance-none rounded-lg relative block w-full border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#F2722B] focus:border-[#F2722B] focus:z-10 text-sm flex items-center"
+                className="h-9 appearance-none rounded-lg relative  w-full border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#F2722B] focus:border-[#F2722B] focus:z-10 text-sm flex items-center"
                 size="large"
               />
             </Form.Item>

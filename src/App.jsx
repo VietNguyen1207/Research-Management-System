@@ -3,10 +3,18 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import Header from "./components/Header";
 import Login from "./pages/Login";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { checkAuthState } from "./auth/authSlice";
 
 function App() {
   const [isNavOpen, setIsNavOpen] = useState(true);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Check auth state when app loads
+    dispatch(checkAuthState());
+  }, [dispatch]);
 
   return (
     <Router>
