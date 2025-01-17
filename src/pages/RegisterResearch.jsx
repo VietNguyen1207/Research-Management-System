@@ -10,6 +10,7 @@ import {
   Slider,
   message,
   Tag,
+  AutoComplete,
 } from "antd";
 import { UploadOutlined, SaveOutlined, SendOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
@@ -23,6 +24,15 @@ const RegisterResearch = () => {
   const [budgetValue, setBudgetValue] = useState(0);
   const [teamMembers, setTeamMembers] = useState([]);
   const [newMember, setNewMember] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+
+  const studentEmails = [
+    "emily.smith@example.com",
+    "john.doe@example.com",
+    "sarah.johnson@example.com",
+    "michael.brown@example.com",
+    "jessica.white@example.com",
+  ];
 
   const onFinish = (values) => {
     console.log("Form values:", values);
@@ -34,9 +44,26 @@ const RegisterResearch = () => {
     if (newMember) {
       setTeamMembers([...teamMembers, newMember]);
       setNewMember("");
+      setSuggestions([]);
     } else {
       message.warning("Please enter a team member's name.");
     }
+  };
+
+  const handleSearch = (value) => {
+    if (value) {
+      const filteredEmails = studentEmails.filter((email) =>
+        email.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filteredEmails);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSelect = (value) => {
+    setNewMember(value);
+    setSuggestions([]);
   };
 
   return (
@@ -72,7 +99,10 @@ const RegisterResearch = () => {
                 { required: true, message: "Please input research title!" },
               ]}
             >
-              <Input className="rounded-lg" />
+              <Input
+                placeholder="Enter the research title"
+                className="rounded-lg"
+              />
             </Form.Item>
 
             <Form.Item
@@ -82,7 +112,7 @@ const RegisterResearch = () => {
                 { required: true, message: "Please select research type!" },
               ]}
             >
-              <Select className="rounded-lg">
+              <Select placeholder="Select research type" className="rounded-lg">
                 <Select.Option value="scientific_paper">
                   Scientific Paper
                 </Select.Option>
@@ -100,11 +130,14 @@ const RegisterResearch = () => {
               Team Members
             </h3>
             <div className="flex mb-4">
-              <Input
-                placeholder="Enter team member's name"
+              <AutoComplete
+                placeholder="Enter team member's email"
                 value={newMember}
-                onChange={(e) => setNewMember(e.target.value)}
-                className="rounded-lg mr-2"
+                options={suggestions.map((email) => ({ value: email }))}
+                onSearch={handleSearch}
+                onSelect={handleSelect}
+                onChange={(value) => setNewMember(value)}
+                className="rounded-lg mr-2 w-full"
               />
               <Button
                 type="primary"
@@ -133,7 +166,11 @@ const RegisterResearch = () => {
               name="context"
               rules={[{ required: true, message: "Please input context!" }]}
             >
-              <TextArea rows={4} className="rounded-lg" />
+              <TextArea
+                placeholder="Enter project context"
+                rows={4}
+                className="rounded-lg"
+              />
             </Form.Item>
 
             <Form.Item
@@ -141,7 +178,11 @@ const RegisterResearch = () => {
               name="objectives"
               rules={[{ required: true, message: "Please input objectives!" }]}
             >
-              <TextArea rows={4} className="rounded-lg" />
+              <TextArea
+                placeholder="Enter research objectives"
+                rows={4}
+                className="rounded-lg"
+              />
             </Form.Item>
           </div>
 
@@ -162,6 +203,7 @@ const RegisterResearch = () => {
             >
               <div className="space-y-2">
                 <InputNumber
+                  placeholder="Enter estimated budget"
                   className="w-full rounded-lg"
                   min={0}
                   max={1000000000}
