@@ -19,8 +19,10 @@ import {
   ProjectOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 const NavBar = () => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSubItem, setSelectedSubItem] = useState(null);
@@ -74,6 +76,15 @@ const NavBar = () => {
       ],
     },
     {
+      icon: <ProjectOutlined />,
+      label: "Quotas",
+      subItems: [
+        { icon: <ProjectOutlined />, label: "Pending Quotas" },
+        { icon: <FormOutlined />, label: "Create Project" },
+        { icon: <TeamOutlined />, label: "Project Teams" },
+      ],
+    },
+    {
       icon: <UserOutlined />,
       label: "User",
       subItems: [
@@ -96,6 +107,24 @@ const NavBar = () => {
       ],
     },
   ];
+
+  const handleSubItemClick = (subItem) => {
+    switch (subItem.label) {
+      case "New Registration":
+        navigate("/register-research");
+        break;
+      case "Pending Approval":
+        navigate("/papers");
+        break;
+      case "Pending Quotas":
+        navigate("/quotas");
+        break;
+      default:
+        break;
+    }
+    setSelectedSubItem(subIndex);
+    setSelectedItem(index);
+  };
 
   return (
     <div className="fixed top-16 left-0 h-[calc(100vh-4rem)] z-10">
@@ -160,8 +189,7 @@ const NavBar = () => {
                           key={subIndex}
                           className="w-full flex items-center p-2 hover:bg-[#FFA50010] rounded-lg transition-all duration-300 group"
                           onClick={() => {
-                            setSelectedSubItem(subIndex);
-                            setSelectedItem(index);
+                            handleSubItemClick(subItem);
                           }}
                         >
                           <span className="text-gray-600 text-lg group-hover:text-[#F2722B] transition-colors duration-200">
