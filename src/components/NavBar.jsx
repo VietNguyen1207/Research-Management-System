@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   SearchOutlined,
   InboxOutlined,
@@ -20,103 +20,98 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 
-const NavBar = () => {
+// Define navItems outside of component
+const navItems = [
+  {
+    icon: <TeamOutlined />,
+    label: "Group",
+    subItems: [
+      { icon: <TeamOutlined />, label: "View Groups" },
+      { icon: <FormOutlined />, label: "Create Group" },
+      { icon: <UserOutlined />, label: "Manage Members" },
+    ],
+  },
+  {
+    icon: <FormOutlined />,
+    label: "Registration",
+    subItems: [
+      { icon: <FormOutlined />, label: "Research" },
+      { icon: <FileSearchOutlined />, label: "Conference Project" },
+      { icon: <ProjectOutlined />, label: "Case Study Project" },
+    ],
+  },
+  {
+    icon: <ExperimentOutlined />,
+    label: "Research",
+    subItems: [
+      { icon: <ExperimentOutlined />, label: "Active Research" },
+      { icon: <ProjectOutlined />, label: "Completed Research" },
+      { icon: <FileSearchOutlined />, label: "Research Archive" },
+    ],
+  },
+  {
+    icon: <FileSearchOutlined />,
+    label: "Paper",
+    badge: "3",
+    subItems: [
+      { icon: <FileSearchOutlined />, label: "Active Project" },
+      { icon: <FormOutlined />, label: "Completed Paper" },
+      { icon: <ProjectOutlined />, label: "Paper History" },
+    ],
+  },
+  {
+    icon: <ProjectOutlined />,
+    label: "Request",
+    subItems: [
+      { icon: <ProjectOutlined />, label: "Pending Request" },
+      { icon: <FormOutlined />, label: "Request Progress" },
+      { icon: <TeamOutlined />, label: "Request Record" },
+    ],
+  },
+  {
+    icon: <ProjectOutlined />,
+    label: "Quotas",
+  },
+  {
+    icon: <AppstoreOutlined />,
+    label: "Menu",
+    subItems: [
+      { icon: <AppstoreOutlined />, label: "Dashboard" },
+      { icon: <BarChartOutlined />, label: "Product analytics" },
+      { icon: <LineChartOutlined />, label: "Reporting" },
+      { icon: <FileOutlined />, label: "Order summary" },
+      { icon: <FileDoneOutlined />, label: "Invoices" },
+      { icon: <BuildOutlined />, label: "Manufactures" },
+      { icon: <DeleteOutlined />, label: "Trash" },
+    ],
+  },
+];
+
+const NavBar = ({ allowedItems = [] }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSubItem, setSelectedSubItem] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(true);
 
-  const navItems = [
-    {
-      icon: <TeamOutlined />,
-      label: "Group",
-      subItems: [
-        { icon: <TeamOutlined />, label: "View Groups" },
-        { icon: <FormOutlined />, label: "Create Group" },
-        { icon: <UserOutlined />, label: "Manage Members" },
-      ],
-    },
-    {
-      icon: <FormOutlined />,
-      label: "Register Research",
-      subItems: [
-        { icon: <FormOutlined />, label: "New Registration" },
-        { icon: <FileSearchOutlined />, label: "Draft Registrations" },
-        { icon: <ProjectOutlined />, label: "Registration History" },
-      ],
-    },
-    {
-      icon: <ExperimentOutlined />,
-      label: "Research",
-      subItems: [
-        { icon: <ExperimentOutlined />, label: "Active Research" },
-        { icon: <ProjectOutlined />, label: "Completed Research" },
-        { icon: <FileSearchOutlined />, label: "Research Archive" },
-      ],
-    },
-    {
-      icon: <FileSearchOutlined />,
-      label: "Paper",
-      badge: "3",
-      subItems: [
-        { icon: <FileSearchOutlined />, label: "Pending Approval" },
-        { icon: <FormOutlined />, label: "Submit Paper" },
-        { icon: <ProjectOutlined />, label: "Paper History" },
-      ],
-    },
-    {
-      icon: <ProjectOutlined />,
-      label: "Project",
-      subItems: [
-        { icon: <ProjectOutlined />, label: "Active Projects" },
-        { icon: <FormOutlined />, label: "Create Project" },
-        { icon: <TeamOutlined />, label: "Project Teams" },
-      ],
-    },
-    {
-      icon: <ProjectOutlined />,
-      label: "Quotas",
-      subItems: [
-        { icon: <ProjectOutlined />, label: "Pending Quotas" },
-        { icon: <FormOutlined />, label: "Create Project" },
-        { icon: <TeamOutlined />, label: "Project Teams" },
-      ],
-    },
-    {
-      icon: <UserOutlined />,
-      label: "User",
-      subItems: [
-        { icon: <UserOutlined />, label: "Profile" },
-        { icon: <TeamOutlined />, label: "My Groups" },
-        { icon: <ProjectOutlined />, label: "My Projects" },
-      ],
-    },
-    {
-      icon: <AppstoreOutlined />,
-      label: "Menu",
-      subItems: [
-        { icon: <AppstoreOutlined />, label: "Dashboard" },
-        { icon: <BarChartOutlined />, label: "Product analytics" },
-        { icon: <LineChartOutlined />, label: "Reporting" },
-        { icon: <FileOutlined />, label: "Order summary" },
-        { icon: <FileDoneOutlined />, label: "Invoices" },
-        { icon: <BuildOutlined />, label: "Manufactures" },
-        { icon: <DeleteOutlined />, label: "Trash" },
-      ],
-    },
-  ];
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter((item) => allowedItems.includes(item.label));
+  }, [allowedItems]);
 
   const handleSubItemClick = (subItem) => {
     switch (subItem.label) {
-      case "New Registration":
+      case "Research":
         navigate("/register-research");
         break;
-      case "Pending Approval":
+      case "Pending Request":
+        navigate("/pending-request");
+        break;
+      case "Active Project":
         navigate("/papers");
         break;
-      case "Pending Quotas":
+      case "Quotas":
         navigate("/quotas");
         break;
       default:
@@ -124,6 +119,13 @@ const NavBar = () => {
     }
     setSelectedSubItem(subIndex);
     setSelectedItem(index);
+  };
+
+  const handleItemClick = (item) => {
+    if (item.label === "Quotas") {
+      navigate("/quotas");
+    }
+    setSelectedItem(item.label);
   };
 
   return (
@@ -144,7 +146,7 @@ const NavBar = () => {
 
         <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-2">
-            {navItems.map((item, index) => (
+            {filteredNavItems.map((item, index) => (
               <div key={index}>
                 <button
                   className={`w-full flex items-center p-2 hover:bg-[#FFA50010] rounded-lg transition-all duration-300 group ${
@@ -153,8 +155,10 @@ const NavBar = () => {
                   onClick={() => {
                     if (item.subItems) {
                       setIsMenuOpen(!isMenuOpen);
+                      setSelectedItem(index);
+                    } else {
+                      handleItemClick(item);
                     }
-                    setSelectedItem(index);
                     if (!isNavOpen) {
                       setIsNavOpen(true);
                     }
@@ -219,6 +223,10 @@ const NavBar = () => {
       </nav>
     </div>
   );
+};
+
+NavBar.propTypes = {
+  allowedItems: PropTypes.arrayOf(PropTypes.string),
 };
 
 export default NavBar;
