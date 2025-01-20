@@ -97,13 +97,23 @@ const NavBar = ({ allowedItems = [] }) => {
   const [isNavOpen, setIsNavOpen] = useState(true);
 
   const filteredNavItems = useMemo(() => {
+    // console.log(navItems);
+    // console.log(allowedItems);
+
     return navItems.filter((item) => allowedItems.includes(item.label));
   }, [allowedItems]);
 
-  const handleSubItemClick = (subItem) => {
+  // console.log(filteredNavItems);
+
+  const handleSubItemClick = (subItem, index) => {
+    console.log("sub", subItem);
+    console.log("index", index);
+
     switch (subItem.label) {
       case "Research":
         navigate("/register-research");
+        console.log("Research");
+
         break;
       case "Pending Request":
         navigate("/pending-request");
@@ -117,7 +127,7 @@ const NavBar = ({ allowedItems = [] }) => {
       default:
         break;
     }
-    setSelectedSubItem(subIndex);
+    setSelectedSubItem(subItem);
     setSelectedItem(index);
   };
 
@@ -125,7 +135,7 @@ const NavBar = ({ allowedItems = [] }) => {
     if (item.label === "Quotas") {
       navigate("/quotas");
     }
-    setSelectedItem(item.label);
+    setSelectedItem(item);
   };
 
   return (
@@ -193,7 +203,7 @@ const NavBar = ({ allowedItems = [] }) => {
                           key={subIndex}
                           className="w-full flex items-center p-2 hover:bg-[#FFA50010] rounded-lg transition-all duration-300 group"
                           onClick={() => {
-                            handleSubItemClick(subItem);
+                            handleSubItemClick(subItem, subIndex);
                           }}
                         >
                           <span className="text-gray-600 text-lg group-hover:text-[#F2722B] transition-colors duration-200">

@@ -138,7 +138,7 @@
 
 // export default AppRoutes;
 
-import { Routes, Route, useRoutes, Navigate } from "react-router-dom";
+import { Routes, Route, useRoutes, Navigate, Outlet } from "react-router-dom";
 import { StandardLayout } from "../layouts/StandardLayout";
 import { ProtectedRoutes } from "./ProtectedRoutes";
 import { StudentLayout } from "../layouts/StudentLayout";
@@ -175,8 +175,9 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["student"]}>
-            <StudentLayout />
+          <ProtectedRoutes allowedRoles={["student", "lecturer"]}>
+            <LecturerLayout />
+            {/* <Outlet /> */}
           </ProtectedRoutes>
         ),
         children: [
