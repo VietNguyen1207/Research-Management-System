@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   SearchOutlined,
   InboxOutlined,
@@ -21,6 +21,8 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
+import { useSelector } from "react-redux";
+import { Menu } from "antd";
 
 // Define navItems outside of component
 const navItems = [
@@ -89,19 +91,59 @@ const navItems = [
   },
 ];
 
-const NavBar = ({ allowedItems = [] }) => {
+const NavBar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedSubItem, setSelectedSubItem] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(true);
 
+  //get user
+  const { user } = useSelector((state) => state.auth);
+  const studentNavItems = ["Group", "Registration", "Research", "Paper"];
+  const lecturerNavItems = [
+    "Group",
+    "Registration",
+    "Research",
+    "Paper",
+    "Request",
+  ];
+  const deptHeadNavItems = ["Research", "Paper", "Request", "Quotas"];
+  const officeNavItems = ["Research", "Paper", "Request", "Quotas"];
+  const adminNavItems = [
+    "Group",
+    "Registration",
+    "Research",
+    "Paper",
+    "Request",
+    "Quotas",
+    "Menu",
+  ];
+
   const filteredNavItems = useMemo(() => {
-    // console.log(navItems);
-    // console.log(allowedItems);
+    let allowedItems = [];
+    if (user) {
+      switch (user.role) {
+        case "student":
+          allowedItems = studentNavItems;
+          break;
+        case "lecturer":
+          allowedItems = lecturerNavItems;
+          break;
+        case "dept_head":
+          allowedItems = deptHeadNavItems;
+          break;
+        case "office":
+          allowedItems = officeNavItems;
+          break;
+        case "admin":
+          allowedItems = adminNavItems;
+          break;
+      }
+    }
 
     return navItems.filter((item) => allowedItems.includes(item.label));
-  }, [allowedItems]);
+  }, []);
 
   // console.log(filteredNavItems);
 

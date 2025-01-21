@@ -8,7 +8,7 @@ const getStoredUser = () => {
 };
 
 const initialState = {
-  user: getStoredUser(),
+  user: JSON.parse(localStorage.getItem("user")),
   token: localStorage.getItem("token"),
   isLoading: false,
   error: null,
@@ -67,7 +67,15 @@ export const checkAuthState = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState,
-  reducers: {},
+  reducers: {
+    // loginSuccess: (state, action) => {
+    //   console.log("Login payload:", action.payload);
+    //   state.user = action.payload.user;
+    //   state.token = action.payload.token;
+    //   localStorage.setItem("user", JSON.stringify(action.payload.user));
+    //   localStorage.setItem("token", action.payload.token);
+    // },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(loginUser.pending, (state) => {

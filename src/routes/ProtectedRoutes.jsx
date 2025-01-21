@@ -46,16 +46,15 @@
 import { Navigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
-import NavBar from "../components/NavBar";
 
 export const ProtectedRoutes = ({
   children,
   allowedRoles = [],
   requiresGuest = false,
-  navItems = [],
 }) => {
   const { user } = useSelector((state) => state.auth);
   console.log(user);
+  console.log(allowedRoles);
 
   // For routes that require guest access (like login)
   if (requiresGuest) {
@@ -75,22 +74,11 @@ export const ProtectedRoutes = ({
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return (
-    <>
-      <NavBar allowedItems={navItems} />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 };
 
 ProtectedRoutes.propTypes = {
   children: PropTypes.node.isRequired,
   allowedRoles: PropTypes.arrayOf(PropTypes.string),
   requiresGuest: PropTypes.bool,
-  navItems: PropTypes.arrayOf(PropTypes.string),
 };
-
-// ProtectedRoutes.defaultProps = {
-//   allowedRoles: [],
-//   requiresGuest: false,
-// };
