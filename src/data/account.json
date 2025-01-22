@@ -38,7 +38,7 @@
       "email": "michael.johnson@departmenthead.example.com",
       "phone": "3456789012",
       "role_id": 3,
-      "role": "dept_head",
+      "role": "department",
       "department_id": 3,
       "status": "active",
       "created_at": "2025-01-15T08:00:00",

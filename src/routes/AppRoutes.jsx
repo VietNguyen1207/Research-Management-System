@@ -2,8 +2,11 @@ import { Routes, Route, useRoutes, Navigate, Outlet } from "react-router-dom";
 import { StandardLayout } from "../layouts/StandardLayout";
 import { ProtectedRoutes } from "./ProtectedRoutes";
 import Login from "../pages/Login";
+import DepartmentQuota from "../pages/DepartmentQuota";
+import OfficeQuota from "../pages/office/OfficeQuota";
 import Unauthorized from "../pages/error/Unauthorized";
 import RegisterResearch from "../pages/RegisterResearch";
+import PendingRequest from "../pages/PendingRequest";
 
 export const routes = [
   {
@@ -53,23 +56,26 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["head_department"]}>
+          <ProtectedRoutes allowedRoles={["department", "office"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
         children: [
           // Add department head routes here
+          { path: "pending-request", element: <PendingRequest /> },
+          { path: "department-quota", element: <DepartmentQuota /> },
         ],
       },
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["office_scientific"]}>
+          <ProtectedRoutes allowedRoles={["office"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
         children: [
           // Add office routes here
+          { path: "office-quota", element: <OfficeQuota /> },
         ],
       },
     ],

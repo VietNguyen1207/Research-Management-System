@@ -75,6 +75,10 @@ const navItems = [
   {
     icon: <ProjectOutlined />,
     label: "Quotas",
+    subItems: [
+      { icon: <ProjectOutlined />, label: "Department Quota" },
+      { icon: <FormOutlined />, label: "Office Quota" },
+    ],
   },
   {
     icon: <AppstoreOutlined />,
@@ -98,7 +102,7 @@ const NavBar = () => {
   const [selectedSubItem, setSelectedSubItem] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(true);
 
-  //get user
+  //Get user
   const { user } = useSelector((state) => state.auth);
   const studentNavItems = ["Group", "Registration", "Research", "Paper"];
   const lecturerNavItems = [
@@ -130,7 +134,7 @@ const NavBar = () => {
         case "lecturer":
           allowedItems = lecturerNavItems;
           break;
-        case "dept_head":
+        case "department":
           allowedItems = deptHeadNavItems;
           break;
         case "office":
@@ -142,7 +146,27 @@ const NavBar = () => {
       }
     }
 
-    return navItems.filter((item) => allowedItems.includes(item.label));
+    return navItems
+      .filter((item) => allowedItems.includes(item.label))
+      .map((item) => {
+        //Custom Quota for department and office role
+        if (item.label === "Quotas" && item.subItems) {
+          const filteredSubItems = item.subItems.filter((subItem) => {
+            if (
+              user.role === "department" &&
+              subItem.label === "Department Quota"
+            ) {
+              return true;
+            }
+            if (user.role === "office" && subItem.label === "Office Quota") {
+              return true;
+            }
+            return false;
+          });
+          return { ...item, subItems: filteredSubItems };
+        }
+        return item;
+      });
   }, []);
 
   // console.log(filteredNavItems);
@@ -163,8 +187,8 @@ const NavBar = () => {
       case "Active Project":
         navigate("/papers");
         break;
-      case "Quotas":
-        navigate("/quotas");
+      case "Department Quota":
+        navigate("/department-quota");
         break;
       default:
         break;
