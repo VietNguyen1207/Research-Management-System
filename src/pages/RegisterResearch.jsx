@@ -7,63 +7,63 @@ import {
   Select,
   Button,
   Upload,
-  Slider,
   message,
-  Tag,
-  AutoComplete,
+  Divider,
 } from "antd";
-import { UploadOutlined, SaveOutlined, SendOutlined } from "@ant-design/icons";
+import {
+  UploadOutlined,
+  SaveOutlined,
+  SendOutlined,
+  UserOutlined,
+  BankOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { useSelector } from "react-redux";
 
 const { TextArea } = Input;
-const { RangePicker } = DatePicker;
 
 const RegisterResearch = () => {
   const [form] = Form.useForm();
   const { user } = useSelector((state) => state.auth);
-  const [budgetValue, setBudgetValue] = useState(0);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [newMember, setNewMember] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
+  const [fileList, setFileList] = useState([]);
 
-  const studentEmails = [
-    "emily.smith@example.com",
-    "john.doe@example.com",
-    "sarah.johnson@example.com",
-    "michael.brown@example.com",
-    "jessica.white@example.com",
+  // Mock data - replace with API calls
+  const lecturers = [
+    { id: 1, name: "Dr. Emily Smith" },
+    { id: 2, name: "Prof. John Doe" },
+    { id: 3, name: "Dr. Sarah Johnson" },
+  ];
+
+  const departments = [
+    { id: 1, name: "Computer Science" },
+    { id: 2, name: "Information Technology" },
+    { id: 3, name: "Software Engineering" },
+  ];
+
+  const categories = [
+    { id: 1, name: "AI & Machine Learning" },
+    { id: 2, name: "Data Science" },
+    { id: 3, name: "Cybersecurity" },
+  ];
+
+  // Add groups to mock data
+  const groups = [
+    { id: 1, name: "Research Group A" },
+    { id: 2, name: "Research Group B" },
+    { id: 3, name: "Research Group C" },
   ];
 
   const onFinish = (values) => {
     console.log("Form values:", values);
-    console.log("Team Members:", teamMembers);
     message.success("Research project submitted successfully!");
   };
 
-  const addTeamMember = () => {
-    if (newMember) {
-      setTeamMembers([...teamMembers, newMember]);
-      setNewMember("");
-      setSuggestions([]);
-    } else {
-      message.warning("Please enter a team member's name.");
-    }
-  };
-
-  const handleSearch = (value) => {
-    if (value) {
-      const filteredEmails = studentEmails.filter((email) =>
-        email.toLowerCase().includes(value.toLowerCase())
-      );
-      setSuggestions(filteredEmails);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const handleSelect = (value) => {
-    setNewMember(value);
-    setSuggestions([]);
+  const handleFileChange = (info) => {
+    let fileList = [...info.fileList];
+    fileList = fileList.slice(-1); // Keep only the latest file
+    setFileList(fileList);
   };
 
   return (
@@ -85,181 +85,204 @@ const RegisterResearch = () => {
           onFinish={onFinish}
           className="bg-white p-8 rounded-lg shadow-md"
           initialValues={{
-            researcher_name: user?.full_name,
-            department: user?.department_id,
-            budget: 0,
+            department_id: user?.department_id,
+            status: "pending",
           }}
         >
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 gap-6">
             <Form.Item
-              label="Research Title"
+              label="Project Title"
               name="title"
               rules={[
-                { required: true, message: "Please input research title!" },
+                { required: true, message: "Please input project title!" },
               ]}
             >
               <Input
-                placeholder="Enter the research title"
+                prefix={<FileTextOutlined className="text-gray-400" />}
+                placeholder="Enter the project title"
                 className="rounded-lg"
               />
             </Form.Item>
 
             <Form.Item
-              label="Research Type"
-              name="type"
+              label="Project Description"
+              name="description"
               rules={[
-                { required: true, message: "Please select research type!" },
+                {
+                  required: true,
+                  message: "Please input project description!",
+                },
               ]}
             >
-              <Select placeholder="Select research type" className="rounded-lg">
-                <Select.Option value="scientific_paper">
-                  Scientific Paper
-                </Select.Option>
-                <Select.Option value="research_project">
-                  Research Project
-                </Select.Option>
-                <Select.Option value="thesis">Thesis</Select.Option>
+              <TextArea
+                placeholder="Describe the project in detail"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+          </div>
+
+          <Divider />
+
+          {/* Supervisor and Department */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Form.Item
+              label="Supervisor"
+              name="lecturer_id"
+              rules={[
+                { required: true, message: "Please select a supervisor!" },
+              ]}
+            >
+              <Select
+                placeholder="Select a supervisor"
+                className="rounded-lg"
+                prefix={<UserOutlined />}
+              >
+                {lecturers.map((lecturer) => (
+                  <Select.Option key={lecturer.id} value={lecturer.id}>
+                    {lecturer.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Department"
+              name="department_id"
+              rules={[
+                { required: true, message: "Please select a department!" },
+              ]}
+            >
+              <Select
+                placeholder="Select a department"
+                className="rounded-lg"
+                prefix={<BankOutlined />}
+              >
+                {departments.map((dept) => (
+                  <Select.Option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </div>
 
-          {/* Team Members Section */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Team Members
-            </h3>
-            <div className="flex mb-4">
-              <AutoComplete
-                placeholder="Enter team member's email"
-                value={newMember}
-                options={suggestions.map((email) => ({ value: email }))}
-                onSearch={handleSearch}
-                onSelect={handleSelect}
-                onChange={(value) => setNewMember(value)}
-                className="rounded-lg mr-2 w-full"
-              />
-              <Button
-                type="primary"
-                className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-                onClick={addTeamMember}
-              >
-                Add Member
-              </Button>
-            </div>
-            <div className="flex flex-wrap">
-              {teamMembers.map((member, index) => (
-                <Tag key={index} className="mr-2 mb-2">
-                  {member}
-                </Tag>
-              ))}
-            </div>
-          </div>
-
-          {/* Project Details */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Project Details
-            </h3>
-            <Form.Item
-              label="Context"
-              name="context"
-              rules={[{ required: true, message: "Please input context!" }]}
-            >
-              <TextArea
-                placeholder="Enter project context"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Research Objectives"
-              name="objectives"
-              rules={[{ required: true, message: "Please input objectives!" }]}
-            >
-              <TextArea
-                placeholder="Enter research objectives"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-          </div>
+          <Divider />
 
           {/* Timeline and Budget */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Form.Item
-              label="Project Timeline"
-              name="timeline"
-              rules={[{ required: true, message: "Please select timeline!" }]}
-            >
-              <RangePicker className="w-full rounded-lg" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Form.Item label="Project Timeline" required className="mb-0">
+              <div className="grid grid-cols-2 gap-4">
+                <Form.Item
+                  name="start_date"
+                  rules={[{ required: true, message: "Select start date!" }]}
+                >
+                  <DatePicker
+                    placeholder="Start Date"
+                    className="w-full rounded-lg"
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="end_date"
+                  rules={[{ required: true, message: "Select end date!" }]}
+                >
+                  <DatePicker
+                    placeholder="End Date"
+                    className="w-full rounded-lg"
+                  />
+                </Form.Item>
+              </div>
             </Form.Item>
 
             <Form.Item
-              label="Estimated Budget (VND)"
+              label="Budget (VND)"
               name="budget"
               rules={[{ required: true, message: "Please input budget!" }]}
             >
-              <div className="space-y-2">
-                <InputNumber
-                  placeholder="Enter estimated budget"
-                  className="w-full rounded-lg"
-                  min={0}
-                  max={1000000000}
-                  value={budgetValue}
-                  formatter={(value) =>
-                    `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
-                  onChange={(value) => {
-                    setBudgetValue(value);
-                    form.setFieldsValue({ budget: value });
-                  }}
-                />
-                <Slider
-                  min={0}
-                  max={1000000000}
-                  step={1000000}
-                  value={budgetValue}
-                  tooltip={{
-                    formatter: (value) => `₫${value.toLocaleString()}`,
-                  }}
-                  onChange={(value) => {
-                    setBudgetValue(value);
-                    form.setFieldsValue({ budget: value });
-                  }}
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>₫0</span>
-                  <span>₫500,000,000</span>
-                  <span>₫1,000,000,000</span>
-                </div>
-              </div>
+              <InputNumber
+                prefix={<DollarOutlined className="text-gray-400" />}
+                placeholder="Enter proposed budget"
+                className="w-full rounded-lg"
+                formatter={(value) =>
+                  `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+              />
             </Form.Item>
           </div>
 
-          {/* Documents Upload */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Supporting Documents
-            </h3>
+          <Divider />
+
+          {/* Category and Group */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Form.Item
-              name="proposal_file"
+              label="Category"
+              name="category_ids"
+              rules={[{ required: true, message: "Please select categories!" }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="Select categories"
+                className="rounded-lg"
+              >
+                {categories.map((category) => (
+                  <Select.Option key={category.id} value={category.id}>
+                    {category.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            {/* Research Group */}
+            <Form.Item
+              label="Research Group"
+              name="group_id"
               rules={[
-                { required: true, message: "Please upload proposal document!" },
+                { required: true, message: "Please select a research group!" },
               ]}
             >
-              <Upload maxCount={1}>
-                <Button icon={<UploadOutlined />} className="rounded-lg">
-                  Upload Proposal Document
+              <Select
+                placeholder="Select a research group"
+                className="rounded-lg"
+                prefix={<TeamOutlined />}
+              >
+                {groups.map((group) => (
+                  <Select.Option key={group.id} value={group.id}>
+                    {group.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <Form.Item
+              label="Supporting Documents"
+              name="document"
+              rules={[
+                { required: true, message: "Please upload project documents!" },
+              ]}
+            >
+              <Upload
+                fileList={fileList}
+                onChange={handleFileChange}
+                maxCount={1}
+              >
+                <Button icon={<UploadOutlined />} className="rounded-lg w-full">
+                  Upload Document
                 </Button>
               </Upload>
             </Form.Item>
           </div>
 
+          {/* Hidden Status Field */}
+          <Form.Item name="status" hidden>
+            <Input />
+          </Form.Item>
+
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-4 mt-8">
             <Button
               icon={<SaveOutlined />}
               className="rounded-lg border-[#F2722B] text-[#F2722B] hover:text-[#D2691E] hover:border-[#D2691E]"

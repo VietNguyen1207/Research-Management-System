@@ -46,7 +46,7 @@ const navItems = [
   },
   {
     icon: <ExperimentOutlined />,
-    label: "Research",
+    label: "Research Project",
     subItems: [
       { icon: <ExperimentOutlined />, label: "Active Research" },
       { icon: <ProjectOutlined />, label: "Completed Research" },
@@ -104,20 +104,25 @@ const NavBar = () => {
 
   //Get user
   const { user } = useSelector((state) => state.auth);
-  const studentNavItems = ["Group", "Registration", "Research", "Paper"];
+  const studentNavItems = [
+    "Group",
+    "Registration",
+    "Research Project",
+    "Paper",
+  ];
   const lecturerNavItems = [
     "Group",
     "Registration",
-    "Research",
+    "Research Project",
     "Paper",
     "Request",
   ];
-  const deptHeadNavItems = ["Research", "Paper", "Request", "Quotas"];
-  const officeNavItems = ["Research", "Paper", "Request", "Quotas"];
+  const deptHeadNavItems = ["Research Project", "Paper", "Request", "Quotas"];
+  const officeNavItems = ["Research Project", "Paper", "Request", "Quotas"];
   const adminNavItems = [
     "Group",
     "Registration",
-    "Research",
+    "Research Project",
     "Paper",
     "Request",
     "Quotas",
@@ -150,24 +155,45 @@ const NavBar = () => {
       .filter((item) => allowedItems.includes(item.label))
       .map((item) => {
         //Custom Quota for department and office role
-        if (item.label === "Quotas" && item.subItems) {
-          const filteredSubItems = item.subItems.filter((subItem) => {
-            if (
-              user.role === "department" &&
-              subItem.label === "Department Quota"
-            ) {
-              return true;
-            }
-            if (user.role === "office" && subItem.label === "Office Quota") {
-              return true;
-            }
-            return false;
-          });
-          return { ...item, subItems: filteredSubItems };
+        if (item.label === "Quotas") {
+          if (user.role === "department") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) => subItem.label === "Department Quota"
+              ),
+            };
+          }
+          if (user.role === "office") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) => subItem.label === "Office Quota"
+              ),
+            };
+          }
+        }
+
+        //Custom Registration for student and lecturer
+        if (item.label === "Registration") {
+          if (user.role === "lecturer") {
+            return {
+              ...item,
+              subItems: item.subItems,
+            };
+          }
+          if (user.role === "student") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) => subItem.label === "Research"
+              ),
+            };
+          }
         }
         return item;
       });
-  }, []);
+  }, [user]);
 
   // console.log(filteredNavItems);
 
@@ -179,7 +205,12 @@ const NavBar = () => {
       case "Research":
         navigate("/register-research");
         console.log("Research");
-
+        break;
+      case "Conference Project":
+        navigate("/register-conference-paper");
+        break;
+      case "Case Study Project":
+        navigate("/register-case-study-paper");
         break;
       case "Pending Request":
         navigate("/pending-request");
@@ -293,7 +324,7 @@ const NavBar = () => {
           }`}
         >
           <div className="text-xs text-gray-500 hover:text-[#F2722B] transition-colors duration-200">
-            {isNavOpen ? "Research Management System" : "RMS"}
+            {isNavOpen ? "Research Management System" : "LRMS"}
           </div>
         </div>
       </nav>

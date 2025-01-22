@@ -6,6 +6,8 @@ import DepartmentQuota from "../pages/DepartmentQuota";
 import OfficeQuota from "../pages/office/OfficeQuota";
 import Unauthorized from "../pages/error/Unauthorized";
 import RegisterResearch from "../pages/RegisterResearch";
+import RegisterConference from "../pages/lecturer/RegisterConference";
+import RegisterCaseStudy from "../pages/lecturer/RegisterCaseStudy";
 import PendingRequest from "../pages/PendingRequest";
 
 export const routes = [
@@ -51,6 +53,14 @@ export const routes = [
         ),
         children: [
           // Add other lecturer routes here
+          {
+            path: "register-conference-paper",
+            element: <RegisterConference />,
+          },
+          {
+            path: "register-case-study-paper",
+            element: <RegisterCaseStudy />,
+          },
         ],
       },
       {
