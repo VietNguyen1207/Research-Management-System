@@ -2,7 +2,7 @@ import React from "react";
 import { Table, Card, Button, Input, Select } from "antd";
 import { useSelector } from "react-redux";
 
-const Quotas = () => {
+const DepartmentQuota = () => {
   const lecturersData = [
     // Mock data with additional fields
     {
@@ -103,4 +103,4 @@ const Quotas = () => {
   );
 };
 
-export default Quotas;
+export default DepartmentQuota;
