@@ -202,9 +202,11 @@ const NavBar = () => {
     console.log("index", index);
 
     switch (subItem.label) {
+      case "Create Group":
+        navigate("/create-group");
+        break;
       case "Research":
         navigate("/register-research");
-        console.log("Research");
         break;
       case "Conference Project":
         navigate("/register-conference-paper");
