@@ -1,0 +1,68 @@
+{
+  "users": [
+    {
+      "user_id": 1,
+      "username": "john.doe",
+      "password": "hashed_password_1",
+      "full_name": "John Doe",
+      "email": "john.doe@university.edu",
+      "phone": "0123456789",
+      "role_id": 2,
+      "department_id": 1,
+      "status": 1,
+      "created_at": "2024-03-15T08:00:00Z",
+      "updated_at": "2024-03-15T08:00:00Z",
+      "group_id": 1
+    },
+    {
+      "user_id": 2,
+      "username": "emily.smith",
+      "password": "hashed_password_2",
+      "full_name": "Dr. Emily Smith",
+      "email": "emily.smith@university.edu",
+      "phone": "0987654321",
+      "role_id": 3,
+      "department_id": 1,
+      "status": 1,
+      "created_at": "2024-03-15T08:00:00Z",
+      "updated_at": "2024-03-15T08:00:00Z",
+      "group_id": 2
+    },
+    {
+      "user_id": 3,
+      "username": "sarah.johnson",
+      "password": "hashed_password_3",
+      "full_name": "Dr. Sarah Johnson",
+      "email": "sarah.johnson@university.edu",
+      "phone": "0123498765",
+      "role_id": 3,
+      "department_id": 2,
+      "status": 1,
+      "created_at": "2024-03-15T08:00:00Z",
+      "updated_at": "2024-03-15T08:00:00Z",
+      "group_id": 1
+    }
+  ],
+  "roles": {
+    "1": "student",
+    "2": "lecturer",
+    "3": "head_department",
+    "4": "office_scientific",
+    "5": "admin"
+  },
+  "departments": {
+    "1": "Computer Science",
+    "2": "Information Technology",
+    "3": "Software Engineering"
+  },
+  "groups": {
+    "1": "Research Group A",
+    "2": "Research Group B",
+    "3": "Research Group C"
+  },
+  "status": {
+    "0": "inactive",
+    "1": "active",
+    "2": "suspended"
+  }
+}

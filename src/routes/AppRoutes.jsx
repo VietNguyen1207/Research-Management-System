@@ -2,6 +2,7 @@ import { Routes, Route, useRoutes, Navigate, Outlet } from "react-router-dom";
 import { StandardLayout } from "../layouts/StandardLayout";
 import { ProtectedRoutes } from "./ProtectedRoutes";
 import Login from "../pages/Login";
+import CreateGroup from "../pages/CreateGroup";
 import DepartmentQuota from "../pages/DepartmentQuota";
 import OfficeQuota from "../pages/office/OfficeQuota";
 import Unauthorized from "../pages/error/Unauthorized";
@@ -41,6 +42,7 @@ export const routes = [
         ),
         children: [
           { path: "register-research", element: <RegisterResearch /> },
+          { path: "create-group", element: <CreateGroup /> },
           // Add other student routes here
         ],
       },
