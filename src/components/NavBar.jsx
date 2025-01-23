@@ -208,6 +208,9 @@ const NavBar = () => {
       case "View Groups":
         navigate("/view-groups");
         break;
+      case "Manage Members":
+        navigate("/manage-group");
+        break;
       case "Research":
         navigate("/register-research");
         break;
