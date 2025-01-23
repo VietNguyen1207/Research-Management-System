@@ -39,8 +39,8 @@ const CreateGroup = () => {
 
   const handleAddMember = () => {
     if (emailInput && members.length < 5) {
-      if (!members.includes(emailInput)) {
-        setMembers([...members, emailInput]);
+      if (!members.some((member) => member.email === emailInput)) {
+        setMembers([...members, { email: emailInput, role: "Member" }]);
         setEmailInput("");
       } else {
         message.error("This member is already added!");
@@ -51,11 +51,20 @@ const CreateGroup = () => {
   };
 
   const handleRemoveMember = (email) => {
-    setMembers(members.filter((member) => member !== email));
+    setMembers(members.filter((member) => member.email !== email));
+  };
+
+  const handleRoleChange = (email, role) => {
+    setMembers(
+      members.map((member) =>
+        member.email === email ? { ...member, role } : member
+      )
+    );
   };
 
   const onFinish = (values) => {
     console.log("Form values:", values);
+    console.log("Members:", members);
     message.success("Group created successfully!");
   };
 
@@ -86,18 +95,6 @@ const CreateGroup = () => {
               <Input
                 prefix={<TeamOutlined className="text-gray-400" />}
                 placeholder="Enter group name"
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Description"
-              name="description"
-              rules={[{ required: true, message: "Please input description!" }]}
-            >
-              <Input.TextArea
-                placeholder="Describe the group's research focus and objectives"
-                rows={4}
                 className="rounded-lg"
               />
             </Form.Item>
@@ -165,17 +162,26 @@ const CreateGroup = () => {
             </div>
           </div>
 
-          {/* Member Tags */}
+          {/* Member Tags with Role Selection */}
           <div className="mb-6">
             <Space size={[0, 8]} wrap>
-              {members.map((email) => (
+              {members.map(({ email, role }) => (
                 <Tag
                   key={email}
                   closable
                   onClose={() => handleRemoveMember(email)}
                   className="px-3 py-1 rounded-full bg-orange-50 border-orange-200"
                 >
-                  {email}
+                  <span>{email}</span>
+                  <Select
+                    value={role}
+                    onChange={(value) => handleRoleChange(email, value)}
+                    className="ml-2"
+                    style={{ width: 100 }}
+                  >
+                    <Option value="Leader">Leader</Option>
+                    <Option value="Member">Member</Option>
+                  </Select>
                 </Tag>
               ))}
             </Space>
