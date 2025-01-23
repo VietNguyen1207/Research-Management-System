@@ -4,6 +4,7 @@ import { ProtectedRoutes } from "./ProtectedRoutes";
 import Login from "../pages/Login";
 import CreateGroup from "../pages/CreateGroup";
 import ViewGroup from "../pages/ViewGroup";
+import ManageGroup from "../pages/ManageGroup";
 import DepartmentQuota from "../pages/DepartmentQuota";
 import OfficeQuota from "../pages/office/OfficeQuota";
 import Unauthorized from "../pages/error/Unauthorized";
@@ -45,6 +46,7 @@ export const routes = [
           { path: "register-research", element: <RegisterResearch /> },
           { path: "create-group", element: <CreateGroup /> },
           { path: "view-groups", element: <ViewGroup /> },
+          { path: "manage-group", element: <ManageGroup /> },
           // Add other student routes here
         ],
       },
