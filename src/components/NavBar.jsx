@@ -205,6 +205,9 @@ const NavBar = () => {
       case "Create Group":
         navigate("/create-group");
         break;
+      case "View Groups":
+        navigate("/view-groups");
+        break;
       case "Research":
         navigate("/register-research");
         break;

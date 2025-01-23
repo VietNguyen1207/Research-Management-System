@@ -52,6 +52,12 @@ const RegisterConference = () => {
     { id: 3, name: "Dr. Sarah Johnson" },
   ];
 
+  const groups = [
+    { id: 1, name: "Research Group A" },
+    { id: 2, name: "Research Group B" },
+    { id: 3, name: "Research Group C" },
+  ];
+
   const onFinish = (values) => {
     console.log("Form values:", values);
     message.success("Conference paper submitted successfully!");
@@ -321,6 +327,26 @@ const RegisterConference = () => {
                 {reviewers.map((reviewer) => (
                   <Select.Option key={reviewer.id} value={reviewer.id}>
                     {reviewer.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Research Group"
+              name="group_id"
+              rules={[
+                { required: true, message: "Please select a research group!" },
+              ]}
+            >
+              <Select
+                placeholder="Select a research group"
+                className="rounded-lg"
+                prefix={<TeamOutlined />}
+              >
+                {groups.map((group) => (
+                  <Select.Option key={group.id} value={group.id}>
+                    {group.name}
                   </Select.Option>
                 ))}
               </Select>
