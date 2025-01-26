@@ -48,11 +48,24 @@ const RegisterResearch = () => {
     { id: 3, name: "Cybersecurity" },
   ];
 
-  // Add groups to mock data
-  const groups = [
-    { id: 1, name: "Research Group A" },
-    { id: 2, name: "Research Group B" },
-    { id: 3, name: "Research Group C" },
+  // Add mock data for groups (replace with API call later)
+  const availableGroups = [
+    {
+      id: 1,
+      name: "AI Research Group",
+      members: [
+        { name: "Dr. Emily Smith", role: "Leader" },
+        { name: "John Doe", role: "Member" },
+      ],
+    },
+    {
+      id: 2,
+      name: "Machine Learning Lab",
+      members: [
+        { name: "Prof. Sarah Johnson", role: "Leader" },
+        { name: "Alice Wong", role: "Member" },
+      ],
+    },
   ];
 
   const onFinish = (values) => {
@@ -122,6 +135,49 @@ const RegisterResearch = () => {
               />
             </Form.Item>
           </div>
+
+          <Divider>Research Details</Divider>
+
+          <Form.Item
+            label="Objectives"
+            name="objectives"
+            rules={[
+              { required: true, message: "Please input research objectives!" },
+            ]}
+          >
+            <Select
+              mode="tags"
+              placeholder="Enter research objectives"
+              className="w-full"
+              tokenSeparators={[","]}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Expected Outcomes"
+            name="expectedOutcomes"
+            rules={[
+              { required: true, message: "Please describe expected outcomes!" },
+            ]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="Describe the expected outcomes and impact of your research"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Required Datasets"
+            name="datasets"
+            extra="Optional: List any specific datasets needed for the research"
+          >
+            <Select
+              mode="tags"
+              placeholder="Enter required datasets"
+              className="w-full"
+              tokenSeparators={[","]}
+            />
+          </Form.Item>
 
           <Divider />
 
@@ -241,15 +297,30 @@ const RegisterResearch = () => {
               rules={[
                 { required: true, message: "Please select a research group!" },
               ]}
+              className="col-span-2"
             >
               <Select
                 placeholder="Select a research group"
-                className="rounded-lg"
-                prefix={<TeamOutlined />}
+                optionLabelProp="label"
+                className="w-full"
               >
-                {groups.map((group) => (
-                  <Select.Option key={group.id} value={group.id}>
-                    {group.name}
+                {availableGroups.map((group) => (
+                  <Select.Option
+                    key={group.id}
+                    value={group.id}
+                    label={
+                      <div className="flex items-center">
+                        <TeamOutlined className="mr-2" />
+                        {group.name}
+                      </div>
+                    }
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{group.name}</span>
+                      <span className="text-xs text-gray-500">
+                        Members: {group.members.map((m) => m.name).join(", ")}
+                      </span>
+                    </div>
                   </Select.Option>
                 ))}
               </Select>
