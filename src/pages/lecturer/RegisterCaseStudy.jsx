@@ -10,6 +10,8 @@ import {
   Divider,
   Space,
   Radio,
+  Collapse,
+  InputNumber,
 } from "antd";
 import {
   UploadOutlined,
@@ -24,11 +26,15 @@ import {
   FlagOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  CaretRightOutlined,
+  DollarOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 const { TextArea } = Input;
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 const RegisterCaseStudy = () => {
   const [form] = Form.useForm();
@@ -74,6 +80,26 @@ const RegisterCaseStudy = () => {
     "Other",
   ];
 
+  // Add mock data for groups (replace with API call later)
+  const availableGroups = [
+    {
+      id: 1,
+      name: "AI Research Group",
+      members: [
+        { name: "Dr. Emily Smith", role: "Leader" },
+        { name: "John Doe", role: "Member" },
+      ],
+    },
+    {
+      id: 2,
+      name: "Machine Learning Lab",
+      members: [
+        { name: "Prof. Sarah Johnson", role: "Leader" },
+        { name: "Alice Wong", role: "Member" },
+      ],
+    },
+  ];
+
   const onFinish = (values) => {
     console.log("Form values:", values);
     message.success("Case study submitted successfully!");
@@ -83,6 +109,16 @@ const RegisterCaseStudy = () => {
     let fileList = [...info.fileList];
     fileList = fileList.slice(-5); // Keep last 5 files
     setFileList(fileList);
+  };
+
+  const removeAuthor = (index) => {
+    const newAuthors = authors.filter((_, i) => i !== index);
+    setAuthors(newAuthors);
+
+    // Update form fields
+    const currentAuthors = form.getFieldValue("authors") || [];
+    const updatedAuthors = currentAuthors.filter((_, i) => i !== index);
+    form.setFieldValue("authors", updatedAuthors);
   };
 
   return (
@@ -130,9 +166,74 @@ const RegisterCaseStudy = () => {
             </Form.Item>
           </div>
 
-          <Divider>Authors Information</Divider>
+          <Collapse
+            expandIcon={({ isActive }) => (
+              <CaretRightOutlined
+                rotate={isActive ? 90 : 0}
+                className="text-[#F2722B]"
+              />
+            )}
+            className="mb-6 border border-gray-200 rounded-lg"
+          >
+            <Collapse.Panel
+              header={
+                <span className="font-medium text-gray-700">
+                  Company Profile (Optional)
+                </span>
+              }
+              key="1"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Form.Item
+                  label="Company Name"
+                  name={["companyProfile", "name"]}
+                >
+                  <Input placeholder="Enter company name" />
+                </Form.Item>
 
-          {/* Authors Section */}
+                <Form.Item
+                  label="Industry"
+                  name={["companyProfile", "industry"]}
+                >
+                  <Input placeholder="Enter industry type" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Company Size"
+                  name={["companyProfile", "size"]}
+                >
+                  <Select placeholder="Select company size">
+                    <Option value="1-50 employees">1-50 employees</Option>
+                    <Option value="51-200 employees">51-200 employees</Option>
+                    <Option value="201-500 employees">201-500 employees</Option>
+                    <Option value="500+ employees">500+ employees</Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  label="Company Website"
+                  name={["companyProfile", "website"]}
+                >
+                  <Input placeholder="Enter company website" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Contact Person"
+                  name={["companyProfile", "contactPerson"]}
+                >
+                  <Input placeholder="Name of company contact person" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Contact Email"
+                  name={["companyProfile", "contactEmail"]}
+                >
+                  <Input placeholder="Email of company contact person" />
+                </Form.Item>
+              </div>
+            </Collapse.Panel>
+          </Collapse>
+          <Divider>Authors Information</Divider>
           {authors.map((author, index) => (
             <div
               key={index}
@@ -178,9 +279,19 @@ const RegisterCaseStudy = () => {
               >
                 <Input prefix={<PhoneOutlined />} placeholder="Phone number" />
               </Form.Item>
+
+              {index > 0 && (
+                <Button
+                  danger
+                  type="link"
+                  onClick={() => removeAuthor(index)}
+                  className="col-span-2 justify-self-end mb-4"
+                >
+                  <DeleteOutlined /> Remove Author
+                </Button>
+              )}
             </div>
           ))}
-
           <Button
             type="dashed"
             onClick={() =>
@@ -193,63 +304,69 @@ const RegisterCaseStudy = () => {
           >
             <TeamOutlined /> Add Author
           </Button>
-
-          <Divider>Issue Details</Divider>
-
-          {/* Issue Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Form.Item
-              label="Type of Issue"
-              name="issue_type"
-              rules={[{ required: true, message: "Please select issue type!" }]}
+          <Divider>Study Scope</Divider>
+          <Form.Item
+            label="Primary Focus"
+            name={["studyScope", "primary"]}
+            rules={[{ required: true, message: "Please input primary focus!" }]}
+          >
+            <Input placeholder="Enter primary focus of the case study" />
+          </Form.Item>
+          <Form.Item
+            label="Secondary Areas"
+            name={["studyScope", "secondary"]}
+            rules={[
+              { required: true, message: "Please input secondary areas!" },
+            ]}
+          >
+            <Select
+              mode="tags"
+              placeholder="Enter secondary areas of focus"
+              className="w-full"
+            />
+          </Form.Item>
+          <Form.Item
+            label="Data Collection Methods"
+            name="dataCollectionMethods"
+            rules={[
+              {
+                required: true,
+                message: "Please select data collection methods!",
+              },
+            ]}
+          >
+            <Select
+              mode="multiple"
+              placeholder="Select data collection methods"
+              className="w-full"
             >
-              <Select
-                placeholder="Select issue type"
-                onChange={(value) => setOtherIssueSelected(value === "Other")}
-              >
-                {issueTypes.map((type) => (
-                  <Option key={type} value={type}>
-                    {type}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            {otherIssueSelected && (
-              <Form.Item
-                label="Other Issue Description"
-                name="other_issue_description"
-                rules={[
-                  { required: true, message: "Please describe the issue!" },
-                ]}
-              >
-                <Input placeholder="Describe the other issue type" />
-              </Form.Item>
-            )}
-
-            <Form.Item label="Related Project" name="related_project">
-              <Select placeholder="Link to existing project">
-                {existingProjects.map((project) => (
-                  <Option key={project.id} value={project.id}>
-                    {project.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              label="Priority Level"
-              name="priority_level"
-              rules={[{ required: true, message: "Please select priority!" }]}
-            >
-              <Radio.Group>
-                <Radio.Button value="Low">Low</Radio.Button>
-                <Radio.Button value="Medium">Medium</Radio.Button>
-                <Radio.Button value="High">High</Radio.Button>
-              </Radio.Group>
-            </Form.Item>
-          </div>
-
+              <Option value="On-site observations">On-site observations</Option>
+              <Option value="Employee interviews">Employee interviews</Option>
+              <Option value="Process analysis">Process analysis</Option>
+              <Option value="Financial data review">
+                Financial data review
+              </Option>
+              <Option value="Document analysis">Document analysis</Option>
+              <Option value="Surveys">Surveys</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="Expected Deliverables"
+            name="expectedDeliverables"
+            rules={[
+              {
+                required: true,
+                message: "Please input expected deliverables!",
+              },
+            ]}
+          >
+            <Select
+              mode="tags"
+              placeholder="Enter expected deliverables"
+              className="w-full"
+              tokenSeparators={[","]}
+            />
+          </Form.Item>
           <Form.Item
             label="Detailed Description of the Issue"
             name="issue_description"
@@ -257,79 +374,79 @@ const RegisterCaseStudy = () => {
           >
             <TextArea placeholder="Describe the issue in detail" rows={4} />
           </Form.Item>
-
           <Form.Item label="Proposed Solutions" name="proposed_solutions">
             <TextArea
               placeholder="Provide suggestions for resolving the issue"
               rows={4}
             />
           </Form.Item>
-
-          <Divider>Assignment and Status</Divider>
-
-          {/* Assignment and Status */}
+          <Divider>Project Details</Divider>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Form.Item
-              label="Responsible Person/Team"
-              name="responsible_person"
+              label="Timeline"
+              name="timeline"
               rules={[
-                {
-                  required: true,
-                  message: "Please select responsible person!",
-                },
+                { required: true, message: "Please select project timeline!" },
               ]}
             >
-              <Select placeholder="Select responsible person/team">
-                {responsiblePersons.map((person) => (
-                  <Option key={person.id} value={person.id}>
-                    {person.name}
-                  </Option>
-                ))}
-              </Select>
+              <RangePicker
+                className="w-full"
+                placeholder={["Start Date", "End Date"]}
+              />
             </Form.Item>
 
             <Form.Item
-              label="Field of Research"
-              name="field_of_research"
-              rules={[
-                { required: true, message: "Please select research field!" },
-              ]}
+              label="Budget (VND)"
+              name="budget"
+              rules={[{ required: true, message: "Please input the budget!" }]}
             >
-              <Select placeholder="Select field of research">
-                {researchFields.map((field) => (
-                  <Option key={field} value={field}>
-                    {field}
-                  </Option>
-                ))}
-              </Select>
+              <InputNumber
+                prefix={<DollarOutlined />}
+                className="w-full"
+                formatter={(value) =>
+                  `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+                placeholder="Enter required budget"
+              />
             </Form.Item>
 
             <Form.Item
-              label="Current Status"
-              name="status"
-              rules={[{ required: true, message: "Please select status!" }]}
+              label="Research Group"
+              name="group_id"
+              rules={[
+                { required: true, message: "Please select a research group!" },
+              ]}
+              className="col-span-2"
             >
-              <Select placeholder="Select current status">
-                <Option value="Draft">Draft</Option>
-                <Option value="In Review">In Review</Option>
-                <Option value="Needs Revision">Needs Revision</Option>
+              <Select
+                placeholder="Select a research group"
+                optionLabelProp="label"
+                className="w-full"
+              >
+                {availableGroups.map((group) => (
+                  <Select.Option
+                    key={group.id}
+                    value={group.id}
+                    label={
+                      <div className="flex items-center">
+                        <TeamOutlined className="mr-2" />
+                        {group.name}
+                      </div>
+                    }
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{group.name}</span>
+                      <span className="text-xs text-gray-500">
+                        Members: {group.members.map((m) => m.name).join(", ")}
+                      </span>
+                    </div>
+                  </Select.Option>
+                ))}
               </Select>
-            </Form.Item>
-
-            <Form.Item label="Resolution Deadline" name="resolution_deadline">
-              <DatePicker className="w-full" />
             </Form.Item>
           </div>
-
-          <Form.Item label="Review Comments" name="review_comments">
-            <TextArea
-              placeholder="Add feedback from reviewers or supervisors"
-              rows={4}
-            />
-          </Form.Item>
-
           <Divider>Documents</Divider>
-
           {/* Document Upload */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Form.Item label="Supporting Files" name="supporting_files">
@@ -344,12 +461,10 @@ const RegisterCaseStudy = () => {
               </Upload>
             </Form.Item>
           </div>
-
           {/* Hidden Fields */}
           <Form.Item name="submission_date" hidden>
             <Input />
           </Form.Item>
-
           {/* Action Buttons */}
           <div className="flex justify-end space-x-4 mt-8">
             <Button

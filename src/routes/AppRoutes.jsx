@@ -69,6 +69,19 @@ export const routes = [
           },
         ],
       },
+      // {
+      //   path: "",
+      //   element: (
+      //     <ProtectedRoutes allowedRoles={["lecturer","department", "office"]}>
+      //       <Outlet />
+      //     </ProtectedRoutes>
+      //   ),
+      //   children: [
+      //     // Add department head routes here
+      //     { path: "pending-request", element: <PendingRequest /> },
+      //     { path: "department-quota", element: <DepartmentQuota /> },
+      //   ],
+      // },
       {
         path: "",
         element: (
