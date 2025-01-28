@@ -229,6 +229,9 @@ const NavBar = () => {
       case "Department Quota":
         navigate("/department-quota");
         break;
+      case "Office Quota":
+        navigate("/office-quota");
+        break;
       default:
         break;
     }
