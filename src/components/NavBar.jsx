@@ -1,8 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  SearchOutlined,
-  InboxOutlined,
-  BellOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   LineChartOutlined,
@@ -46,11 +43,11 @@ const navItems = [
   },
   {
     icon: <ExperimentOutlined />,
-    label: "Research Project",
+    label: "Project",
     subItems: [
-      { icon: <ExperimentOutlined />, label: "Active Research" },
-      { icon: <ProjectOutlined />, label: "Completed Research" },
-      { icon: <FileSearchOutlined />, label: "Research Archive" },
+      { icon: <ExperimentOutlined />, label: "Active Projects" },
+      { icon: <ProjectOutlined />, label: "Completed Projects" },
+      { icon: <FileSearchOutlined />, label: "Projects Archive" },
     ],
   },
   {
@@ -58,9 +55,9 @@ const navItems = [
     label: "Paper",
     badge: "3",
     subItems: [
-      { icon: <FileSearchOutlined />, label: "Active Project" },
+      { icon: <FileSearchOutlined />, label: "Active Paper" },
       { icon: <FormOutlined />, label: "Completed Paper" },
-      { icon: <ProjectOutlined />, label: "Paper History" },
+      { icon: <ProjectOutlined />, label: "Paper Archived" },
     ],
   },
   {
@@ -104,25 +101,20 @@ const NavBar = () => {
 
   //Get user
   const { user } = useSelector((state) => state.auth);
-  const studentNavItems = [
-    "Group",
-    "Registration",
-    "Research Project",
-    "Paper",
-  ];
+  const studentNavItems = ["Group", "Registration", "Project", "Paper"];
   const lecturerNavItems = [
     "Group",
     "Registration",
-    "Research Project",
+    "Project",
     "Paper",
     "Request",
   ];
-  const deptHeadNavItems = ["Research Project", "Paper", "Request", "Quotas"];
-  const officeNavItems = ["Research Project", "Paper", "Request", "Quotas"];
+  const deptHeadNavItems = ["Project", "Paper", "Request", "Quotas"];
+  const officeNavItems = ["Project", "Paper", "Request", "Quotas"];
   const adminNavItems = [
     "Group",
     "Registration",
-    "Research Project",
+    "Project",
     "Paper",
     "Request",
     "Quotas",
