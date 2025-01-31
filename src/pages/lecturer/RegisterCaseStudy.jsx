@@ -186,7 +186,7 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <FileTextOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Basic Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -243,8 +243,8 @@ const RegisterCaseStudy = () => {
               header={
                 <div className="flex items-center">
                   <BankOutlined className="text-xl text-[#F2722B] mr-3" />
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
+                  <div className="">
+                    <h3 className="flex items-start text-lg font-medium text-gray-900">
                       Company Profile
                     </h3>
                     <p className="text-sm text-gray-500">
@@ -366,7 +366,7 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Authors Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -488,7 +488,7 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <AimOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Study Scope
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -596,7 +596,7 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className=" flex items-start text-xl font-semibold text-gray-900">
                   Project Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -744,7 +744,7 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <CalendarOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Timeline & Milestones
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -921,8 +921,8 @@ const RegisterCaseStudy = () => {
             <div className="flex items-center mb-6">
               <FileOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Documents
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                  Additional Documents
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
                   Upload supporting documents and files

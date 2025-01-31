@@ -32,7 +32,10 @@ import {
   DeleteOutlined,
   PhoneOutlined,
   CalendarOutlined,
+  FileOutlined,
   PlusOutlined,
+  InboxOutlined,
+  MinusCircleOutlined,
 } from "@ant-design/icons";
 // import React from "react";
 
@@ -140,7 +143,7 @@ const RegisterConference = () => {
             <div className="flex items-center mb-6">
               <FileTextOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Basic Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -275,7 +278,7 @@ const RegisterConference = () => {
             <div className="flex items-center mb-6">
               <BookOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Conference Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -369,7 +372,7 @@ const RegisterConference = () => {
             <div className="flex items-center mb-6">
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Project Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -518,7 +521,7 @@ const RegisterConference = () => {
             <div className="flex items-center mb-6">
               <CalendarOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Timeline & Milestones
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -683,52 +686,89 @@ const RegisterConference = () => {
             </Form.List>
           </Card>
 
-          <Divider>Additional Information</Divider>
+          {/* <Divider>Additional Information</Divider> */}
+          <Card
+            className="shadow-md rounded-xl border-0 overflow-hidden"
+            headStyle={{
+              borderBottom: "2px solid #F2722B20",
+              padding: "20px 24px",
+            }}
+            bodyStyle={{ padding: "24px" }}
+          >
+            <div className="flex items-center mb-6">
+              <FileOutlined className="text-2xl text-[#F2722B] mr-3" />
+              <div>
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                  Additional Documents
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Upload supporting documents and files
+                </p>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Form.Item
-              label="Supporting Documents"
-              name="documents"
-              rules={[
-                {
-                  required: true,
-                  message: "Please upload required documents!",
-                },
-              ]}
-            >
-              <Upload fileList={fileList} onChange={handleFileChange} multiple>
-                <Button icon={<UploadOutlined />}>Upload Files</Button>
-              </Upload>
-            </Form.Item>
-
-            <Form.Item
-              label="Assigned Reviewer(s)"
-              name="reviewers"
-              rules={[
-                { required: true, message: "Please select reviewer(s)!" },
-              ]}
-            >
-              <Select
-                mode="multiple"
-                placeholder="Select reviewers"
-                className="w-full"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Form.Item
+                label={
+                  <span className="text-gray-700 font-medium text-base">
+                    Supporting Files
+                  </span>
+                }
+                name="supporting_files"
               >
-                {reviewers.map((reviewer) => (
-                  <Select.Option key={reviewer.id} value={reviewer.id}>
-                    {reviewer.name}
-                  </Select.Option>
-                ))}
-              </Select>
+                <Upload.Dragger
+                  fileList={fileList}
+                  onChange={handleFileChange}
+                  multiple
+                  className="rounded-lg"
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined className="text-[#F2722B]" />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or drag files to upload
+                  </p>
+                  <p className="ant-upload-hint">
+                    Support for single or bulk upload
+                  </p>
+                </Upload.Dragger>
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span className="text-gray-700 font-medium text-base">
+                    Associated Documents
+                  </span>
+                }
+                name="associated_documents"
+              >
+                <Upload.Dragger
+                  fileList={fileList}
+                  onChange={handleFileChange}
+                  multiple
+                  className="rounded-lg"
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined className="text-[#F2722B]" />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or drag files to upload
+                  </p>
+                  <p className="ant-upload-hint">
+                    Support for single or bulk upload
+                  </p>
+                </Upload.Dragger>
+              </Form.Item>
+            </div>
+
+            <Form.Item name="submission_date" hidden>
+              <Input type="hidden" value={new Date().toISOString()} />
             </Form.Item>
-          </div>
 
-          <Form.Item name="submission_date" hidden>
-            <Input type="hidden" value={new Date().toISOString()} />
-          </Form.Item>
-
-          <Form.Item name="status" hidden>
-            <Input type="hidden" value="pending" />
-          </Form.Item>
+            <Form.Item name="status" hidden>
+              <Input type="hidden" value="pending" />
+            </Form.Item>
+          </Card>
 
           <div className="flex justify-end space-x-4 mt-12">
             <Button

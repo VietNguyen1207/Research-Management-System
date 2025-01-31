@@ -119,7 +119,7 @@ const RegisterResearch = () => {
             <div className="flex items-center mb-6">
               <FileTextOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Basic Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -219,7 +219,7 @@ const RegisterResearch = () => {
             <div className="flex items-center mb-6">
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Project Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
