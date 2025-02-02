@@ -69,19 +69,19 @@ export const routes = [
           },
         ],
       },
-      // {
-      //   path: "",
-      //   element: (
-      //     <ProtectedRoutes allowedRoles={["lecturer","department", "office"]}>
-      //       <Outlet />
-      //     </ProtectedRoutes>
-      //   ),
-      //   children: [
-      //     // Add department head routes here
-      //     { path: "pending-request", element: <PendingRequest /> },
-      //     { path: "department-quota", element: <DepartmentQuota /> },
-      //   ],
-      // },
+      {
+        path: "",
+        element: (
+          <ProtectedRoutes allowedRoles={["lecturer", "department", "office"]}>
+            <Outlet />
+          </ProtectedRoutes>
+        ),
+        children: [
+          // Add department head routes here
+          { path: "pending-request", element: <PendingRequest /> },
+        ],
+      },
+      //Department + Office
       {
         path: "",
         element: (
@@ -89,12 +89,9 @@ export const routes = [
             <Outlet />
           </ProtectedRoutes>
         ),
-        children: [
-          // Add department head routes here
-          { path: "pending-request", element: <PendingRequest /> },
-          { path: "department-quota", element: <DepartmentQuota /> },
-        ],
+        children: [{ path: "department-quota", element: <DepartmentQuota /> }],
       },
+      // Office
       {
         path: "",
         element: (
@@ -102,10 +99,7 @@ export const routes = [
             <Outlet />
           </ProtectedRoutes>
         ),
-        children: [
-          // Add office routes here
-          { path: "office-quota", element: <OfficeQuota /> },
-        ],
+        children: [{ path: "office-quota", element: <OfficeQuota /> }],
       },
     ],
   },
@@ -116,9 +110,7 @@ export const routes = [
         <Outlet />
       </ProtectedRoutes>
     ),
-    children: [
-      // Add admin routes here
-    ],
+    children: [],
   },
   {
     path: "*",
