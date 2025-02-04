@@ -354,128 +354,6 @@ const RegisterCaseStudy = () => {
             </Collapse.Panel>
           </Collapse>
 
-          {/* Authors Information Card */}
-          <Card
-            className="shadow-md rounded-xl border-0 overflow-hidden"
-            headStyle={{
-              borderBottom: "2px solid #F2722B20",
-              padding: "20px 24px",
-            }}
-            bodyStyle={{ padding: "24px" }}
-          >
-            <div className="flex items-center mb-6">
-              <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
-              <div>
-                <h3 className="flex items-start text-xl font-semibold text-gray-900">
-                  Authors Information
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Details about the authors involved in the case study
-                </p>
-              </div>
-            </div>
-
-            {authors.map((author, index) => (
-              <div key={index} className="bg-gray-50 p-6 rounded-lg mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-medium text-gray-900">
-                    Author {index + 1}
-                  </h4>
-                  {index > 0 && (
-                    <Button
-                      danger
-                      type="text"
-                      onClick={() => removeAuthor(index)}
-                      icon={<DeleteOutlined />}
-                      className="hover:bg-red-50"
-                    >
-                      Remove Author
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Form.Item
-                    label={
-                      <span className="text-gray-700 font-medium">Name</span>
-                    }
-                    name={["authors", index, "name"]}
-                    rules={[{ required: true, message: "Name is required!" }]}
-                  >
-                    <Input
-                      prefix={<UserOutlined className="text-gray-400" />}
-                      placeholder="Full name"
-                      className="rounded-lg py-2.5"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    label={
-                      <span className="text-gray-700 font-medium">Role</span>
-                    }
-                    name={["authors", index, "role"]}
-                    rules={[{ required: true, message: "Role is required!" }]}
-                  >
-                    <Select
-                      placeholder="Select author role"
-                      className="rounded-lg"
-                    >
-                      {authorRoles.map((role) => (
-                        <Option key={role} value={role}>
-                          {role}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item
-                    label={
-                      <span className="text-gray-700 font-medium">Email</span>
-                    }
-                    name={["authors", index, "email"]}
-                    rules={[
-                      { required: true, message: "Email is required!" },
-                      { type: "email", message: "Invalid email!" },
-                    ]}
-                  >
-                    <Input
-                      prefix={<MailOutlined className="text-gray-400" />}
-                      placeholder="Email address"
-                      className="rounded-lg py-2.5"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    label={
-                      <span className="text-gray-700 font-medium">Phone</span>
-                    }
-                    name={["authors", index, "phone"]}
-                    rules={[{ required: true, message: "Phone is required!" }]}
-                  >
-                    <Input
-                      prefix={<PhoneOutlined className="text-gray-400" />}
-                      placeholder="Phone number"
-                      className="rounded-lg py-2.5"
-                    />
-                  </Form.Item>
-                </div>
-              </div>
-            ))}
-
-            <Button
-              type="dashed"
-              onClick={() =>
-                setAuthors([
-                  ...authors,
-                  { name: "", role: "", email: "", phone: "" },
-                ])
-              }
-              className="w-full rounded-lg border-[#F2722B] text-[#F2722B] hover:border-[#F2722B]/80 hover:text-[#F2722B]/80"
-            >
-              <PlusOutlined /> Add Author
-            </Button>
-          </Card>
-
           {/* Study Scope Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
@@ -730,6 +608,128 @@ const RegisterCaseStudy = () => {
                 />
               </Form.Item>
             </div>
+          </Card>
+
+          {/* Authors Information Card */}
+          <Card
+            className="shadow-md rounded-xl border-0 overflow-hidden"
+            headStyle={{
+              borderBottom: "2px solid #F2722B20",
+              padding: "20px 24px",
+            }}
+            bodyStyle={{ padding: "24px" }}
+          >
+            <div className="flex items-center mb-6">
+              <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
+              <div>
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                  Authors Information
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Details about the authors involved in the case study
+                </p>
+              </div>
+            </div>
+
+            {authors.map((author, index) => (
+              <div key={index} className="bg-gray-50 p-6 rounded-lg mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-medium text-gray-900">
+                    Author {index + 1}
+                  </h4>
+                  {index > 0 && (
+                    <Button
+                      danger
+                      type="text"
+                      onClick={() => removeAuthor(index)}
+                      icon={<DeleteOutlined />}
+                      className="hover:bg-red-50"
+                    >
+                      Remove Author
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Name</span>
+                    }
+                    name={["authors", index, "name"]}
+                    rules={[{ required: true, message: "Name is required!" }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined className="text-gray-400" />}
+                      placeholder="Full name"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Role</span>
+                    }
+                    name={["authors", index, "role"]}
+                    rules={[{ required: true, message: "Role is required!" }]}
+                  >
+                    <Select
+                      placeholder="Select author role"
+                      className="rounded-lg"
+                    >
+                      {authorRoles.map((role) => (
+                        <Option key={role} value={role}>
+                          {role}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Email</span>
+                    }
+                    name={["authors", index, "email"]}
+                    rules={[
+                      { required: true, message: "Email is required!" },
+                      { type: "email", message: "Invalid email!" },
+                    ]}
+                  >
+                    <Input
+                      prefix={<MailOutlined className="text-gray-400" />}
+                      placeholder="Email address"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Phone</span>
+                    }
+                    name={["authors", index, "phone"]}
+                    rules={[{ required: true, message: "Phone is required!" }]}
+                  >
+                    <Input
+                      prefix={<PhoneOutlined className="text-gray-400" />}
+                      placeholder="Phone number"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="dashed"
+              onClick={() =>
+                setAuthors([
+                  ...authors,
+                  { name: "", role: "", email: "", phone: "" },
+                ])
+              }
+              className="w-full rounded-lg border-[#F2722B] text-[#F2722B] hover:border-[#F2722B]/80 hover:text-[#F2722B]/80"
+            >
+              <PlusOutlined /> Add Author
+            </Button>
           </Card>
 
           {/* Timeline & Milestones Card */}
