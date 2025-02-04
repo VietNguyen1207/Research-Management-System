@@ -36,6 +36,7 @@ import {
   PlusOutlined,
   InboxOutlined,
   MinusCircleOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 // import React from "react";
 
@@ -360,6 +361,141 @@ const RegisterConference = () => {
               </Form.Item>
             </div>
           </Card>
+
+          {/* Travel Details Collapsible Card */}
+          <Collapse
+            expandIcon={({ isActive }) => (
+              <CaretRightOutlined
+                rotate={isActive ? 90 : 0}
+                className="text-[#F2722B]"
+              />
+            )}
+            className="mb-6 border border-gray-200 rounded-lg overflow-hidden"
+          >
+            <Collapse.Panel
+              header={
+                <div className="flex items-center">
+                  <GlobalOutlined className="text-xl text-[#F2722B] mr-3" />
+                  <div>
+                    <h3 className="flex items-start text-lg font-medium text-gray-900">
+                      Travel Details
+                    </h3>
+                    {/* <p className="text-sm text-gray-500">
+                      Information about travel arrangements (Optional)
+                    </p> */}
+                  </div>
+                </div>
+              }
+              key="1"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Travel Mode
+                    </span>
+                  }
+                  name={["travelDetails", "mode"]}
+                >
+                  <Select
+                    placeholder="Select travel mode"
+                    className="w-full rounded-lg"
+                    options={[
+                      { value: "flight", label: "Flight" },
+                      { value: "train", label: "Train" },
+                      { value: "bus", label: "Bus" },
+                      { value: "car", label: "Car" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Accommodation Type
+                    </span>
+                  }
+                  name={["travelDetails", "accommodation"]}
+                >
+                  <Select
+                    placeholder="Select accommodation type"
+                    className="w-full rounded-lg"
+                    options={[
+                      { value: "hotel", label: "Hotel" },
+                      { value: "airbnb", label: "Airbnb" },
+                      { value: "hostel", label: "Hostel" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Departure Date
+                    </span>
+                  }
+                  name={["travelDetails", "departureDate"]}
+                >
+                  <DatePicker
+                    className="w-full rounded-lg py-2.5"
+                    format="DD/MM/YYYY"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Return Date
+                    </span>
+                  }
+                  name={["travelDetails", "returnDate"]}
+                >
+                  <DatePicker
+                    className="w-full rounded-lg py-2.5"
+                    format="DD/MM/YYYY"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Estimated Travel Cost
+                    </span>
+                  }
+                  name={["travelDetails", "estimatedCost"]}
+                  className="md:col-span-2"
+                >
+                  <InputNumber
+                    prefix="₫"
+                    className="w-full rounded-lg py-1.5"
+                    placeholder="Enter estimated travel cost"
+                    formatter={(value) =>
+                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    }
+                    parser={(value) => value.replace(/\₫\s?|(,*)/g, "")}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Additional Notes
+                    </span>
+                  }
+                  name={["travelDetails", "notes"]}
+                  className="md:col-span-2"
+                >
+                  <Input.TextArea
+                    placeholder="Any special requirements or additional information"
+                    className="rounded-lg"
+                    rows={4}
+                  />
+                </Form.Item>
+              </div>
+            </Collapse.Panel>
+          </Collapse>
 
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
