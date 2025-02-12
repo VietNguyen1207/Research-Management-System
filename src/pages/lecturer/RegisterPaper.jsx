@@ -3,16 +3,19 @@ import {
   Form,
   Input,
   DatePicker,
-  InputNumber,
   Select,
   Button,
   Upload,
   message,
   Divider,
+  InputNumber,
+  Space,
+  Collapse,
   Card,
+  Tag,
 } from "antd";
 import {
-  FileOutlined,
+  UploadOutlined,
   SaveOutlined,
   SendOutlined,
   UserOutlined,
@@ -20,23 +23,47 @@ import {
   DollarOutlined,
   FileTextOutlined,
   TeamOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
+  BookOutlined,
+  AimOutlined,
+  ExperimentOutlined,
+  CheckOutlined,
+  CaretRightOutlined,
+  DeleteOutlined,
+  PhoneOutlined,
   CalendarOutlined,
+  FileOutlined,
+  PlusOutlined,
   InboxOutlined,
+  MinusCircleOutlined,
+  GlobalOutlined,
+  ProjectOutlined,
 } from "@ant-design/icons";
-import { useSelector } from "react-redux";
+// import React from "react";
 
 const { TextArea } = Input;
+const { Panel } = Collapse;
+const { Option } = Select;
 
-const RegisterResearch = () => {
+const RegisterPaper = () => {
   const [form] = Form.useForm();
-  const { user } = useSelector((state) => state.auth);
   const [fileList, setFileList] = useState([]);
+  const [authors, setAuthors] = useState([
+    { name: "", email: "", affiliation: "" },
+  ]);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
 
   // Mock data - replace with API calls
+  const researchFields = [
+    "Computer Science",
+    "Information Technology",
+    "Software Engineering",
+    "Data Science",
+    "Artificial Intelligence",
+  ];
+
   const lecturers = [
     { id: 1, name: "Dr. Emily Smith" },
     { id: 2, name: "Prof. John Doe" },
@@ -69,7 +96,18 @@ const RegisterResearch = () => {
     { id: 12, name: "Web Technologies", departmentId: 3 },
   ];
 
-  // Add mock data for groups (replace with API call later)
+  const paper_type = [
+    { id: 1, name: "Conference" },
+    { id: 2, name: "Magazine" },
+  ];
+
+  const authorRoles = [
+    "Lead Author",
+    "Co-author",
+    "Contributing Author",
+    "Corresponding Author",
+  ];
+
   const availableGroups = [
     {
       id: 1,
@@ -89,16 +127,34 @@ const RegisterResearch = () => {
     },
   ];
 
+  // Add this constant for status options
+  const publisherStatuses = [
+    { value: "pending", label: "Pending" },
+    { value: "submitted", label: "Submitted" },
+    { value: "accepted", label: "Accepted" },
+    { value: "rejected", label: "Rejected" },
+  ];
+
   const onFinish = (values) => {
     console.log("Form values:", values);
-    message.success("Research project submitted successfully!");
+    message.success("Paper submitted successfully!");
   };
 
-  const handleFileChange = (info) => {
-    let fileList = [...info.fileList];
-    fileList = fileList.slice(-1); // Keep only the latest file
-    setFileList(fileList);
+  const removeAuthor = (index) => {
+    const newAuthors = authors.filter((_, i) => i !== index);
+    setAuthors(newAuthors);
+
+    // Update form fields
+    const currentAuthors = form.getFieldValue("authors") || [];
+    const updatedAuthors = currentAuthors.filter((_, i) => i !== index);
+    form.setFieldValue("authors", updatedAuthors);
   };
+
+  // const handleFileChange = (info) => {
+  //   let fileList = [...info.fileList];
+  //   fileList = fileList.slice(-1);
+  //   setFileList(fileList);
+  // };
 
   const handleDepartmentChange = (departmentId) => {
     setSelectedDepartment(departmentId);
@@ -114,28 +170,22 @@ const RegisterResearch = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Enhanced Header Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-3">
-            Register New Research
+            Register New Paper
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Please provide detailed information about your research project
+            Please provide detailed information about your paper
           </p>
         </div>
 
         <Form
           form={form}
-          name="register_research"
+          name="register_conference"
           layout="vertical"
           onFinish={onFinish}
           className="space-y-8"
-          initialValues={{
-            type: "research",
-            status: "pending",
-          }}
         >
-          {/* Basic Information Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -151,52 +201,64 @@ const RegisterResearch = () => {
                   Basic Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Enter the fundamental details of your research
+                  Enter the fundamental details of your paper
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {/* hidden type field */}
-              <Form.Item name="type" hidden>
-                <Input type="hidden" />
-              </Form.Item>
               <Form.Item
                 label={
                   <span className="text-gray-700 font-medium text-base">
-                    Project Title
+                    Paper Title
                   </span>
                 }
                 name="title"
                 rules={[
-                  { required: true, message: "Please input project title!" },
+                  { required: true, message: "Please input paper title!" },
                 ]}
               >
                 <Input
                   prefix={<FileTextOutlined className="text-gray-400" />}
-                  placeholder="Enter the project title"
+                  placeholder="Enter the full title of the paper"
                   className="rounded-lg py-2.5"
                 />
               </Form.Item>
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium">
-                    Project Description
+                  <span className="text-gray-700 font-medium text-base">
+                    Abstract
                   </span>
                 }
-                name="description"
+                name="abstract"
+                rules={[{ required: true, message: "Please input abstract!" }]}
+              >
+                <TextArea
+                  placeholder="Provide a concise summary of the paper (250-300 words)"
+                  rows={4}
+                  className="rounded-lg"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span className="text-gray-700 font-medium text-base">
+                    Publisher
+                  </span>
+                }
+                name="publisher"
                 rules={[
                   {
                     required: true,
-                    message: "Please input project description!",
+                    message: "Please input publisher you submitted to!",
                   },
                 ]}
               >
-                <TextArea
-                  placeholder="Describe the project in detail"
-                  rows={4}
-                  className="rounded-lg"
+                <Input
+                  prefix={<GlobalOutlined className="text-gray-400" />}
+                  placeholder="Enter publisher name"
+                  className="rounded-lg py-2.5"
                 />
               </Form.Item>
             </div>
@@ -212,54 +274,17 @@ const RegisterResearch = () => {
             bodyStyle={{ padding: "24px" }}
           >
             <div className="flex items-center mb-6">
-              <FileTextOutlined className="text-2xl text-[#F2722B] mr-3" />
+              <ProjectOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
                 <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Project Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Enter the details of your research
+                  Specify the project details for your paper
                 </p>
               </div>
             </div>
 
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Project Objectives
-                </span>
-              }
-              name="title"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input project objectives!",
-                },
-              ]}
-            >
-              <Input
-                prefix={<FileTextOutlined className="text-gray-400" />}
-                placeholder="Enter the project objectives "
-                className="rounded-lg py-2.5"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium">
-                  Required Datasets
-                </span>
-              }
-              name="datasets"
-              extra="Optional: List any specific datasets needed for the research"
-            >
-              <Select
-                mode="tags"
-                placeholder="Enter required datasets"
-                className="w-full"
-                tokenSeparators={[","]}
-              />
-            </Form.Item>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Form.Item
                 label={
@@ -317,17 +342,39 @@ const RegisterResearch = () => {
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium">
-                    Budget (VND)
+                  <span className="text-gray-700 font-medium text-base">
+                    Paper Type
                   </span>
                 }
-                name="budget"
-                className="md:col-span-2"
+                name="paperType_ids"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select type of your paper!",
+                  },
+                ]}
+              >
+                <Select placeholder="Select paper type" className="rounded-lg">
+                  {paper_type.map((paperType) => (
+                    <Select.Option key={paperType.id} value={paperType.id}>
+                      {paperType.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span className="text-gray-700 font-medium text-base">
+                    Royalties (VND)
+                  </span>
+                }
+                name="royalties"
                 rules={[{ required: true, message: "Please input budget!" }]}
               >
                 <InputNumber
                   prefix={<DollarOutlined className="text-gray-400" />}
-                  placeholder="Enter proposed budget"
+                  placeholder="Enter proposed royalties"
                   className="w-full rounded-lg"
                   formatter={(value) =>
                     `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -338,7 +385,7 @@ const RegisterResearch = () => {
             </div>
           </Card>
 
-          {/* Team members Card */}
+          {/* Authors Information Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -351,70 +398,113 @@ const RegisterResearch = () => {
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
                 <h3 className="flex items-start text-xl font-semibold text-gray-900">
-                  Team Members
+                  Authors Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Team members information
+                  Details about the authors involved in the case study
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium">Supervisor</span>
-                }
-                name="lecturer_id"
-                rules={[
-                  { required: true, message: "Please select a supervisor!" },
-                ]}
-              >
-                <Select
-                  placeholder="Select a supervisor"
-                  className="rounded-lg"
-                  suffixIcon={<UserOutlined className="text-gray-400" />}
-                >
-                  {lecturers.map((lecturer) => (
-                    <Select.Option key={lecturer.id} value={lecturer.id}>
-                      {lecturer.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
+            {authors.map((author, index) => (
+              <div key={index} className="bg-gray-50 p-6 rounded-lg mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-medium text-gray-900">
+                    Author {index + 1}
+                  </h4>
+                  {index > 0 && (
+                    <Button
+                      danger
+                      type="text"
+                      onClick={() => removeAuthor(index)}
+                      icon={<DeleteOutlined />}
+                      className="hover:bg-red-50"
+                    >
+                      Remove Author
+                    </Button>
+                  )}
+                </div>
 
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium">
-                    Research Group
-                  </span>
-                }
-                name="group_id"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a research group!",
-                  },
-                ]}
-              >
-                <Select
-                  placeholder="Select a research group"
-                  className="rounded-lg"
-                  suffixIcon={<TeamOutlined className="text-gray-400" />}
-                >
-                  {availableGroups.map((group) => (
-                    <Select.Option key={group.id} value={group.id}>
-                      <div>
-                        <div className="font-medium">{group.name}</div>
-                        <div className="text-xs text-gray-500">
-                          Leader:{" "}
-                          {group.members.find((m) => m.role === "Leader")?.name}
-                        </div>
-                      </div>
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Name</span>
+                    }
+                    name={["authors", index, "name"]}
+                    rules={[{ required: true, message: "Name is required!" }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined className="text-gray-400" />}
+                      placeholder="Full name"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Role</span>
+                    }
+                    name={["authors", index, "role"]}
+                    rules={[{ required: true, message: "Role is required!" }]}
+                  >
+                    <Select
+                      placeholder="Select author role"
+                      className="rounded-lg"
+                    >
+                      {authorRoles.map((role) => (
+                        <Option key={role} value={role}>
+                          {role}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Email</span>
+                    }
+                    name={["authors", index, "email"]}
+                    rules={[
+                      { required: true, message: "Email is required!" },
+                      { type: "email", message: "Invalid email!" },
+                    ]}
+                  >
+                    <Input
+                      prefix={<MailOutlined className="text-gray-400" />}
+                      placeholder="Email address"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Phone</span>
+                    }
+                    name={["authors", index, "phone"]}
+                    rules={[{ required: true, message: "Phone is required!" }]}
+                  >
+                    <Input
+                      prefix={<PhoneOutlined className="text-gray-400" />}
+                      placeholder="Phone number"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="dashed"
+              onClick={() =>
+                setAuthors([
+                  ...authors,
+                  { name: "", role: "", email: "", phone: "" },
+                ])
+              }
+              className="w-full rounded-lg border-[#F2722B] text-[#F2722B] hover:border-[#F2722B]/80 hover:text-[#F2722B]/80"
+            >
+              <PlusOutlined /> Add Author
+            </Button>
           </Card>
 
           {/* Timeline & Milestones Card */}
@@ -429,18 +519,18 @@ const RegisterResearch = () => {
             <div className="flex items-center mb-6">
               <CalendarOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
                   Timeline & Milestones
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Define project milestones and deadlines
+                  Define key milestones and their deadlines
                 </p>
               </div>
             </div>
 
             <Form.Item
               label={
-                <span className="text-gray-700 font-medium">
+                <span className="text-gray-700 font-medium text-base">
                   Project Duration
                 </span>
               }
@@ -491,7 +581,7 @@ const RegisterResearch = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <span className="text-gray-700 font-medium">
+                      <span className="text-gray-700 font-medium text-base">
                         Project Milestones
                       </span>
                       <div className="text-sm text-gray-500 mt-1">
@@ -543,142 +633,68 @@ const RegisterResearch = () => {
                               </span>
                             </div>
                             <Button
+                              danger
                               type="text"
-                              icon={<MinusCircleOutlined />}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => remove(field.name)}
+                              icon={<DeleteOutlined />}
+                              className="hover:bg-red-50"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+
+                          <Form.Item
+                            {...field}
+                            label={
+                              <span className="text-gray-700 font-medium">
+                                Milestone Name
+                              </span>
+                            }
+                            name={[field.name, "name"]}
+                            fieldKey={[field.fieldKey, "name"]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Milestone name is required",
+                              },
+                            ]}
+                          >
+                            <Input
+                              placeholder="Enter milestone name"
+                              className="rounded-lg py-2.5"
                             />
-                          </div>
+                          </Form.Item>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Form.Item
-                              {...field}
-                              name={[field.name, "title"]}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: "Please enter milestone title",
-                                },
-                              ]}
-                            >
-                              <Input
-                                placeholder="Enter milestone title"
-                                className="rounded-lg"
-                              />
-                            </Form.Item>
-
-                            <Form.Item
-                              {...field}
-                              name={[field.name, "deadline"]}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: "Please select deadline",
-                                },
-                              ]}
-                            >
-                              <DatePicker
-                                placeholder="Select deadline"
-                                className="w-full rounded-lg"
-                              />
-                            </Form.Item>
-                          </div>
+                          <Form.Item
+                            {...field}
+                            label={
+                              <span className="text-gray-700 font-medium">
+                                Deadline
+                              </span>
+                            }
+                            name={[field.name, "deadline"]}
+                            fieldKey={[field.fieldKey, "deadline"]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Deadline is required",
+                              },
+                            ]}
+                          >
+                            <DatePicker
+                              placeholder="Select deadline"
+                              className="w-full rounded-lg"
+                            />
+                          </Form.Item>
                         </div>
                       ))}
                     </div>
                   )}
-
-                  <Form.ErrorList errors={errors} />
                 </div>
               )}
             </Form.List>
           </Card>
 
-          {/* Additional Document */}
-          <Card
-            className="shadow-md rounded-xl border-0 overflow-hidden"
-            headStyle={{
-              borderBottom: "2px solid #F2722B20",
-              padding: "20px 24px",
-            }}
-            bodyStyle={{ padding: "24px" }}
-          >
-            <div className="flex items-center mb-6">
-              <FileOutlined className="text-2xl text-[#F2722B] mr-3" />
-              <div>
-                <h3 className="flex items-start text-xl font-semibold text-gray-900">
-                  Additional Documents
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Upload supporting documents and files
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Supporting Files
-                  </span>
-                }
-                name="supporting_files"
-              >
-                <Upload.Dragger
-                  fileList={fileList}
-                  onChange={handleFileChange}
-                  multiple
-                  className="rounded-lg"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined className="text-[#F2722B]" />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or drag files to upload
-                  </p>
-                  <p className="ant-upload-hint">
-                    Support for single or bulk upload
-                  </p>
-                </Upload.Dragger>
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Associated Documents
-                  </span>
-                }
-                name="associated_documents"
-              >
-                <Upload.Dragger
-                  fileList={fileList}
-                  onChange={handleFileChange}
-                  multiple
-                  className="rounded-lg"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined className="text-[#F2722B]" />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or drag files to upload
-                  </p>
-                  <p className="ant-upload-hint">
-                    Support for single or bulk upload
-                  </p>
-                </Upload.Dragger>
-              </Form.Item>
-            </div>
-
-            <Form.Item name="submission_date" hidden>
-              <Input type="hidden" value={new Date().toISOString()} />
-            </Form.Item>
-
-            <Form.Item name="status" hidden>
-              <Input type="hidden" value="pending" />
-            </Form.Item>
-          </Card>
-
-          {/* Enhanced Action Buttons */}
           <div className="flex justify-end space-x-4 mt-12">
             <Button
               icon={<SaveOutlined />}
@@ -692,7 +708,7 @@ const RegisterResearch = () => {
               icon={<SendOutlined />}
               className="rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none px-6 h-11 flex items-center"
             >
-              Submit Proposal
+              Submit Conference Paper
             </Button>
           </div>
         </Form>
@@ -701,4 +717,4 @@ const RegisterResearch = () => {
   );
 };
 
-export default RegisterResearch;
+export default RegisterPaper;

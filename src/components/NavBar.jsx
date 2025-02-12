@@ -36,9 +36,9 @@ const navItems = [
     icon: <FormOutlined />,
     label: "Registration",
     subItems: [
-      { icon: <FormOutlined />, label: "Research" },
-      { icon: <FileSearchOutlined />, label: "Conference Project" },
-      { icon: <ProjectOutlined />, label: "Case Study Project" },
+      { icon: <FormOutlined />, label: "Research Project" },
+      { icon: <FileSearchOutlined />, label: "Paper Project" },
+      // { icon: <ProjectOutlined />, label: "Case Study Project" },
     ],
   },
   {
@@ -178,7 +178,7 @@ const NavBar = () => {
             return {
               ...item,
               subItems: item.subItems.filter(
-                (subItem) => subItem.label === "Research"
+                (subItem) => subItem.label === "Research Project"
               ),
             };
           }
@@ -203,15 +203,15 @@ const NavBar = () => {
       case "Manage Members":
         navigate("/manage-group");
         break;
-      case "Research":
-        navigate("/register-research");
+      case "Research Project":
+        navigate("/register-research-project");
         break;
-      case "Conference Project":
-        navigate("/register-conference-paper");
+      case "Paper Project":
+        navigate("/register-paper");
         break;
-      case "Case Study Project":
-        navigate("/register-case-study-paper");
-        break;
+      // case "Case Study Project":
+      //   navigate("/register-case-study-paper");
+      //   break;
       case "Pending Request":
         navigate("/pending-request");
         break;

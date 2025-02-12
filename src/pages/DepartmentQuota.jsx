@@ -193,7 +193,6 @@ const DepartmentQuota = () => {
       key: "actions",
       render: (_, record) => (
         <div className="space-y-2">
-          55
           <Button
             type="primary"
             icon={<DollarOutlined />}
