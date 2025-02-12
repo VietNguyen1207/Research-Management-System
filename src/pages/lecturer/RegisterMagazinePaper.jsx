@@ -8,9 +8,10 @@ import {
   Upload,
   message,
   Divider,
-  InputNumber,
   Space,
+  Radio,
   Collapse,
+  InputNumber,
   Card,
 } from "antd";
 import {
@@ -19,45 +20,74 @@ import {
   SendOutlined,
   UserOutlined,
   BankOutlined,
-  DollarOutlined,
   FileTextOutlined,
   TeamOutlined,
   MailOutlined,
-  EnvironmentOutlined,
-  BookOutlined,
-  AimOutlined,
-  ExperimentOutlined,
-  CheckOutlined,
-  CaretRightOutlined,
-  DeleteOutlined,
   PhoneOutlined,
-  CalendarOutlined,
-  FileOutlined,
-  PlusOutlined,
-  InboxOutlined,
+  FlagOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  CaretRightOutlined,
+  DollarOutlined,
+  DeleteOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
+  CalendarOutlined,
+  ShopOutlined,
   GlobalOutlined,
+  InboxOutlined,
+  AimOutlined,
+  FileOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 // import React from "react";
 
 const { TextArea } = Input;
-const { Panel } = Collapse;
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
-const RegisterConference = () => {
+const RegisterMagazinePaper = () => {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [authors, setAuthors] = useState([
-    { name: "", email: "", affiliation: "" },
+    { name: "", role: "", email: "", phone: "" },
   ]);
+  const [otherIssueSelected, setOtherIssueSelected] = useState(false);
 
   // Mock data - replace with API calls
+  const existingProjects = [
+    { id: 1, name: "Project Alpha" },
+    { id: 2, name: "Project Beta" },
+    { id: 3, name: "Project Gamma" },
+  ];
+
+  const responsiblePersons = [
+    { id: 1, name: "Dr. Emily Smith" },
+    { id: 2, name: "Prof. John Doe" },
+    { id: 3, name: "Research Team A" },
+  ];
+
   const researchFields = [
     "Computer Science",
     "Information Technology",
     "Software Engineering",
     "Data Science",
     "Artificial Intelligence",
+  ];
+
+  const authorRoles = [
+    "Lead Author",
+    "Co-author",
+    "Contributing Author",
+    "Corresponding Author",
+  ];
+
+  const issueTypes = [
+    "Incomplete Research",
+    "Missing Data",
+    "Pending Review Feedback",
+    "Budget Constraints",
+    "Other",
   ];
 
   const lecturers = [
@@ -78,12 +108,7 @@ const RegisterConference = () => {
     { id: 3, name: "Cybersecurity" },
   ];
 
-  const reviewers = [
-    { id: 1, name: "Dr. Emily Smith" },
-    { id: 2, name: "Prof. John Doe" },
-    { id: 3, name: "Dr. Sarah Johnson" },
-  ];
-
+  // Add mock data for groups (replace with API call later)
   const availableGroups = [
     {
       id: 1,
@@ -105,34 +130,51 @@ const RegisterConference = () => {
 
   const onFinish = (values) => {
     console.log("Form values:", values);
-    message.success("Conference paper submitted successfully!");
+    message.success("Case study submitted successfully!");
   };
 
   const handleFileChange = (info) => {
     let fileList = [...info.fileList];
-    fileList = fileList.slice(-1);
+    fileList = fileList.slice(-5); // Keep last 5 files
     setFileList(fileList);
+  };
+
+  const removeAuthor = (index) => {
+    const newAuthors = authors.filter((_, i) => i !== index);
+    setAuthors(newAuthors);
+
+    // Update form fields
+    const currentAuthors = form.getFieldValue("authors") || [];
+    const updatedAuthors = currentAuthors.filter((_, i) => i !== index);
+    form.setFieldValue("authors", updatedAuthors);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
+        {/* Enhanced Header Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-3">
-            Register Conference Paper
+            Register Case Study
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Please provide detailed information about your conference paper
+            Please provide detailed information about your case study
           </p>
         </div>
 
         <Form
           form={form}
-          name="register_conference"
+          name="register_case_study"
           layout="vertical"
           onFinish={onFinish}
           className="space-y-8"
+          initialValues={{
+            submission_date: dayjs(),
+            status: "Draft",
+            priority_level: "Medium",
+          }}
         >
+          {/* Basic Information Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -148,7 +190,7 @@ const RegisterConference = () => {
                   Basic Information
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Enter the fundamental details of your conference paper
+                  Enter the fundamental details of your case study
                 </p>
               </div>
             </div>
@@ -157,17 +199,15 @@ const RegisterConference = () => {
               <Form.Item
                 label={
                   <span className="text-gray-700 font-medium text-base">
-                    Paper Title
+                    Title
                   </span>
                 }
                 name="title"
-                rules={[
-                  { required: true, message: "Please input paper title!" },
-                ]}
+                rules={[{ required: true, message: "Please input the title!" }]}
               >
                 <Input
                   prefix={<FileTextOutlined className="text-gray-400" />}
-                  placeholder="Enter the full title of the paper"
+                  placeholder="Enter the working title of the paper"
                   className="rounded-lg py-2.5"
                 />
               </Form.Item>
@@ -179,190 +219,17 @@ const RegisterConference = () => {
                   </span>
                 }
                 name="abstract"
-                rules={[{ required: true, message: "Please input abstract!" }]}
               >
                 <TextArea
-                  placeholder="Provide a concise summary of the paper (250-300 words)"
+                  placeholder="Provide a brief overview of the paper"
                   rows={4}
                   className="rounded-lg"
                 />
               </Form.Item>
-
-              <div className="grid grid-cols-1 gap-6">
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Purpose of the Paper
-                    </span>
-                  }
-                  name="purpose"
-                  rules={[{ required: true, message: "Purpose is required!" }]}
-                >
-                  <TextArea
-                    prefix={<AimOutlined />}
-                    placeholder="Explain the goal of your research"
-                    rows={3}
-                    className="rounded-lg"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Methodology
-                    </span>
-                  }
-                  name="methodology"
-                  rules={[
-                    { required: true, message: "Methodology is required!" },
-                  ]}
-                >
-                  <TextArea
-                    prefix={<ExperimentOutlined />}
-                    placeholder="Describe your research approach"
-                    rows={3}
-                    className="rounded-lg"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Expected Outcomes
-                    </span>
-                  }
-                  name="expected_outcomes"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Expected outcomes are required!",
-                    },
-                  ]}
-                >
-                  <TextArea
-                    prefix={<CheckOutlined />}
-                    placeholder="Describe anticipated results"
-                    rows={3}
-                    className="rounded-lg"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Keywords
-                    </span>
-                  }
-                  name="keywords"
-                  rules={[
-                    { required: true, message: "Please input keywords!" },
-                  ]}
-                >
-                  <Select
-                    mode="tags"
-                    placeholder="Enter keywords (e.g., Artificial Intelligence, Data Science)"
-                    className="rounded-lg"
-                  />
-                </Form.Item>
-              </div>
             </div>
           </Card>
 
-          <Card
-            className="shadow-md rounded-xl border-0 overflow-hidden"
-            headStyle={{
-              borderBottom: "2px solid #F2722B20",
-              padding: "20px 24px",
-            }}
-            bodyStyle={{ padding: "24px" }}
-          >
-            <div className="flex items-center mb-6">
-              <BookOutlined className="text-2xl text-[#F2722B] mr-3" />
-              <div>
-                <h3 className="flex items-start text-xl font-semibold text-gray-900">
-                  Conference Details
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Provide information about the conference venue and
-                  presentation
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Conference Location
-                  </span>
-                }
-                name="location"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please input conference location!",
-                  },
-                ]}
-              >
-                <Input
-                  prefix={<EnvironmentOutlined className="text-gray-400" />}
-                  placeholder="Enter conference location"
-                  className="rounded-lg py-2.5"
-                />
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Presentation Type
-                  </span>
-                }
-                name="presentationType"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select presentation type!",
-                  },
-                ]}
-              >
-                <Select
-                  placeholder="Select presentation type"
-                  className="rounded-lg"
-                >
-                  <Option value="Oral Presentation">Oral Presentation</Option>
-                  <Option value="Poster Presentation">
-                    Poster Presentation
-                  </Option>
-                  <Option value="Workshop">Workshop</Option>
-                  <Option value="Panel Discussion">Panel Discussion</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Publishing Journal
-                  </span>
-                }
-                name="publishingJournal"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please input publishing journal!",
-                  },
-                ]}
-                className="md:col-span-2"
-              >
-                <Input
-                  prefix={<BookOutlined className="text-gray-400" />}
-                  placeholder="Enter target publishing journal"
-                  className="rounded-lg py-2.5"
-                />
-              </Form.Item>
-            </div>
-          </Card>
-
-          {/* Travel Details Collapsible Card */}
+          {/* Company Profile Collapsible Card */}
           <Collapse
             expandIcon={({ isActive }) => (
               <CaretRightOutlined
@@ -375,128 +242,227 @@ const RegisterConference = () => {
             <Collapse.Panel
               header={
                 <div className="flex items-center">
-                  <GlobalOutlined className="text-xl text-[#F2722B] mr-3" />
-                  <div>
+                  <BankOutlined className="text-xl text-[#F2722B] mr-3" />
+                  <div className="">
                     <h3 className="flex items-start text-lg font-medium text-gray-900">
-                      Travel Details
+                      Company Profile
                     </h3>
-                    {/* <p className="text-sm text-gray-500">
-                      Information about travel arrangements (Optional)
-                    </p> */}
+                    <p className="text-sm text-gray-500">
+                      Information about the company involved (Optional)
+                    </p>
                   </div>
                 </div>
               }
               key="1"
+              className="bg-white"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                 <Form.Item
                   label={
                     <span className="text-gray-700 font-medium text-base">
-                      Travel Mode
+                      Company Name
                     </span>
                   }
-                  name={["travelDetails", "mode"]}
+                  name={["companyProfile", "name"]}
+                >
+                  <Input
+                    prefix={<BankOutlined className="text-gray-400" />}
+                    placeholder="Enter company name"
+                    className="rounded-lg py-2.5"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Industry
+                    </span>
+                  }
+                  name={["companyProfile", "industry"]}
+                >
+                  <Input
+                    prefix={<ShopOutlined className="text-gray-400" />}
+                    placeholder="Enter industry type"
+                    className="rounded-lg py-2.5"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Company Size
+                    </span>
+                  }
+                  name={["companyProfile", "size"]}
                 >
                   <Select
-                    placeholder="Select travel mode"
-                    className="w-full rounded-lg"
-                    options={[
-                      { value: "flight", label: "Flight" },
-                      { value: "train", label: "Train" },
-                      { value: "bus", label: "Bus" },
-                      { value: "car", label: "Car" },
-                      { value: "other", label: "Other" },
-                    ]}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Accommodation Type
-                    </span>
-                  }
-                  name={["travelDetails", "accommodation"]}
-                >
-                  <Select
-                    placeholder="Select accommodation type"
-                    className="w-full rounded-lg"
-                    options={[
-                      { value: "hotel", label: "Hotel" },
-                      { value: "airbnb", label: "Airbnb" },
-                      { value: "hostel", label: "Hostel" },
-                      { value: "other", label: "Other" },
-                    ]}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Departure Date
-                    </span>
-                  }
-                  name={["travelDetails", "departureDate"]}
-                >
-                  <DatePicker
-                    className="w-full rounded-lg py-2.5"
-                    format="DD/MM/YYYY"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Return Date
-                    </span>
-                  }
-                  name={["travelDetails", "returnDate"]}
-                >
-                  <DatePicker
-                    className="w-full rounded-lg py-2.5"
-                    format="DD/MM/YYYY"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Estimated Travel Cost
-                    </span>
-                  }
-                  name={["travelDetails", "estimatedCost"]}
-                  className="md:col-span-2"
-                >
-                  <InputNumber
-                    prefix="₫"
-                    className="w-full rounded-lg py-1.5"
-                    placeholder="Enter estimated travel cost"
-                    formatter={(value) =>
-                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(value) => value.replace(/\₫\s?|(,*)/g, "")}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label={
-                    <span className="text-gray-700 font-medium text-base">
-                      Additional Notes
-                    </span>
-                  }
-                  name={["travelDetails", "notes"]}
-                  className="md:col-span-2"
-                >
-                  <Input.TextArea
-                    placeholder="Any special requirements or additional information"
+                    placeholder="Select company size"
                     className="rounded-lg"
-                    rows={4}
+                  >
+                    <Option value="1-50 employees">1-50 employees</Option>
+                    <Option value="51-200 employees">51-200 employees</Option>
+                    <Option value="201-500 employees">201-500 employees</Option>
+                    <Option value="500+ employees">500+ employees</Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Company Website
+                    </span>
+                  }
+                  name={["companyProfile", "website"]}
+                >
+                  <Input
+                    prefix={<GlobalOutlined className="text-gray-400" />}
+                    placeholder="Enter company website"
+                    className="rounded-lg py-2.5"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Contact Person
+                    </span>
+                  }
+                  name={["companyProfile", "contactPerson"]}
+                >
+                  <Input
+                    prefix={<UserOutlined className="text-gray-400" />}
+                    placeholder="Name of company contact person"
+                    className="rounded-lg py-2.5"
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={
+                    <span className="text-gray-700 font-medium text-base">
+                      Contact Email
+                    </span>
+                  }
+                  name={["companyProfile", "contactEmail"]}
+                >
+                  <Input
+                    prefix={<MailOutlined className="text-gray-400" />}
+                    placeholder="Email of company contact person"
+                    className="rounded-lg py-2.5"
                   />
                 </Form.Item>
               </div>
             </Collapse.Panel>
           </Collapse>
 
+          {/* Study Scope Card */}
+          <Card
+            className="shadow-md rounded-xl border-0 overflow-hidden"
+            headStyle={{
+              borderBottom: "2px solid #F2722B20",
+              padding: "20px 24px",
+            }}
+            bodyStyle={{ padding: "24px" }}
+          >
+            <div className="flex items-center mb-6">
+              <AimOutlined className="text-2xl text-[#F2722B] mr-3" />
+              <div>
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                  Study Scope
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Define the scope and focus areas of your case study
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <Form.Item
+                label="Primary Focus"
+                name={["studyScope", "primary"]}
+                rules={[
+                  { required: true, message: "Please input primary focus!" },
+                ]}
+              >
+                <Input placeholder="Enter primary focus of the case study" />
+              </Form.Item>
+              <Form.Item
+                label="Secondary Areas"
+                name={["studyScope", "secondary"]}
+                rules={[
+                  { required: true, message: "Please input secondary areas!" },
+                ]}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Enter secondary areas of focus"
+                  className="w-full"
+                />
+              </Form.Item>
+              <Form.Item
+                label="Data Collection Methods"
+                name="dataCollectionMethods"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select data collection methods!",
+                  },
+                ]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Select data collection methods"
+                  className="w-full"
+                >
+                  <Option value="On-site observations">
+                    On-site observations
+                  </Option>
+                  <Option value="Employee interviews">
+                    Employee interviews
+                  </Option>
+                  <Option value="Process analysis">Process analysis</Option>
+                  <Option value="Financial data review">
+                    Financial data review
+                  </Option>
+                  <Option value="Document analysis">Document analysis</Option>
+                  <Option value="Surveys">Surveys</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label="Expected Deliverables"
+                name="expectedDeliverables"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please input expected deliverables!",
+                  },
+                ]}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Enter expected deliverables"
+                  className="w-full"
+                  tokenSeparators={[","]}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Detailed Description of the Issue"
+                name="issue_description"
+                rules={[
+                  { required: true, message: "Please describe the issue!" },
+                ]}
+              >
+                <TextArea placeholder="Describe the issue in detail" rows={4} />
+              </Form.Item>
+              <Form.Item label="Proposed Solutions" name="proposed_solutions">
+                <TextArea
+                  placeholder="Provide suggestions for resolving the issue"
+                  rows={4}
+                />
+              </Form.Item>
+            </div>
+          </Card>
+
+          {/* Project Details Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -508,11 +474,11 @@ const RegisterConference = () => {
             <div className="flex items-center mb-6">
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
-                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                <h3 className=" flex items-start text-xl font-semibold text-gray-900">
                   Project Details
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Provide information about the project and research team
+                  Details about the project
                 </p>
               </div>
             </div>
@@ -520,20 +486,20 @@ const RegisterConference = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Conference Lead
+                  <span className="text-gray-700 font-medium">
+                    Case Study Lead
                   </span>
                 }
-                name="conference_lead_id"
+                name="case_lead_id"
                 rules={[
                   {
                     required: true,
-                    message: "Please select a conference lead!",
+                    message: "Please select a case study lead!",
                   },
                 ]}
               >
                 <Select
-                  placeholder="Select a conference lead"
+                  placeholder="Select a case study lead"
                   className="rounded-lg"
                   suffixIcon={<UserOutlined className="text-gray-400" />}
                 >
@@ -547,7 +513,7 @@ const RegisterConference = () => {
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium text-base">
+                  <span className="text-gray-700 font-medium">
                     Research Team
                   </span>
                 }
@@ -577,8 +543,8 @@ const RegisterConference = () => {
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Conference Category
+                  <span className="text-gray-700 font-medium">
+                    Study Category
                   </span>
                 }
                 name="category_ids"
@@ -601,9 +567,7 @@ const RegisterConference = () => {
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Department
-                  </span>
+                  <span className="text-gray-700 font-medium">Department</span>
                 }
                 name="department_id"
                 rules={[
@@ -625,7 +589,7 @@ const RegisterConference = () => {
 
               <Form.Item
                 label={
-                  <span className="text-gray-700 font-medium text-base">
+                  <span className="text-gray-700 font-medium">
                     Budget (VND)
                   </span>
                 }
@@ -646,6 +610,129 @@ const RegisterConference = () => {
             </div>
           </Card>
 
+          {/* Authors Information Card */}
+          <Card
+            className="shadow-md rounded-xl border-0 overflow-hidden"
+            headStyle={{
+              borderBottom: "2px solid #F2722B20",
+              padding: "20px 24px",
+            }}
+            bodyStyle={{ padding: "24px" }}
+          >
+            <div className="flex items-center mb-6">
+              <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
+              <div>
+                <h3 className="flex items-start text-xl font-semibold text-gray-900">
+                  Authors Information
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Details about the authors involved in the case study
+                </p>
+              </div>
+            </div>
+
+            {authors.map((author, index) => (
+              <div key={index} className="bg-gray-50 p-6 rounded-lg mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-medium text-gray-900">
+                    Author {index + 1}
+                  </h4>
+                  {index > 0 && (
+                    <Button
+                      danger
+                      type="text"
+                      onClick={() => removeAuthor(index)}
+                      icon={<DeleteOutlined />}
+                      className="hover:bg-red-50"
+                    >
+                      Remove Author
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Name</span>
+                    }
+                    name={["authors", index, "name"]}
+                    rules={[{ required: true, message: "Name is required!" }]}
+                  >
+                    <Input
+                      prefix={<UserOutlined className="text-gray-400" />}
+                      placeholder="Full name"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Role</span>
+                    }
+                    name={["authors", index, "role"]}
+                    rules={[{ required: true, message: "Role is required!" }]}
+                  >
+                    <Select
+                      placeholder="Select author role"
+                      className="rounded-lg"
+                    >
+                      {authorRoles.map((role) => (
+                        <Option key={role} value={role}>
+                          {role}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Email</span>
+                    }
+                    name={["authors", index, "email"]}
+                    rules={[
+                      { required: true, message: "Email is required!" },
+                      { type: "email", message: "Invalid email!" },
+                    ]}
+                  >
+                    <Input
+                      prefix={<MailOutlined className="text-gray-400" />}
+                      placeholder="Email address"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="text-gray-700 font-medium">Phone</span>
+                    }
+                    name={["authors", index, "phone"]}
+                    rules={[{ required: true, message: "Phone is required!" }]}
+                  >
+                    <Input
+                      prefix={<PhoneOutlined className="text-gray-400" />}
+                      placeholder="Phone number"
+                      className="rounded-lg py-2.5"
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="dashed"
+              onClick={() =>
+                setAuthors([
+                  ...authors,
+                  { name: "", role: "", email: "", phone: "" },
+                ])
+              }
+              className="w-full rounded-lg border-[#F2722B] text-[#F2722B] hover:border-[#F2722B]/80 hover:text-[#F2722B]/80"
+            >
+              <PlusOutlined /> Add Author
+            </Button>
+          </Card>
+
+          {/* Timeline & Milestones Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -661,14 +748,14 @@ const RegisterConference = () => {
                   Timeline & Milestones
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Define key milestones and their deadlines
+                  Define the timeline and milestones for your project
                 </p>
               </div>
             </div>
 
             <Form.Item
               label={
-                <span className="text-gray-700 font-medium text-base">
+                <span className="text-gray-700 font-medium">
                   Project Duration
                 </span>
               }
@@ -719,7 +806,7 @@ const RegisterConference = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <span className="text-gray-700 font-medium text-base">
+                      <span className="text-gray-700 font-medium">
                         Project Milestones
                       </span>
                       <div className="text-sm text-gray-500 mt-1">
@@ -822,7 +909,7 @@ const RegisterConference = () => {
             </Form.List>
           </Card>
 
-          {/* <Divider>Additional Information</Divider> */}
+          {/* Documents Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -896,22 +983,15 @@ const RegisterConference = () => {
                 </Upload.Dragger>
               </Form.Item>
             </div>
-
-            <Form.Item name="submission_date" hidden>
-              <Input type="hidden" value={new Date().toISOString()} />
-            </Form.Item>
-
-            <Form.Item name="status" hidden>
-              <Input type="hidden" value="pending" />
-            </Form.Item>
           </Card>
 
+          {/* Enhanced Action Buttons */}
           <div className="flex justify-end space-x-4 mt-12">
             <Button
               icon={<SaveOutlined />}
               className="rounded-lg border-2 border-[#F2722B] text-[#F2722B] hover:text-[#D2691E] hover:border-[#D2691E] px-6 h-11 flex items-center"
             >
-              Save as Draft
+              Save Draft
             </Button>
             <Button
               type="primary"
@@ -919,7 +999,7 @@ const RegisterConference = () => {
               icon={<SendOutlined />}
               className="rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none px-6 h-11 flex items-center"
             >
-              Submit Conference Paper
+              Submit Case Study
             </Button>
           </div>
         </Form>
@@ -928,4 +1008,4 @@ const RegisterConference = () => {
   );
 };
 
-export default RegisterConference;
+export default RegisterMagazinePaper;

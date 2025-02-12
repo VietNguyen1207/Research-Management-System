@@ -30,6 +30,9 @@ import {
   UserOutlined,
   CheckCircleOutlined,
   ProjectOutlined,
+  SearchOutlined,
+  GlobalOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 
@@ -44,7 +47,7 @@ const STATUS_COLORS = {
   "in review": "blue",
   "revision needed": "orange",
 };
-
+// status
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
   { value: "pending", label: "Pending" },
@@ -52,6 +55,36 @@ const STATUS_OPTIONS = [
   { value: "revision needed", label: "Revision Needed" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
+];
+
+// request
+const REQUEST_OPTIONS = [
+  { value: "all", label: "All Request" },
+  { value: "research", label: "Research" },
+  { value: "conference", label: "Conference" },
+  { value: "case study", label: "Case Study" },
+  // { value: "approved", label: "Approved" },
+  // { value: "rejected", label: "Rejected" },
+];
+
+// department
+const DEPARTMENT_OPTIONS = [
+  { value: "all", label: "All Department" },
+  { value: "information technology", label: "Information Technology" },
+  { value: "computer science", label: "Computer Science" },
+  { value: "software engineering", label: "Software Engineering" },
+  // { value: "approved", label: "Approved" },
+  // { value: "rejected", label: "Rejected" },
+];
+
+// category
+const CATEGORY_OPTIONS = [
+  { value: "all", label: "All Category" },
+  { value: "ai & machine learning", label: "AI & Machine Learning" },
+  { value: "data science", label: "Data Science" },
+  { value: "cybersecurity", label: "Cybersecurity" },
+  // { value: "approved", label: "Approved" },
+  // { value: "rejected", label: "Rejected" },
 ];
 
 const formatDate = (dateString) => {
@@ -71,143 +104,133 @@ const PendingRequest = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [filteredRequests, setFilteredRequests] = useState([]);
+  const [searchText, setSearchText] = useState("");
 
   // Mock data - replace with actual API call
   const pendingRequests = [
-    // research request
     {
       id: 1,
       type: "Research",
-      title: "AI Implementation in Healthcare",
+      title: "AI-Driven Healthcare Solutions",
       description:
-        "Research on implementing AI solutions in healthcare diagnostics",
+        "A comprehensive study on implementing AI solutions in healthcare systems to improve patient care and operational efficiency.",
+
+      // Project Details
       objectives: [
-        "Develop AI-based diagnostic tools",
-        "Validate system accuracy",
-        "Implement in test environments",
+        "Develop AI algorithms for patient diagnosis",
+        "Optimize hospital resource allocation",
+        "Improve healthcare data management systems",
       ],
-      datasets: [
-        "Medical imaging datasets",
-        "Patient records",
-        "Clinical trials data",
-      ],
-      supervisor: {
-        id: 1,
-        name: "Dr. Emily Smith",
-        email: "emily.smith@university.edu",
-        role: "Lecturer",
-      },
-      group: {
-        id: 1,
-        name: "AI Research Group",
-        members: [
-          { name: "Dr. Emily Smith", role: "Leader" },
-          { name: "John Doe", role: "Member" },
-          { name: "Alice Wong", role: "Member" },
-        ],
-      },
-      category: {
-        id: 1,
-        name: "AI & Machine Learning",
+      dataset: {
+        type: "Healthcare Records",
+        size: "50,000 patient records",
+        format: "Structured and unstructured medical data",
+        source: "Partner hospitals and medical institutions",
       },
       department: {
         id: 1,
         name: "Computer Science",
       },
+      category: {
+        id: 1,
+        name: "AI & Machine Learning",
+      },
       requestedBudget: 500000000,
       approvedBudget: null,
+
+      // Team Members
+      supervisor: {
+        id: 1,
+        name: "Prof. John Smith",
+        email: "john.smith@university.edu",
+        role: "Research Supervisor",
+      },
+      researchGroup: {
+        id: 1,
+        name: "AI Research Group",
+        members: [
+          { name: "Dr. Emily Smith", role: "Leader" },
+          { name: "John Doe", role: "Member" },
+        ],
+      },
+
+      // Timeline and Milestones
       projectDuration: {
         startDate: "2024-03-01",
-        endDate: "2024-12-31",
+        endDate: "2025-02-28",
       },
       projectMilestones: [
         {
           title: "Literature Review",
-          deadline: "2024-04-01",
+          deadline: "2024-04-30",
         },
         {
           title: "Data Collection",
-          deadline: "2024-06-01",
+          deadline: "2024-07-31",
         },
         {
-          title: "AI Model Development",
-          deadline: "2024-08-01",
+          title: "Algorithm Development",
+          deadline: "2024-11-30",
         },
         {
-          title: "Testing Phase",
-          deadline: "2024-10-01",
+          title: "Testing and Validation",
+          deadline: "2025-01-31",
         },
         {
-          title: "Final Implementation",
-          deadline: "2024-12-01",
+          title: "Final Report",
+          deadline: "2025-02-28",
         },
       ],
+
       status: "pending",
       submittedBy: {
         id: 1,
-        name: "Dr. Emily Smith",
-        email: "emily.smith@university.edu",
-        role: "Lecturer",
+        name: "Dr. Sarah Johnson",
+        email: "sarah.johnson@university.edu",
+        role: "Lead Researcher",
       },
       submissionDate: "2024-02-15",
     },
-    // Conference request with travel details
+    // Simplified Conference request
     {
       id: 2,
       type: "Conference",
       title: "Machine Learning Applications in Education",
       abstract:
         "This paper explores innovative applications of machine learning in educational technology, focusing on personalized learning systems and student performance prediction.",
-      purpose:
-        "To demonstrate the effectiveness of ML algorithms in improving educational outcomes through adaptive learning systems.",
-      methodology:
-        "Mixed-method approach combining quantitative analysis of student performance data with qualitative assessment of learning outcomes.",
-      expectedOutcomes:
-        "A framework for implementing ML-based adaptive learning systems in higher education.",
-      keywords: [
-        "Machine Learning",
-        "Education Technology",
-        "Adaptive Learning",
-        "Student Performance",
-      ],
-      conferenceDetails: {
-        location: "Singapore",
-        presentationType: "Oral Presentation",
-        publishingJournal: "Journal of Educational Technology",
-        travelDetails: {
-          mode: "flight",
-          accommodation: "hotel",
-          departureDate: "2024-04-15",
-          returnDate: "2024-04-20",
-          estimatedCost: 25000000,
-          notes: "Requires early check-in",
-        },
-      },
-      conferenceLead: {
+      publisher: "IEEE Transactions on Education",
+
+      // Project Details
+      department: {
         id: 1,
-        name: "Dr. Emily Smith",
-        email: "emily.smith@university.edu",
-        role: "Lecturer",
-      },
-      researchTeam: {
-        id: 2,
-        name: "Machine Learning Lab",
-        members: [
-          { name: "Dr. Emily Smith", role: "Leader" },
-          { name: "John Doe", role: "Member" },
-          { name: "Alice Wong", role: "Member" },
-        ],
+        name: "Computer Science",
       },
       category: {
         id: 1,
         name: "AI & Machine Learning",
       },
-      department: {
+      paperType: {
         id: 1,
-        name: "Computer Science",
+        name: "Conference",
       },
       requestedBudget: 150000000,
       approvedBudget: null,
+
+      // Author Information
+      authors: [
+        {
+          name: "Dr. Emily Smith",
+          role: "Main Author",
+          email: "emily.smith@university.edu",
+        },
+        {
+          name: "Dr. Michael Chen",
+          role: "Co-Author",
+          email: "michael.chen@university.edu",
+        },
+      ],
+
+      // Timeline and Milestones
       projectDuration: {
         startDate: "2024-03-01",
         endDate: "2024-06-30",
@@ -222,28 +245,11 @@ const PendingRequest = () => {
           deadline: "2024-04-01",
         },
         {
-          title: "Conference Presentation",
-          deadline: "2024-04-17",
-        },
-        {
           title: "Final Paper Submission",
           deadline: "2024-05-30",
         },
       ],
-      supportingFiles: [
-        {
-          uid: "1",
-          name: "conference_paper_draft.pdf",
-          status: "done",
-          type: "Paper",
-        },
-        {
-          uid: "2",
-          name: "presentation_slides.pdf",
-          status: "done",
-          type: "Presentation",
-        },
-      ],
+
       status: "pending",
       submittedBy: {
         id: 1,
@@ -253,323 +259,42 @@ const PendingRequest = () => {
       },
       submissionDate: "2024-02-15",
     },
-    // Conference request without travel details
+    // Simplified Magazine request
     {
       id: 3,
-      type: "Conference",
-      title: "Blockchain Technology in Supply Chain Management",
-      abstract:
-        "An analysis of blockchain implementation in modern supply chain systems, focusing on transparency and efficiency improvements.",
-      purpose:
-        "To present a comprehensive framework for blockchain integration in supply chain operations.",
-      methodology:
-        "Case study analysis of successful blockchain implementations in global supply chains.",
-      expectedOutcomes:
-        "A practical roadmap for organizations to implement blockchain in their supply chain operations.",
-      keywords: [
-        "Blockchain",
-        "Supply Chain",
-        "Digital Transformation",
-        "Logistics",
-      ],
-      conferenceDetails: {
-        location: "Tokyo, Japan",
-        presentationType: "Poster Presentation",
-        publishingJournal: "International Journal of Supply Chain Management",
-      },
-      conferenceLead: {
-        id: 2,
-        name: "Dr. James Wilson",
-        email: "james.wilson@university.edu",
-        role: "Lecturer",
-      },
-      researchTeam: {
-        id: 3,
-        name: "Digital Transformation Group",
-        members: [
-          { name: "Dr. James Wilson", role: "Leader" },
-          { name: "Sarah Chen", role: "Member" },
-          { name: "Michael Brown", role: "Member" },
-        ],
-      },
-      category: {
-        id: 2,
-        name: "Digital Technology",
-      },
-      department: {
-        id: 2,
-        name: "Information Systems",
-      },
-      requestedBudget: 100000000,
-      approvedBudget: null,
-      projectDuration: {
-        startDate: "2024-05-01",
-        endDate: "2024-08-31",
-      },
-      projectMilestones: [
-        {
-          title: "Literature Review",
-          deadline: "2024-05-15",
-        },
-        {
-          title: "Methodology Development",
-          deadline: "2024-06-01",
-        },
-        {
-          title: "Data Collection & Analysis",
-          deadline: "2024-07-15",
-        },
-        {
-          title: "Poster Preparation",
-          deadline: "2024-08-01",
-        },
-      ],
-      supportingFiles: [
-        {
-          uid: "1",
-          name: "research_proposal.pdf",
-          status: "done",
-          type: "Proposal",
-        },
-        {
-          uid: "2",
-          name: "preliminary_findings.pdf",
-          status: "pending",
-          type: "Research",
-        },
-      ],
-      status: "pending",
-      submittedBy: {
-        id: 2,
-        name: "Dr. James Wilson",
-        email: "james.wilson@university.edu",
-        role: "Lecturer",
-      },
-      submissionDate: "2024-02-20",
-    },
-    // Case Study request with company profile
-    {
-      id: 4,
-      type: "Case Study",
+      type: "Magazine",
       title: "Digital Transformation in Manufacturing",
       abstract:
-        "A comprehensive analysis of Industry 4.0 implementation challenges and solutions in Vietnamese manufacturing sector, focusing on technology adoption and change management.",
-
-      // Company Profile (Optional)
-      companyProfile: {
-        name: "TechManufacturing Corp",
-        industry: "Electronics Manufacturing",
-        size: "500+ employees",
-        location: "Ho Chi Minh City, Vietnam",
-        website: "www.techmanufacturing.com",
-        contactPerson: "David Lee",
-        contactEmail: "d.lee@techmanufacturing.com",
-        contactPhone: "+84 123 456 789",
-      },
-
-      // Study Scope
-      studyScope: {
-        primaryFocus:
-          "Digital transformation process and implementation strategies",
-        secondaryAreas: [
-          "Change management and employee adaptation",
-          "Technology infrastructure assessment",
-          "ROI analysis and performance metrics",
-          "Supply chain integration",
-        ],
-        dataCollectionMethod: [
-          "Semi-structured interviews",
-          "Process observation",
-          "Document analysis",
-          "Employee surveys",
-        ],
-        expectedDeliverables: [
-          "Detailed transformation roadmap",
-          "Implementation guidelines",
-          "Risk assessment report",
-          "ROI projection model",
-        ],
-        issueDescription:
-          "The company faces challenges in modernizing its manufacturing processes while maintaining operational efficiency and managing workforce transition.",
-        proposedSolution:
-          "A phased implementation approach combining technological upgrades with comprehensive employee training and change management programs.",
-      },
+        "A comprehensive analysis of Industry 4.0 implementation challenges and solutions in Vietnamese manufacturing sector.",
+      publisher: "Journal of Manufacturing Technology Management",
 
       // Project Details
-      caseStudyLead: {
-        id: 1,
-        name: "Prof. Sarah Johnson",
-        email: "sarah.johnson@university.edu",
-        role: "Lecturer",
-      },
-      researchTeam: {
-        id: 3,
-        name: "Digital Transformation Research Unit",
-        members: [
-          { name: "Prof. Sarah Johnson", role: "Leader" },
-          { name: "Dr. Michael Chen", role: "Senior Researcher" },
-          { name: "David Lee", role: "Industry Liaison" },
-        ],
+      department: {
+        id: 2,
+        name: "Information Technology",
       },
       category: {
-        id: 3,
-        name: "Digital Transformation",
+        id: 5,
+        name: "Digital Technology",
       },
-      department: {
-        id: 3,
-        name: "Industrial Engineering",
+      paperType: {
+        id: 2,
+        name: "Magazine",
       },
-      requestedBudget: 300000000,
+      requestedBudget: 250000000,
       approvedBudget: null,
 
-      // Authors Information
+      // Author Information
       authors: [
         {
           name: "Prof. Sarah Johnson",
           role: "Main Author",
           email: "sarah.johnson@university.edu",
-          phone: "+84 123 456 789",
         },
-        {
-          name: "Dr. Michael Chen",
-          role: "Co-Author",
-          email: "michael.chen@university.edu",
-          phone: "+84 987 654 321",
-        },
-      ],
-
-      // Timeline and Milestones
-      projectDuration: {
-        startDate: "2024-05-01",
-        endDate: "2024-08-31",
-      },
-      projectMilestones: [
-        {
-          title: "Initial Assessment and Planning",
-          deadline: "2024-05-15",
-        },
-        {
-          title: "Data Collection Phase",
-          deadline: "2024-06-15",
-        },
-        {
-          title: "Analysis and Draft Report",
-          deadline: "2024-07-15",
-        },
-        {
-          title: "Final Report and Recommendations",
-          deadline: "2024-08-15",
-        },
-      ],
-
-      // Supporting Documents
-      supportingDocuments: [
-        {
-          uid: "1",
-          name: "research_proposal.pdf",
-          status: "done",
-          type: "Proposal",
-        },
-        {
-          uid: "2",
-          name: "company_agreement.pdf",
-          status: "done",
-          type: "Agreement",
-        },
-      ],
-
-      // Request Status Info
-      status: "pending",
-      submittedBy: {
-        id: 1,
-        name: "Prof. Sarah Johnson",
-        email: "sarah.johnson@university.edu",
-        role: "Principal Investigator",
-      },
-      submissionDate: "2024-02-20",
-    },
-    // Case Study request without company profile
-    {
-      id: 5,
-      type: "Case Study",
-      title: "Sustainable Practices in Vietnamese Hospitality Industry",
-      abstract:
-        "An investigation into sustainable practices adoption in Vietnam's hospitality sector, focusing on environmental impact reduction and cost efficiency.",
-
-      // Study Scope
-      studyScope: {
-        primaryFocus:
-          "Sustainable practices implementation in hospitality services",
-        secondaryAreas: [
-          "Environmental impact assessment",
-          "Cost-benefit analysis",
-          "Staff training programs",
-          "Guest satisfaction metrics",
-        ],
-        dataCollectionMethod: [
-          "Industry surveys",
-          "Expert interviews",
-          "Environmental data analysis",
-          "Customer feedback analysis",
-        ],
-        expectedDeliverables: [
-          "Sustainability implementation guide",
-          "Cost reduction strategies",
-          "Staff training framework",
-          "Performance measurement toolkit",
-        ],
-        issueDescription:
-          "Need to identify and implement cost-effective sustainable practices while maintaining service quality and guest satisfaction.",
-        proposedSolution:
-          "Development of a comprehensive sustainability framework tailored for Vietnamese hospitality sector.",
-      },
-
-      // Project Details
-      caseStudyLead: {
-        id: 2,
-        name: "Dr. Lisa Nguyen",
-        email: "lisa.nguyen@university.edu",
-        role: "Research Director",
-      },
-      researchTeam: {
-        id: 4,
-        name: "Sustainable Hospitality Research Group",
-        members: [
-          { name: "Dr. Lisa Nguyen", role: "Leader" },
-          { name: "Prof. John Smith", role: "Senior Advisor" },
-          { name: "Maria Garcia", role: "Research Associate" },
-        ],
-      },
-      category: {
-        id: 4,
-        name: "Sustainability",
-      },
-      department: {
-        id: 4,
-        name: "Hospitality Management",
-      },
-      requestedBudget: 250000000,
-      approvedBudget: null,
-
-      // Authors Information
-      authors: [
         {
           name: "Dr. Lisa Nguyen",
-          role: "Main Author",
-          email: "lisa.nguyen@university.edu",
-          phone: "+84 123 789 456",
-        },
-        {
-          name: "Prof. John Smith",
           role: "Co-Author",
-          email: "john.smith@university.edu",
-          phone: "+84 789 456 123",
-        },
-        {
-          name: "Maria Garcia",
-          role: "Contributing Author",
-          email: "maria.garcia@university.edu",
-          phone: "+84 456 123 789",
+          email: "lisa.nguyen@university.edu",
         },
       ],
 
@@ -584,45 +309,20 @@ const PendingRequest = () => {
           deadline: "2024-06-15",
         },
         {
-          title: "Industry Survey and Interviews",
-          deadline: "2024-07-31",
-        },
-        {
           title: "Data Analysis",
           deadline: "2024-09-30",
         },
         {
-          title: "Framework Development",
-          deadline: "2024-10-31",
-        },
-        {
-          title: "Final Report and Recommendations",
+          title: "Final Report",
           deadline: "2024-11-15",
         },
       ],
 
-      // Supporting Documents
-      supportingDocuments: [
-        {
-          uid: "1",
-          name: "research_methodology.pdf",
-          status: "done",
-          type: "Methodology",
-        },
-        {
-          uid: "2",
-          name: "preliminary_findings.pdf",
-          status: "done",
-          type: "Research",
-        },
-      ],
-
-      // Request Status Info
       status: "pending",
       submittedBy: {
         id: 2,
-        name: "Dr. Lisa Nguyen",
-        email: "lisa.nguyen@university.edu",
+        name: "Prof. Sarah Johnson",
+        email: "sarah.johnson@university.edu",
         role: "Research Director",
       },
       submissionDate: "2024-02-25",
@@ -631,11 +331,27 @@ const PendingRequest = () => {
 
   // Add filter function
   useEffect(() => {
-    const filtered = pendingRequests.filter((request) =>
-      statusFilter === "all" ? true : request.status === statusFilter
-    );
+    const filtered = pendingRequests.filter((request) => {
+      const matchesStatus =
+        statusFilter === "all" ? true : request.status === statusFilter;
+      const matchesSearch =
+        searchText.toLowerCase() === ""
+          ? true
+          : request.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+            request.description
+              ?.toLowerCase()
+              .includes(searchText.toLowerCase()) ||
+            request.type?.toLowerCase().includes(searchText.toLowerCase()) ||
+            request.department?.name
+              ?.toLowerCase()
+              .includes(searchText.toLowerCase()) ||
+            request.category?.name
+              ?.toLowerCase()
+              .includes(searchText.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
     setFilteredRequests(filtered);
-  }, [statusFilter]);
+  }, [statusFilter, searchText]);
 
   const columns = [
     {
@@ -648,7 +364,7 @@ const PendingRequest = () => {
             <h4 className="text-lg font-medium text-gray-900">
               {record.title}
             </h4>
-            <p className="text-sm text-gray-500">{record.description}</p>
+            <p className="text-sm text-gray-500">{record.abstract}</p>
           </div>
           <div className="flex items-center space-x-2">
             <Tag color="blue">{record.type}</Tag>
@@ -659,15 +375,19 @@ const PendingRequest = () => {
               <Tag color="orange">{record.category.name}</Tag>
             )}
           </div>
-          <div className="text-sm">
-            <span className="text-gray-600">Supervisor: </span>
-            <span className="font-medium">
-              {record.supervisor?.name ||
-                record.conferenceLead?.name ||
-                "Not Assigned"}
-            </span>
-          </div>
+
+          {/* Show Supervisor only for Research type */}
+          {record.type === "Research" && (
+            <div className="text-sm">
+              <span className="text-gray-600">Supervisor: </span>
+              <span className="font-medium">
+                {record.supervisor?.name || "Not Assigned"}
+              </span>
+            </div>
+          )}
+
           <Divider className="my-3" />
+
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
@@ -682,6 +402,41 @@ const PendingRequest = () => {
               <div>Submitted on: {formatDate(record.submissionDate)}</div>
             </div>
           </div>
+
+          {/* Show Publisher only for Conference and Magazine types */}
+          {(record.type === "Conference" || record.type === "Magazine") && (
+            <div className="flex items-center mt-2">
+              <GlobalOutlined className="text-gray-400 mr-2" />
+              <span className="text-sm text-gray-600">Publisher: </span>
+              <span className="text-sm font-medium ml-1">
+                {record.publisher}
+              </span>
+            </div>
+          )}
+
+          {/* Show Authors only for Conference and Magazine types */}
+          {(record.type === "Conference" || record.type === "Magazine") &&
+            record.authors && (
+              <div className="mt-4">
+                <div className="text-sm text-gray-600 mb-2">Authors:</div>
+                <div className="space-y-2">
+                  {record.authors.map((author, index) => (
+                    <div key={index} className="flex items-start space-x-2">
+                      <TeamOutlined className="text-gray-400 mt-1" />
+                      <div>
+                        <div className="text-sm font-medium">{author.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {author.role}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {author.email}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       ),
     },
@@ -695,14 +450,22 @@ const PendingRequest = () => {
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-600">Requested Budget</span>
+                <span className="text-sm text-gray-600">
+                  {record.type === "Research"
+                    ? "Requested Budget"
+                    : "Requested Royalties"}
+                </span>
                 <span className="text-sm font-medium">
                   ₫{record.requestedBudget?.toLocaleString() || "0"}
                 </span>
               </div>
               {record.approvedBudget && (
                 <div className="flex justify-between mb-1">
-                  <span className="text-sm text-gray-600">Approved Budget</span>
+                  <span className="text-sm text-gray-600">
+                    {record.type === "Research"
+                      ? "Approved Budget"
+                      : "Approved Royalties"}
+                  </span>
                   <span className="text-sm font-medium text-green-600">
                     ₫{record.approvedBudget.toLocaleString()}
                   </span>
@@ -841,118 +604,27 @@ const PendingRequest = () => {
   };
 
   const renderTypeSpecificDetails = (record) => {
-    return (
-      <div>
-        {/* Group Information */}
-        <div className="mt-3 mb-4 bg-gray-50 p-3 rounded-lg">
-          <div className="text-sm font-medium mb-2">
-            <TeamOutlined className="mr-2 text-blue-500" />
-            Research Group: {record.group.name}
-          </div>
-          <div className="space-y-1">
-            {record.group.members.map((member, idx) => (
-              <div key={idx} className="text-sm flex items-center space-x-2">
-                <UserOutlined className="text-gray-400" />
-                <span>{member.name}</span>
-                <Tag color={member.role === "Leader" ? "gold" : "default"}>
-                  {member.role}
-                </Tag>
-              </div>
-            ))}
-          </div>
+    if (record.type === "Magazine") {
+      return (
+        <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-2">Magazine Details</h4>
+          {/* ... rest of the magazine-specific details ... */}
         </div>
+      );
+    }
 
-        {/* Type-specific details */}
-        {record.type === "Research" && (
-          <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-blue-800 mb-2">
-              Research Details
-            </h4>
-            <div className="space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">Objectives:</span>
-                <ul className="list-disc list-inside text-sm ml-2">
-                  {record.objectives.map((obj, idx) => (
-                    <li key={idx}>{obj}</li>
-                  ))}
-                </ul>
-              </p>
-              <div className="text-sm">
-                <span className="font-medium">Datasets:</span>
-                <ul className="list-disc list-inside ml-2">
-                  {record.datasets.map((dataset, idx) => (
-                    <li key={idx}>{dataset}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
+    if (record.type === "Conference") {
+      return (
+        <div className="mt-4 bg-green-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-green-800 mb-2">
+            Conference Details
+          </h4>
+          {/* ... rest of the conference-specific details ... */}
+        </div>
+      );
+    }
 
-        {record.type === "Conference" && (
-          <div className="mt-4 bg-green-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-green-800 mb-2">
-              Conference Details
-            </h4>
-            <div className="space-y-2 text-sm">
-              <p>
-                <span className="font-medium">Location:</span>{" "}
-                {record.conferenceDetails.location}
-              </p>
-              <p>
-                <span className="font-medium">Presentation Type:</span>{" "}
-                {record.conferenceDetails.presentationType}
-              </p>
-              <div>
-                <span className="font-medium">Travel Details:</span>
-                <ul className="list-disc list-inside ml-2">
-                  <li>
-                    Duration: {record.conferenceDetails.travelDetails.duration}
-                  </li>
-                  <li>
-                    Accommodation:{" "}
-                    {record.conferenceDetails.travelDetails.accommodation}
-                  </li>
-                  <li>
-                    Transport:{" "}
-                    {record.conferenceDetails.travelDetails.transportationType}
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {record.type === "Case Study" && (
-          <div className="mt-4 bg-amber-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-amber-800 mb-2">
-              Case Study Details
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium">Company Profile:</span>
-                <ul className="list-disc list-inside ml-2">
-                  <li>Name: {record.companyProfile.name}</li>
-                  <li>Industry: {record.companyProfile.industry}</li>
-                  <li>Size: {record.companyProfile.size}</li>
-                </ul>
-              </div>
-              <div>
-                <span className="font-medium">Study Scope:</span>
-                <p className="ml-2">
-                  Primary: {record.studyScope.primaryFocus}
-                </p>
-                <ul className="list-disc list-inside ml-2">
-                  {record.studyScope.secondaryAreas.map((scope, idx) => (
-                    <li key={idx}>{scope}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return null;
   };
 
   return (
@@ -973,8 +645,17 @@ const PendingRequest = () => {
         {/* Add Filter Section */}
         <div className="mb-6">
           <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-1">
+              {/* Search bar */}
+              <Input
+                placeholder="Search requests..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="max-w-md"
+                allowClear
+              />
               <span className="text-gray-700 font-medium">Filter:</span>
+              {/* filter status */}
               <Select
                 defaultValue="all"
                 style={{ width: 200 }}
@@ -982,8 +663,33 @@ const PendingRequest = () => {
                 options={STATUS_OPTIONS}
                 className="rounded-md"
               />
+              {/* filter request type */}
+              <Select
+                defaultValue="all"
+                style={{ width: 200 }}
+                onChange={setStatusFilter}
+                options={REQUEST_OPTIONS}
+                className="rounded-md"
+              />
+              {/* filter department */}
+              <Select
+                defaultValue="all"
+                style={{ width: 200 }}
+                onChange={setStatusFilter}
+                options={DEPARTMENT_OPTIONS}
+                className="rounded-md"
+              />
+              {/* filter category */}
+              <Select
+                defaultValue="all"
+                style={{ width: 200 }}
+                onChange={setStatusFilter}
+                options={CATEGORY_OPTIONS}
+                className="rounded-md"
+              />
             </div>
-            {/* view for all status */}
+
+            {/* Status Legend */}
             {/* <div className="flex items-center space-x-2">
               {Object.entries(STATUS_COLORS).map(([status, color]) => (
                 <Tag key={status} color={color} className="capitalize">
@@ -1016,7 +722,6 @@ const PendingRequest = () => {
             </div>
           }
           open={isModalVisible}
-          onOk={handleModalOk}
           onCancel={() => setIsModalVisible(false)}
           width={800}
           footer={[
@@ -1034,224 +739,332 @@ const PendingRequest = () => {
           ]}
         >
           <div className="max-h-[70vh] overflow-y-auto pr-2">
-            {/* Basic Information Section */}
-            <Collapse defaultActiveKey={["1"]} className="mb-4">
-              <Collapse.Panel
-                header={
-                  <div className="flex items-center">
-                    <InfoCircleOutlined className="text-[#F2722B] mr-2" />
-                    <span className="font-medium">Basic Information</span>
-                  </div>
-                }
-                key="1"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Abstract</div>
-                    <div className="mt-1">{selectedRequest?.abstract}</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-gray-500">Type</div>
-                      <Tag color="blue" className="mt-1">
-                        {selectedRequest?.type}
-                      </Tag>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Status</div>
-                      <Tag
-                        color={STATUS_COLORS[selectedRequest?.status]}
-                        className="mt-1"
-                      >
-                        {selectedRequest?.status}
-                      </Tag>
-                    </div>
-                  </div>
-                </div>
-              </Collapse.Panel>
-            </Collapse>
-
-            {/* Type Specific Details */}
-            <Collapse className="mb-4">
-              <Collapse.Panel
-                header={
-                  <div className="flex items-center">
-                    <ProjectOutlined className="text-[#F2722B] mr-2" />
-                    <span className="font-medium">Project Details</span>
-                  </div>
-                }
-                key="1"
-              >
-                {selectedRequest?.type === "Conference" && (
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-sm text-gray-500">
-                        Conference Details
+            {selectedRequest?.type === "Research" ? (
+              // Original Research Request Modal Content
+              <>
+                {/* Basic Information Section */}
+                <Collapse defaultActiveKey={["1"]} className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <InfoCircleOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Basic Information</span>
                       </div>
-                      <div className="mt-2 space-y-2">
-                        <div>
-                          <strong>Location:</strong>{" "}
-                          {selectedRequest?.conferenceDetails?.location}
-                        </div>
-                        <div>
-                          <strong>Presentation Type:</strong>{" "}
-                          {selectedRequest?.conferenceDetails?.presentationType}
-                        </div>
-                        <div>
-                          <strong>Publishing Journal:</strong>{" "}
-                          {
-                            selectedRequest?.conferenceDetails
-                              ?.publishingJournal
-                          }
-                        </div>
-                      </div>
-                    </div>
-                    {selectedRequest?.conferenceDetails?.travelDetails && (
-                      <div>
-                        <div className="text-sm text-gray-500 mt-4">
-                          Travel Details
-                        </div>
-                        <div className="mt-2 space-y-2">
-                          <div>
-                            <strong>Mode:</strong>{" "}
-                            {
-                              selectedRequest?.conferenceDetails?.travelDetails
-                                ?.mode
-                            }
-                          </div>
-                          <div>
-                            <strong>Accommodation:</strong>{" "}
-                            {
-                              selectedRequest?.conferenceDetails?.travelDetails
-                                ?.accommodation
-                            }
-                          </div>
-                          <div>
-                            <strong>Travel Dates:</strong>{" "}
-                            {formatDate(
-                              selectedRequest?.conferenceDetails?.travelDetails
-                                ?.departureDate
-                            )}{" "}
-                            -{" "}
-                            {formatDate(
-                              selectedRequest?.conferenceDetails?.travelDetails
-                                ?.returnDate
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {selectedRequest?.type === "Case Study" && (
-                  <div className="space-y-4">
-                    {selectedRequest?.companyProfile && (
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-4">
+                      {/* Project Title */}
                       <div>
                         <div className="text-sm text-gray-500">
-                          Company Profile
+                          Project Title
+                        </div>
+                        <div className="mt-1 font-medium text-gray-800">
+                          {selectedRequest?.title}
+                        </div>
+                      </div>
+
+                      {/* Project Description */}
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Project Description
+                        </div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {selectedRequest?.description}
+                        </div>
+                      </div>
+                    </div>
+                  </Collapse.Panel>
+                </Collapse>
+
+                {/* Project Details Section */}
+                <Collapse className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <ProjectOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Project Details</span>
+                      </div>
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-4">
+                      {/* Project Objectives */}
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Project Objectives
                         </div>
                         <div className="mt-2 space-y-2">
-                          <div>
-                            <strong>Company:</strong>{" "}
-                            {selectedRequest?.companyProfile?.name}
+                          {selectedRequest?.objectives?.map(
+                            (objective, index) => (
+                              <div
+                                key={index}
+                                className="flex items-start space-x-3 bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors"
+                              >
+                                <CheckOutlined className="text-[#F2722B] mt-1" />
+                                <span className="text-gray-700">
+                                  {objective}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Dataset Information */}
+                      <div>
+                        <div className="text-sm text-gray-500">Dataset</div>
+                      </div>
+
+                      {/* Department and Category */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Department
                           </div>
-                          <div>
-                            <strong>Industry:</strong>{" "}
-                            {selectedRequest?.companyProfile?.industry}
-                          </div>
-                          <div>
-                            <strong>Size:</strong>{" "}
-                            {selectedRequest?.companyProfile?.size}
-                          </div>
-                          <div>
-                            <strong>Contact:</strong>{" "}
-                            {selectedRequest?.companyProfile?.contactPerson}
+                          <Tag color="green" className="mt-1">
+                            {selectedRequest?.department?.name}
+                          </Tag>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Category</div>
+                          <Tag color="orange" className="mt-1">
+                            {selectedRequest?.category?.name}
+                          </Tag>
+                        </div>
+                      </div>
+
+                      {/* Budget Information */}
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Budget Details
+                        </div>
+                        <div className="mt-2 bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">
+                              Requested Budget:
+                            </span>
+                            <span className="font-medium">
+                              ₫
+                              {selectedRequest?.requestedBudget?.toLocaleString()}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    )}
-                    <div>
-                      <div className="text-sm text-gray-500 mt-4">
-                        Study Scope
+                    </div>
+                  </Collapse.Panel>
+                </Collapse>
+
+                {/* Team Members Section */}
+                <Collapse className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <TeamOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Team Members</span>
                       </div>
-                      <div className="mt-2 space-y-2">
-                        <div>
-                          <strong>Primary Focus:</strong>{" "}
-                          {selectedRequest?.studyScope?.primaryFocus}
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-6">
+                      {/* Supervisor */}
+                      <div>
+                        <div className="text-sm text-gray-500 mb-3">
+                          Supervisor
                         </div>
-                        <div>
-                          <strong>Secondary Areas:</strong>
-                          <ul className="list-disc ml-5 mt-1">
-                            {selectedRequest?.studyScope?.secondaryAreas?.map(
-                              (area, index) => (
-                                <li key={index}>{area}</li>
+                        <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-lg">
+                          <UserOutlined className="text-[#F2722B] mt-1" />
+                          <div>
+                            <div className="font-medium text-gray-800">
+                              {selectedRequest?.supervisor?.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {selectedRequest?.supervisor?.role}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {selectedRequest?.supervisor?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Research Group */}
+                      <div>
+                        <div className="text-sm text-gray-500 mb-3">
+                          Research Group
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-center mb-4">
+                            <TeamOutlined className="text-[#F2722B] mr-2" />
+                            <span className="font-medium text-gray-800">
+                              {selectedRequest?.researchGroup?.name}
+                            </span>
+                          </div>
+
+                          <div className="space-y-3 ml-2">
+                            {selectedRequest?.researchGroup?.members.map(
+                              (member, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-white p-3 rounded-md"
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    {member.role === "Leader" ? (
+                                      <CrownOutlined className="text-[#F2722B]" />
+                                    ) : (
+                                      <UserOutlined className="text-gray-400" />
+                                    )}
+                                    <span>{member.name}</span>
+                                    <Tag
+                                      color={
+                                        member.role === "Leader"
+                                          ? "orange"
+                                          : "default"
+                                      }
+                                      className="rounded-full"
+                                    >
+                                      {member.role}
+                                    </Tag>
+                                  </div>
+                                </div>
                               )
                             )}
-                          </ul>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </Collapse.Panel>
-            </Collapse>
+                  </Collapse.Panel>
+                </Collapse>
+              </>
+            ) : (
+              // Conference and Magazine Modal Content
+              <>
+                {/* Basic Information Section */}
+                <Collapse defaultActiveKey={["1"]} className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <InfoCircleOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Basic Information</span>
+                      </div>
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-4">
+                      {/* Paper Title */}
+                      <div>
+                        <div className="text-sm text-gray-500">Paper Title</div>
+                        <div className="mt-1 font-medium text-gray-800">
+                          {selectedRequest?.title}
+                        </div>
+                      </div>
 
-            {/* Team Information */}
-            <Collapse className="mb-4">
-              <Collapse.Panel
-                header={
-                  <div className="flex items-center">
-                    <TeamOutlined className="text-[#F2722B] mr-2" />
-                    <span className="font-medium">Team Information</span>
-                  </div>
-                }
-                key="1"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Research Team</div>
-                    <div className="mt-2">
-                      {selectedRequest?.researchTeam?.members?.map(
-                        (member, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center space-x-2 mb-2"
-                          >
-                            <UserOutlined className="text-gray-400" />
-                            <span>{member.name}</span>
-                            <Tag
-                              color={
-                                member.role === "Leader" ? "gold" : "default"
-                              }
-                            >
-                              {member.role}
-                            </Tag>
-                          </div>
-                        )
-                      )}
+                      {/* Abstract */}
+                      <div>
+                        <div className="text-sm text-gray-500">Abstract</div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {selectedRequest?.abstract}
+                        </div>
+                      </div>
+
+                      {/* Publisher */}
+                      <div>
+                        <div className="text-sm text-gray-500">Publisher</div>
+                        <div className="mt-1 font-medium text-gray-800">
+                          {selectedRequest?.publisher}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Authors</div>
-                    <div className="mt-2">
-                      {selectedRequest?.authors?.map((author, index) => (
-                        <div key={index} className="mb-3">
-                          <div className="font-medium">{author.name}</div>
+                  </Collapse.Panel>
+                </Collapse>
+
+                {/* Project Details Section */}
+                <Collapse className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <ProjectOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Project Details</span>
+                      </div>
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-4">
+                      {/* Department and Category */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
                           <div className="text-sm text-gray-500">
-                            <div>{author.role}</div>
-                            <div>{author.email}</div>
-                            <div>{author.phone}</div>
+                            Department
+                          </div>
+                          <Tag color="green" className="mt-1">
+                            {selectedRequest?.department?.name}
+                          </Tag>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Category</div>
+                          <Tag color="orange" className="mt-1">
+                            {selectedRequest?.category?.name}
+                          </Tag>
+                        </div>
+                      </div>
+
+                      {/* Paper Type and Royalties */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Paper Type
+                          </div>
+                          <Tag color="blue" className="mt-1">
+                            {selectedRequest?.paperType?.name}
+                          </Tag>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">Royalties</div>
+                          <div className="mt-1 font-medium text-gray-800">
+                            ₫
+                            {selectedRequest?.requestedBudget?.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Collapse.Panel>
+                </Collapse>
+
+                {/* Authors Information Section */}
+                <Collapse className="mb-4">
+                  <Collapse.Panel
+                    header={
+                      <div className="flex items-center">
+                        <TeamOutlined className="text-[#F2722B] mr-2" />
+                        <span className="font-medium">Authors Information</span>
+                      </div>
+                    }
+                    key="1"
+                  >
+                    <div className="space-y-4">
+                      {selectedRequest?.authors?.map((author, index) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <UserOutlined className="text-gray-400 mt-1" />
+                          <div>
+                            <div className="font-medium text-gray-800">
+                              {author.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {author.role}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {author.email}
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                </div>
-              </Collapse.Panel>
-            </Collapse>
+                  </Collapse.Panel>
+                </Collapse>
+              </>
+            )}
 
-            {/* Timeline and Milestones */}
+            {/* Timeline and Milestones - Common for all types */}
             <Collapse className="mb-4">
               <Collapse.Panel
                 header={
@@ -1291,7 +1104,7 @@ const PendingRequest = () => {
               </Collapse.Panel>
             </Collapse>
 
-            {/* Review Form */}
+            {/* Review Form - Common for all types */}
             <Form form={form} layout="vertical" className="mt-4">
               <Form.Item
                 label="Adjusted Budget (VND)"
