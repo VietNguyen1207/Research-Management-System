@@ -43,16 +43,16 @@ const navItems = [
   },
   {
     icon: <ExperimentOutlined />,
-    label: "Project",
+    label: "Research Project",
     subItems: [
-      { icon: <ExperimentOutlined />, label: "Active Projects" },
-      { icon: <ProjectOutlined />, label: "Completed Projects" },
-      { icon: <FileSearchOutlined />, label: "Projects Archive" },
+      { icon: <ExperimentOutlined />, label: "Active Research" },
+      { icon: <ProjectOutlined />, label: "Completed Research" },
+      { icon: <FileSearchOutlined />, label: "Research Archive" },
     ],
   },
   {
     icon: <FileSearchOutlined />,
-    label: "Paper",
+    label: "Paper Project",
     badge: "3",
     subItems: [
       { icon: <FileSearchOutlined />, label: "Active Paper" },
@@ -101,21 +101,36 @@ const NavBar = () => {
 
   //Get user
   const { user } = useSelector((state) => state.auth);
-  const studentNavItems = ["Group", "Registration", "Project", "Paper"];
+  const studentNavItems = [
+    "Group",
+    "Registration",
+    "Research Project",
+    "Paper Project",
+  ];
   const lecturerNavItems = [
     "Group",
     "Registration",
-    "Project",
-    "Paper",
+    "Research Project",
+    "Paper Project",
     "Request",
   ];
-  const deptHeadNavItems = ["Project", "Paper", "Request", "Quotas"];
-  const officeNavItems = ["Project", "Paper", "Request", "Quotas"];
+  const deptHeadNavItems = [
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Quotas",
+  ];
+  const officeNavItems = [
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Quotas",
+  ];
   const adminNavItems = [
     "Group",
     "Registration",
-    "Project",
-    "Paper",
+    "Research Project",
+    "Paper Project",
     "Request",
     "Quotas",
     "Menu",
@@ -208,6 +223,9 @@ const NavBar = () => {
         break;
       case "Paper Project":
         navigate("/register-paper");
+        break;
+      case "Active Research":
+        navigate("/active-research");
         break;
       // case "Case Study Project":
       //   navigate("/register-case-study-paper");

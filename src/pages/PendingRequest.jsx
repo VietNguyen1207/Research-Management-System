@@ -59,7 +59,7 @@ const STATUS_OPTIONS = [
 
 // request
 const REQUEST_OPTIONS = [
-  { value: "all", label: "All Request" },
+  { value: "all", label: "All Type" },
   { value: "research", label: "Research" },
   { value: "conference", label: "Conference" },
   { value: "case study", label: "Case Study" },
@@ -121,6 +121,18 @@ const PendingRequest = () => {
         "Optimize hospital resource allocation",
         "Improve healthcare data management systems",
       ],
+      // methodology:
+      //   "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation. Machine learning algorithms will be developed using Python and TensorFlow, followed by rigorous testing in simulated healthcare environments.",
+      // innovative_aspects:
+      //   "This research introduces novel deep learning architectures specifically designed for healthcare diagnostics, incorporating attention mechanisms for interpretable AI decisions. The system will be the first to integrate real-time patient monitoring with predictive analytics.",
+      // research_subjects:
+      //   "The study will involve analysis of anonymized patient records, healthcare practitioners' workflow patterns, and hospital resource utilization data. Primary subjects include medical staff, hospital administrators, and healthcare IT systems.",
+      // research_scope:
+      //   "The research encompasses three major city hospitals in Vietnam, focusing on emergency departments and chronic disease management units. The scope includes data collection, algorithm development, system implementation, and performance evaluation over a 12-month period.",
+      // scientific_significance:
+      //   "This research advances the field of medical AI by developing new algorithms for healthcare-specific applications, contributing to the broader understanding of AI implementation in critical care settings. The findings will establish new methodologies for integrating AI systems in healthcare environments.",
+      // practical_significance:
+      //   "The outcomes will directly improve patient care through faster diagnosis, optimized resource allocation, and reduced medical errors. Healthcare institutions can expect improved operational efficiency and cost reduction, while patients benefit from more accurate and timely medical interventions.",
       dataset: {
         type: "Healthcare Records",
         size: "50,000 patient records",
@@ -259,10 +271,10 @@ const PendingRequest = () => {
       },
       submissionDate: "2024-02-15",
     },
-    // Simplified Magazine request
+    // Simplified Journal request
     {
       id: 3,
-      type: "Magazine",
+      type: "Journal",
       title: "Digital Transformation in Manufacturing",
       abstract:
         "A comprehensive analysis of Industry 4.0 implementation challenges and solutions in Vietnamese manufacturing sector.",
@@ -279,7 +291,7 @@ const PendingRequest = () => {
       },
       paperType: {
         id: 2,
-        name: "Magazine",
+        name: "Journal",
       },
       requestedBudget: 250000000,
       approvedBudget: null,
@@ -403,8 +415,8 @@ const PendingRequest = () => {
             </div>
           </div>
 
-          {/* Show Publisher only for Conference and Magazine types */}
-          {(record.type === "Conference" || record.type === "Magazine") && (
+          {/* Show Publisher only for Conference and Journal types */}
+          {(record.type === "Conference" || record.type === "Journal") && (
             <div className="flex items-center mt-2">
               <GlobalOutlined className="text-gray-400 mr-2" />
               <span className="text-sm text-gray-600">Publisher: </span>
@@ -414,8 +426,8 @@ const PendingRequest = () => {
             </div>
           )}
 
-          {/* Show Authors only for Conference and Magazine types */}
-          {(record.type === "Conference" || record.type === "Magazine") &&
+          {/* Show Authors only for Conference and Journal types */}
+          {(record.type === "Conference" || record.type === "Journal") &&
             record.authors && (
               <div className="mt-4">
                 <div className="text-sm text-gray-600 mb-2">Authors:</div>
@@ -604,11 +616,11 @@ const PendingRequest = () => {
   };
 
   const renderTypeSpecificDetails = (record) => {
-    if (record.type === "Magazine") {
+    if (record.type === "Journal") {
       return (
         <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">Magazine Details</h4>
-          {/* ... rest of the magazine-specific details ... */}
+          <h4 className="font-semibold text-blue-800 mb-2">Journal Details</h4>
+          {/* ... rest of the journal-specific details ... */}
         </div>
       );
     }
@@ -935,9 +947,50 @@ const PendingRequest = () => {
                     </div>
                   </Collapse.Panel>
                 </Collapse>
+                {/* Review Form - Type specific */}
+                <Form form={form} layout="vertical" className="mt-4">
+                  <Form.Item
+                    label="Adjusted Budget (VND)"
+                    name="budget"
+                    rules={[
+                      { required: true, message: "Please input the budget!" },
+                    ]}
+                  >
+                    <InputNumber
+                      className="w-full"
+                      formatter={(value) =>
+                        ` ${value} vn₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Timeline Adjustment"
+                    name="timeline"
+                    rules={[
+                      { required: true, message: "Please select timeline!" },
+                    ]}
+                  >
+                    <RangePicker className="w-full" />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Feedback Notes"
+                    name="notes"
+                    rules={[
+                      { required: true, message: "Please provide feedback!" },
+                    ]}
+                  >
+                    <TextArea
+                      rows={4}
+                      placeholder="Provide feedback about the adjustments..."
+                    />
+                  </Form.Item>
+                </Form>
               </>
             ) : (
-              // Conference and Magazine Modal Content
+              // Conference and Journal Modal Content
               <>
                 {/* Basic Information Section */}
                 <Collapse defaultActiveKey={["1"]} className="mb-4">
@@ -1104,23 +1157,41 @@ const PendingRequest = () => {
               </Collapse.Panel>
             </Collapse>
 
-            {/* Review Form - Common for all types */}
+            {/* Review Form */}
             <Form form={form} layout="vertical" className="mt-4">
-              <Form.Item
-                label="Adjusted Budget (VND)"
-                name="budget"
-                rules={[
-                  { required: true, message: "Please input the budget!" },
-                ]}
-              >
-                <InputNumber
-                  className="w-full"
-                  formatter={(value) =>
-                    ` ${value} vn₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
-                />
-              </Form.Item>
+              {selectedRequest?.type === "Research" ? (
+                <Form.Item
+                  label="Adjust Budget (VND)"
+                  name="budget"
+                  rules={[
+                    { required: true, message: "Please input the budget!" },
+                  ]}
+                >
+                  <InputNumber
+                    className="w-full"
+                    formatter={(value) =>
+                      ` ${value} vn₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    }
+                    parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item
+                  label="Adjust Royalties (VND)"
+                  name="royalties"
+                  rules={[
+                    { required: true, message: "Please input the royalties!" },
+                  ]}
+                >
+                  <InputNumber
+                    className="w-full"
+                    formatter={(value) =>
+                      ` ${value} ₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    }
+                    parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+                  />
+                </Form.Item>
+              )}
 
               <Form.Item
                 label="Timeline Adjustment"

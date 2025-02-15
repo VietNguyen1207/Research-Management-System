@@ -108,7 +108,7 @@ const OfficeQuota = () => {
               {record.projectTypes.conference}
             </Tag>
             <Tag color="orange" className="text-center">
-              <span className="font-medium">Magazine:</span>{" "}
+              <span className="font-medium">Journal:</span>{" "}
               {record.projectTypes.caseStudy}
             </Tag>
           </div>

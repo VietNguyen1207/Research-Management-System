@@ -260,6 +260,124 @@ const RegisterResearch = () => {
                 tokenSeparators={[","]}
               />
             </Form.Item>
+
+            {/* <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Research Methodology
+                </span>
+              }
+              name="methodology"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input research methodology!",
+                },
+              ]}
+            >
+              <TextArea
+                placeholder="Describe your research methodology"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Innovative Aspects of Research
+                </span>
+              }
+              name="innovative_aspects"
+              rules={[
+                { required: true, message: "Please input innovative aspects!" },
+              ]}
+            >
+              <TextArea
+                placeholder="Describe the innovative aspects of your research"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Research Subjects
+                </span>
+              }
+              name="research_subjects"
+              rules={[
+                { required: true, message: "Please input research subjects!" },
+              ]}
+            >
+              <TextArea
+                placeholder="Describe your research subjects"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Research Scope
+                </span>
+              }
+              name="research_scope"
+              rules={[
+                { required: true, message: "Please input research scope!" },
+              ]}
+            >
+              <TextArea
+                placeholder="Define the scope of your research"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Scientific Significance
+                </span>
+              }
+              name="scientific_significance"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input scientific significance!",
+                },
+              ]}
+            >
+              <TextArea
+                placeholder="Describe the scientific significance of your research"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Practical Significance
+                </span>
+              }
+              name="practical_significance"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input practical significance!",
+                },
+              ]}
+            >
+              <TextArea
+                placeholder="Describe the practical significance of your research"
+                rows={4}
+                className="rounded-lg"
+              />
+            </Form.Item> */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Form.Item
                 label={

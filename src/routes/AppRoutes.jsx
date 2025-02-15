@@ -12,6 +12,7 @@ import RegisterResearch from "../pages/RegisterResearch";
 import RegisterPaper from "../pages/lecturer/RegisterPaper";
 // import RegisterCaseStudy from "../pages/lecturer/RegisterCaseStudy";
 import PendingRequest from "../pages/PendingRequest";
+import ActiveResearch from "../pages/ActiveResearch";
 
 export const routes = [
   {
@@ -47,6 +48,7 @@ export const routes = [
           { path: "create-group", element: <CreateGroup /> },
           { path: "view-groups", element: <ViewGroup /> },
           { path: "manage-group", element: <ManageGroup /> },
+          { path: "active-research", element: <ActiveResearch /> },
           // Add other student routes here
         ],
       },
