@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom transitions for ActiveResearchDetails page */
+.custom-message {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.ant-timeline-item {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.ant-timeline-item-content {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.ant-tag {
+  @apply transition-all duration-200 ease-in-out;
+}

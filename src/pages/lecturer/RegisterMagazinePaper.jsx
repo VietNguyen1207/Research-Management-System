@@ -46,7 +46,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const RegisterMagazinePaper = () => {
+const RegisterJournalPaper = () => {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [authors, setAuthors] = useState([
@@ -1008,4 +1008,4 @@ const RegisterMagazinePaper = () => {
   );
 };
 
-export default RegisterMagazinePaper;
+export default RegisterJournalPaper;

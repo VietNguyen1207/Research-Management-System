@@ -27,9 +27,11 @@ const navItems = [
     icon: <TeamOutlined />,
     label: "Group",
     subItems: [
-      { icon: <TeamOutlined />, label: "View Groups" },
+      { icon: <TeamOutlined />, label: "View Group" },
       { icon: <FormOutlined />, label: "Create Group" },
-      { icon: <UserOutlined />, label: "Manage Members" },
+      { icon: <FormOutlined />, label: "Create Council" },
+      { icon: <UserOutlined />, label: "Manage Group" },
+      { icon: <UserOutlined />, label: "Manage Council" },
     ],
   },
   {
@@ -43,16 +45,16 @@ const navItems = [
   },
   {
     icon: <ExperimentOutlined />,
-    label: "Project",
+    label: "Research Project",
     subItems: [
-      { icon: <ExperimentOutlined />, label: "Active Projects" },
-      { icon: <ProjectOutlined />, label: "Completed Projects" },
-      { icon: <FileSearchOutlined />, label: "Projects Archive" },
+      { icon: <ExperimentOutlined />, label: "Active Research" },
+      { icon: <ProjectOutlined />, label: "Completed Research" },
+      { icon: <FileSearchOutlined />, label: "Research Archive" },
     ],
   },
   {
     icon: <FileSearchOutlined />,
-    label: "Paper",
+    label: "Paper Project",
     badge: "3",
     subItems: [
       { icon: <FileSearchOutlined />, label: "Active Paper" },
@@ -101,21 +103,37 @@ const NavBar = () => {
 
   //Get user
   const { user } = useSelector((state) => state.auth);
-  const studentNavItems = ["Group", "Registration", "Project", "Paper"];
+  const studentNavItems = [
+    "Group",
+    "Registration",
+    "Research Project",
+    "Paper Project",
+  ];
   const lecturerNavItems = [
     "Group",
     "Registration",
-    "Project",
-    "Paper",
+    "Research Project",
+    "Paper Project",
     "Request",
   ];
-  const deptHeadNavItems = ["Project", "Paper", "Request", "Quotas"];
-  const officeNavItems = ["Project", "Paper", "Request", "Quotas"];
+  const deptHeadNavItems = [
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Quotas",
+  ];
+  const officeNavItems = [
+    "Group",
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Quotas",
+  ];
   const adminNavItems = [
     "Group",
     "Registration",
-    "Project",
-    "Paper",
+    "Research Project",
+    "Paper Project",
     "Request",
     "Quotas",
     "Menu",
@@ -183,6 +201,32 @@ const NavBar = () => {
             };
           }
         }
+
+        // Custom Group for lecturer and Office
+        if (item.label === "Group") {
+          if (user.role === "lecturer") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) =>
+                  subItem.label === "View Group" ||
+                  subItem.label === "Create Group" ||
+                  subItem.label === "Manage Group"
+              ),
+            };
+          }
+          if (user.role === "office") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) =>
+                  subItem.label === "Create Council" ||
+                  subItem.label === "Manage Council"
+              ),
+            };
+          }
+        }
+
         return item;
       });
   }, [user]);
@@ -197,17 +241,26 @@ const NavBar = () => {
       case "Create Group":
         navigate("/create-group");
         break;
-      case "View Groups":
-        navigate("/view-groups");
+      case "View Group":
+        navigate("/view-group");
         break;
-      case "Manage Members":
+      case "Create Council":
+        navigate("/create-council");
+        break;
+      case "Manage Group":
         navigate("/manage-group");
+        break;
+      case "Manage Council":
+        navigate("/manage-council");
         break;
       case "Research Project":
         navigate("/register-research-project");
         break;
       case "Paper Project":
         navigate("/register-paper");
+        break;
+      case "Active Research":
+        navigate("/active-research");
         break;
       // case "Case Study Project":
       //   navigate("/register-case-study-paper");

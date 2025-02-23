@@ -98,7 +98,7 @@ const RegisterPaper = () => {
 
   const paper_type = [
     { id: 1, name: "Conference" },
-    { id: 2, name: "Magazine" },
+    { id: 2, name: "Journal" },
   ];
 
   const authorRoles = [
