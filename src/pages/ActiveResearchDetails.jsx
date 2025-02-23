@@ -19,6 +19,8 @@ import {
   Statistic,
   Row,
   Col,
+  Tooltip,
+  InputNumber,
 } from "antd";
 import {
   ProjectOutlined,
@@ -35,6 +37,9 @@ import {
   FileTextOutlined,
   PlusOutlined,
   InboxOutlined,
+  FileOutlined,
+  DownloadOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -129,6 +134,9 @@ const ActiveResearchDetails = () => {
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [isUpdateBudgetModalVisible, setIsUpdateBudgetModalVisible] =
+    useState(false);
+  const [budgetForm] = Form.useForm();
 
   const handleUpdateMilestone = (project) => {
     setSelectedProject(project);
@@ -232,6 +240,111 @@ const ActiveResearchDetails = () => {
     setSelectedProject(project);
     setShowTaskModal(true);
   };
+
+  const handleDownloadDocument = (document) => {
+    // Implement document download logic here
+    console.log("Downloading document:", document);
+  };
+
+  const handleDeleteDocument = (milestoneId, documentId) => {
+    // Implement document deletion logic here
+    console.log(
+      "Deleting document:",
+      documentId,
+      "from milestone:",
+      milestoneId
+    );
+  };
+
+  const handleAttachDocument = (milestone) => {
+    setSelectedMilestone(milestone);
+    // Open file upload modal or trigger file input
+  };
+
+  const handleUpdateBudget = (milestone) => {
+    setSelectedMilestone(milestone);
+    setIsUpdateBudgetModalVisible(true);
+    budgetForm.setFieldsValue({
+      spentAmount: milestone.spentBudget || 0,
+      description: "",
+    });
+  };
+
+  const handleBudgetSubmit = async (values) => {
+    try {
+      // Update the milestone's spent budget
+      const updatedMilestones = selectedProject.projectMilestones.map((m) =>
+        m.id === selectedMilestone.id
+          ? {
+              ...m,
+              spentBudget: (m.spentBudget || 0) + values.spentAmount,
+            }
+          : m
+      );
+
+      // Update the project's current budget
+      const newCurrentBudget =
+        selectedProject.current_budget + values.spentAmount;
+
+      // Update project state
+      // ... API call to update project and milestone budgets
+
+      message.success("Budget updated successfully");
+      setIsUpdateBudgetModalVisible(false);
+      budgetForm.resetFields();
+    } catch (error) {
+      message.error("Failed to update budget");
+    }
+  };
+
+  const renderBudgetModal = () => (
+    <Modal
+      title="Update Milestone Budget"
+      open={isUpdateBudgetModalVisible}
+      onCancel={() => setIsUpdateBudgetModalVisible(false)}
+      footer={null}
+    >
+      <Form form={budgetForm} layout="vertical" onFinish={handleBudgetSubmit}>
+        <Form.Item
+          name="spentAmount"
+          label="Amount Spent"
+          rules={[{ required: true, message: "Please enter the amount spent" }]}
+        >
+          <InputNumber
+            prefix="₫"
+            className="w-full"
+            formatter={(value) =>
+              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+            }
+            parser={(value) => value.replace(/\₫\s?|(,*)/g, "")}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="description"
+          label="Description"
+          rules={[{ required: true, message: "Please enter a description" }]}
+        >
+          <Input.TextArea rows={4} />
+        </Form.Item>
+
+        <Form.Item className="mb-0">
+          <div className="flex justify-end space-x-2">
+            <Button onClick={() => setIsUpdateBudgetModalVisible(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+            >
+              Update Budget
+            </Button>
+          </div>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -550,6 +663,38 @@ const ActiveResearchDetails = () => {
                                       <CalendarOutlined className="mr-1" />
                                       Deadline: {milestone.deadline}
                                     </div>
+
+                                    {/* Budget Progress */}
+                                    <div className="mt-3">
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm text-gray-600">
+                                          Budget Usage
+                                        </span>
+                                        <span className="text-sm font-medium">
+                                          ₫
+                                          {milestone.spentBudget?.toLocaleString() ||
+                                            0}{" "}
+                                          / ₫
+                                          {milestone.budget?.toLocaleString() ||
+                                            0}
+                                        </span>
+                                      </div>
+                                      <Progress
+                                        percent={
+                                          ((milestone.spentBudget || 0) /
+                                            (milestone.budget || 1)) *
+                                          100
+                                        }
+                                        size="small"
+                                        status={
+                                          milestone.spentBudget >
+                                          milestone.budget
+                                            ? "exception"
+                                            : "active"
+                                        }
+                                      />
+                                    </div>
+
                                     <motion.div
                                       initial={{ opacity: 0, y: -10 }}
                                       animate={{ opacity: 1, y: 0 }}
@@ -572,13 +717,63 @@ const ActiveResearchDetails = () => {
                                       >
                                         {getStatusStyle(milestone.status).label}
                                       </Tag>
-                                      {milestone.budget && (
-                                        <Tag color="blue">
-                                          ₫{milestone.budget.toLocaleString()}
-                                        </Tag>
+
+                                      {/* Document Count Badge */}
+                                      {milestone.documents?.length > 0 && (
+                                        <Tooltip title="Attached Documents">
+                                          <Tag
+                                            icon={<FileOutlined />}
+                                            color="blue"
+                                          >
+                                            {milestone.documents.length} files
+                                          </Tag>
+                                        </Tooltip>
                                       )}
                                     </motion.div>
+
+                                    {/* Attached Documents List */}
+                                    {milestone.documents?.length > 0 && (
+                                      <div className="mt-3 space-y-2">
+                                        {milestone.documents.map((doc, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
+                                          >
+                                            <div className="flex items-center space-x-2">
+                                              <FileOutlined className="text-blue-500" />
+                                              <span className="text-sm text-gray-600">
+                                                {doc.name}
+                                              </span>
+                                            </div>
+                                            <Space>
+                                              <Button
+                                                type="text"
+                                                icon={<DownloadOutlined />}
+                                                size="small"
+                                                onClick={() =>
+                                                  handleDownloadDocument(doc)
+                                                }
+                                              />
+                                              <Button
+                                                type="text"
+                                                icon={<DeleteOutlined />}
+                                                size="small"
+                                                danger
+                                                onClick={() =>
+                                                  handleDeleteDocument(
+                                                    milestone.id,
+                                                    doc.id
+                                                  )
+                                                }
+                                              />
+                                            </Space>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
+
+                                  {/* Actions Dropdown */}
                                   <Dropdown
                                     menu={{
                                       items: [
@@ -586,6 +781,20 @@ const ActiveResearchDetails = () => {
                                           project.id,
                                           milestone
                                         ),
+                                        {
+                                          key: "update-budget",
+                                          label: "Update Budget",
+                                          icon: <DollarOutlined />,
+                                          onClick: () =>
+                                            handleUpdateBudget(milestone),
+                                        },
+                                        {
+                                          key: "attach-document",
+                                          label: "Attach Document",
+                                          icon: <UploadOutlined />,
+                                          onClick: () =>
+                                            handleAttachDocument(milestone),
+                                        },
                                         {
                                           key: "edit",
                                           label: "Edit Details",
@@ -1039,6 +1248,8 @@ const ActiveResearchDetails = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {renderBudgetModal()}
     </div>
   );
 };
