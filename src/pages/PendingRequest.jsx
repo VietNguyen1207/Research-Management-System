@@ -121,8 +121,8 @@ const PendingRequest = () => {
         "Optimize hospital resource allocation",
         "Improve healthcare data management systems",
       ],
-      // methodology:
-      //   "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation. Machine learning algorithms will be developed using Python and TensorFlow, followed by rigorous testing in simulated healthcare environments.",
+      methodology:
+        "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation. Machine learning algorithms will be developed using Python and TensorFlow, followed by rigorous testing in simulated healthcare environments.",
       // innovative_aspects:
       //   "This research introduces novel deep learning architectures specifically designed for healthcare diagnostics, incorporating attention mechanisms for interpretable AI decisions. The system will be the first to integrate real-time patient monitoring with predictive analytics.",
       // research_subjects:

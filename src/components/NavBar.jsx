@@ -27,9 +27,11 @@ const navItems = [
     icon: <TeamOutlined />,
     label: "Group",
     subItems: [
-      { icon: <TeamOutlined />, label: "View Groups" },
+      { icon: <TeamOutlined />, label: "View Group" },
       { icon: <FormOutlined />, label: "Create Group" },
-      { icon: <UserOutlined />, label: "Manage Members" },
+      { icon: <FormOutlined />, label: "Create Council" },
+      { icon: <UserOutlined />, label: "Manage Group" },
+      { icon: <UserOutlined />, label: "Manage Council" },
     ],
   },
   {
@@ -121,6 +123,7 @@ const NavBar = () => {
     "Quotas",
   ];
   const officeNavItems = [
+    "Group",
     "Research Project",
     "Paper Project",
     "Request",
@@ -198,6 +201,32 @@ const NavBar = () => {
             };
           }
         }
+
+        // Custom Group for lecturer and Office
+        if (item.label === "Group") {
+          if (user.role === "lecturer") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) =>
+                  subItem.label === "View Group" ||
+                  subItem.label === "Create Group" ||
+                  subItem.label === "Manage Group"
+              ),
+            };
+          }
+          if (user.role === "office") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) =>
+                  subItem.label === "Create Council" ||
+                  subItem.label === "Manage Council"
+              ),
+            };
+          }
+        }
+
         return item;
       });
   }, [user]);
@@ -212,11 +241,17 @@ const NavBar = () => {
       case "Create Group":
         navigate("/create-group");
         break;
-      case "View Groups":
-        navigate("/view-groups");
+      case "View Group":
+        navigate("/view-group");
         break;
-      case "Manage Members":
+      case "Create Council":
+        navigate("/create-council");
+        break;
+      case "Manage Group":
         navigate("/manage-group");
+        break;
+      case "Manage Council":
+        navigate("/manage-council");
         break;
       case "Research Project":
         navigate("/register-research-project");

@@ -12,7 +12,10 @@ import RegisterResearch from "../pages/RegisterResearch";
 import RegisterPaper from "../pages/lecturer/RegisterPaper";
 // import RegisterCaseStudy from "../pages/lecturer/RegisterCaseStudy";
 import PendingRequest from "../pages/PendingRequest";
+import ActiveResearchDetails from "../pages/ActiveResearchDetails";
 import ActiveResearch from "../pages/ActiveResearch";
+import CreateCouncil from "../pages/office/CreateCouncil";
+import ManageCouncil from "../pages/office/ManageCouncil";
 
 export const routes = [
   {
@@ -46,10 +49,16 @@ export const routes = [
         children: [
           { path: "register-research-project", element: <RegisterResearch /> },
           { path: "create-group", element: <CreateGroup /> },
-          { path: "view-groups", element: <ViewGroup /> },
+          { path: "view-group", element: <ViewGroup /> },
           { path: "manage-group", element: <ManageGroup /> },
-          { path: "active-research", element: <ActiveResearch /> },
-          // Add other student routes here
+          {
+            path: "active-research-details",
+            element: <ActiveResearchDetails />,
+          },
+          {
+            path: "active-research",
+            element: <ActiveResearch />,
+          },
         ],
       },
       {
@@ -101,7 +110,11 @@ export const routes = [
             <Outlet />
           </ProtectedRoutes>
         ),
-        children: [{ path: "office-quota", element: <OfficeQuota /> }],
+        children: [
+          { path: "office-quota", element: <OfficeQuota /> },
+          { path: "create-council", element: <CreateCouncil /> },
+          { path: "manage-council", element: <ManageCouncil /> },
+        ],
       },
     ],
   },

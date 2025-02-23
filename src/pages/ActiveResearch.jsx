@@ -1,469 +1,284 @@
 import React, { useState } from "react";
+import { Card, Tag, Button, Input, Select, Empty, Tooltip, Badge } from "antd";
 import {
-  Card,
-  Tag,
-  Timeline,
-  Button,
-  Modal,
-  Form,
-  DatePicker,
-  Input,
-  message,
-  Dropdown,
-  Space,
-} from "antd";
-import {
+  SearchOutlined,
+  FilterOutlined,
   ProjectOutlined,
   TeamOutlined,
   CalendarOutlined,
-  CheckOutlined,
-  ClockCircleOutlined,
-  CrownOutlined,
-  UserOutlined,
-  EditOutlined,
-  MoreOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
-// Move mock data outside the component
-const approvedProjects = [
-  {
-    id: 1,
-    type: "Research",
-    title: "AI-Driven Healthcare Solutions",
-    description:
-      "A comprehensive study on implementing AI solutions in healthcare systems to improve patient care and operational efficiency.",
-
-    // Project Details
-    objectives: [
-      "Develop AI algorithms for patient diagnosis",
-      "Optimize hospital resource allocation",
-      "Improve healthcare data management systems",
-    ],
-    methodology:
-      "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation...",
-    innovative_aspects:
-      "This research introduces novel deep learning architectures specifically designed for healthcare diagnostics...",
-    research_subjects:
-      "The study will involve analysis of anonymized patient records, healthcare practitioners' workflow patterns...",
-    research_scope:
-      "The research encompasses three major city hospitals in Vietnam...",
-    scientific_significance:
-      "This research advances the field of medical AI by developing new algorithms...",
-    practical_significance:
-      "The outcomes will directly improve patient care through faster diagnosis...",
-
-    department: {
-      id: 1,
-      name: "Computer Science",
-    },
-    category: {
-      id: 1,
-      name: "AI & Machine Learning",
-    },
-    approvedBudget: 500000000,
-
-    // Team Members
-    supervisor: {
-      id: 1,
-      name: "Prof. John Smith",
-      email: "john.smith@university.edu",
-      role: "Research Supervisor",
-    },
-    researchGroup: {
-      id: 1,
-      name: "AI Research Group",
-      members: [
-        { name: "Dr. Emily Smith", role: "Leader" },
-        { name: "John Doe", role: "Member" },
-      ],
-    },
-
-    // Timeline and Milestones
-    projectDuration: {
-      startDate: "2024-03-01",
-      endDate: "2025-02-28",
-    },
-    projectMilestones: [
-      {
-        id: 1,
-        title: "Literature Review",
-        deadline: "2024-04-30",
-        status: "completed",
-      },
-      {
-        id: 2,
-        title: "Data Collection",
-        deadline: "2024-07-31",
-        status: "in_progress",
-      },
-      {
-        id: 3,
-        title: "Algorithm Development",
-        deadline: "2024-11-30",
-        status: "pending",
-      },
-    ],
-  },
-];
+const { Search } = Input;
 
 const ActiveResearch = () => {
-  const [form] = Form.useForm();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [projects, setProjects] = useState(approvedProjects);
+  const navigate = useNavigate();
 
-  const handleUpdateMilestone = (project) => {
-    setSelectedProject(project);
-    setIsModalVisible(true);
-    form.setFieldsValue({
-      milestones: project.projectMilestones,
-    });
+  const [searchText, setSearchText] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const handleViewProject = (project) => {
+    navigate(`/active-research-details`);
   };
+  // const handleViewProject = (project) => {
+  //   navigate(`/active-research/${project.id}`);
+  // };
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      // Here you would typically make an API call to update the milestones
-      message.success("Milestones updated successfully");
-      setIsModalVisible(false);
-    } catch (error) {
-      console.error("Validation failed:", error);
-    }
-  };
-
-  const handleStatusChange = (projectId, milestoneId, newStatus) => {
-    setProjects((prevProjects) =>
-      prevProjects.map((project) => {
-        if (project.id === projectId) {
-          return {
-            ...project,
-            projectMilestones: project.projectMilestones.map((milestone) =>
-              milestone.id === milestoneId
-                ? { ...milestone, status: newStatus }
-                : milestone
-            ),
-          };
-        }
-        return project;
-      })
-    );
-
-    message.success({
-      content: (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Space>
-            <CheckOutlined style={{ color: "#52c41a" }} />
-            {`Status updated successfully`}
-          </Space>
-        </motion.div>
-      ),
-      className: "custom-message",
-      duration: 2,
-    });
-  };
-
-  const getStatusMenuItems = (projectId, milestone) => [
+  // Enhanced mock data
+  const projects = [
     {
-      key: "pending",
-      label: "Pending",
-      onClick: () => handleStatusChange(projectId, milestone.id, "pending"),
+      id: 1,
+      type: "Research",
+      title: "AI-Driven Healthcare Solutions",
+      description:
+        "A comprehensive study on implementing AI solutions in healthcare systems to improve patient care and operational efficiency.",
+      department: {
+        id: 1,
+        name: "Computer Science",
+      },
+      category: {
+        id: 1,
+        name: "AI & Machine Learning",
+      },
+      status: "active",
     },
     {
-      key: "in_progress",
-      label: "In Progress",
-      onClick: () => handleStatusChange(projectId, milestone.id, "in_progress"),
+      id: 2,
+      type: "Research",
+      title: "Sustainable Energy Systems",
+      description:
+        "Investigation of renewable energy integration in urban environments, focusing on solar and wind power optimization.",
+      department: {
+        id: 2,
+        name: "Engineering",
+      },
+      category: {
+        id: 2,
+        name: "Renewable Energy",
+      },
+      status: "active",
     },
     {
-      key: "completed",
-      label: "Completed",
-      onClick: () => handleStatusChange(projectId, milestone.id, "completed"),
+      id: 3,
+      type: "Research",
+      title: "Blockchain in Healthcare Data",
+      description:
+        "Exploring the implementation of blockchain technology for secure and efficient healthcare data management and sharing.",
+      department: {
+        id: 1,
+        name: "Computer Science",
+      },
+      category: {
+        id: 3,
+        name: "Blockchain",
+      },
+      status: "active",
+    },
+    {
+      id: 4,
+      type: "Research",
+      title: "Smart City Infrastructure",
+      description:
+        "Development of intelligent urban infrastructure systems using IoT sensors and real-time data analytics.",
+      department: {
+        id: 2,
+        name: "Engineering",
+      },
+      category: {
+        id: 4,
+        name: "IoT & Smart Systems",
+      },
+      status: "active",
+    },
+    {
+      id: 5,
+      type: "Research",
+      title: "Quantum Computing Applications",
+      description:
+        "Research on practical applications of quantum computing in cryptography and complex system simulations.",
+      department: {
+        id: 1,
+        name: "Computer Science",
+      },
+      category: {
+        id: 5,
+        name: "Quantum Computing",
+      },
+      status: "active",
+    },
+    {
+      id: 6,
+      type: "Research",
+      title: "Advanced Materials Science",
+      description:
+        "Investigation of novel materials with enhanced properties for sustainable manufacturing and construction.",
+      department: {
+        id: 2,
+        name: "Engineering",
+      },
+      category: {
+        id: 6,
+        name: "Materials Science",
+      },
+      status: "active",
     },
   ];
 
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "completed":
-        return {
-          icon: <CheckOutlined />,
-          color: "green",
-          tagColor: "success",
-          label: "Completed",
-        };
-      case "in_progress":
-        return {
-          icon: <ClockCircleOutlined />,
-          color: "blue",
-          tagColor: "processing",
-          label: "In Progress",
-        };
-      default:
-        return {
-          icon: <ClockCircleOutlined />,
-          color: "gray",
-          tagColor: "default",
-          label: "Pending",
-        };
-    }
-  };
+  const departments = [
+    { label: "All Departments", value: "all" },
+    { label: "Computer Science", value: "cs" },
+    { label: "Engineering", value: "eng" },
+    { label: "Medicine", value: "med" },
+  ];
+
+  const statusOptions = [
+    { label: "All Status", value: "all" },
+    { label: "Active", value: "active" },
+    { label: "On Hold", value: "on_hold" },
+    { label: "Completed", value: "completed" },
+  ];
+
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.title.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchText.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" || project.status === filterStatus;
+    const matchesDepartment =
+      selectedDepartment === "all" ||
+      project.department.id === selectedDepartment;
+
+    return matchesSearch && matchesStatus && matchesDepartment;
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-3">
-            Active Research Projects
-          </h2>
-          <p className="text-lg text-gray-600">
-            Monitor and manage your ongoing research projects
+        {/* Softened Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-block">
+            <h2 className="text-4xl font-bold text-gray-800 mb-2">
+              Active Research Projects
+            </h2>
+            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500]/70 rounded-full"></div>
+          </div>
+          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+            View and manage your ongoing research projects
           </p>
         </div>
 
-        <div className="grid gap-6">
-          {projects.map((project) => (
-            <Card
-              key={project.id}
-              className="shadow-lg rounded-xl border-0 hover:shadow-xl transition-shadow duration-300"
-            >
-              {/* Project Header */}
-              <div className="flex justify-between items-start mb-8 border-b pb-6">
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-3">
-                    {project.title}
-                  </h3>
-                  <div className="flex items-center space-x-4">
-                    <Tag color="blue" className="px-3 py-1 rounded-full">
-                      {project.department.name}
-                    </Tag>
-                    <Tag color="orange" className="px-3 py-1 rounded-full">
-                      {project.category.name}
-                    </Tag>
-                    <div className="text-sm text-gray-500">
-                      <CalendarOutlined className="mr-2" />
-                      {project.projectDuration.startDate} -{" "}
-                      {project.projectDuration.endDate}
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Filters Section with softer background */}
+        <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-6 border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Projects
+              </label>
+              <Search
+                placeholder="Search by title or description..."
+                allowClear
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department
+              </label>
+              <Select
+                placeholder="Filter by department"
+                options={departments}
+                onChange={setSelectedDepartment}
+                value={selectedDepartment}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <Select
+                placeholder="Filter by status"
+                options={statusOptions}
+                onChange={setFilterStatus}
+                value={filterStatus}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
 
-              {/* Project Content */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column - Project Details */}
-                <div className="space-y-6">
-                  <div className="bg-orange-50 p-6 rounded-xl">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                      <ProjectOutlined className="text-[#F2722B] mr-2" />
-                      Project Overview
-                    </h4>
-                    <p className="text-gray-600 leading-relaxed">
-                      {project.description}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Middle Column - Team Members */}
-                <div className="space-y-6">
-                  <div className="bg-blue-50 p-6 rounded-xl">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                      <TeamOutlined className="text-blue-500 mr-2" />
-                      Research Team
-                    </h4>
-
-                    {/* Supervisor */}
-                    <div className="mb-4">
-                      <div className="flex items-center space-x-3 bg-white p-3 rounded-lg shadow-sm">
-                        <UserOutlined className="text-[#F2722B]" />
-                        <div>
-                          <div className="font-medium">
-                            {project.supervisor.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {project.supervisor.role}
-                          </div>
-                        </div>
+        {/* Projects Grid with softer colors */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProjects.length > 0 ? (
+            filteredProjects.map((project, index) => (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <Card
+                  className="h-full hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 overflow-hidden bg-white"
+                  bodyStyle={{ padding: 0 }}
+                  actions={[
+                    <Tooltip title="View Details">
+                      <Button
+                        type="link"
+                        className="text-[#F2722B] hover:text-[#E65D1B]"
+                        icon={<ArrowRightOutlined />}
+                        onClick={() => handleViewProject(project)}
+                      >
+                        View Details
+                      </Button>
+                    </Tooltip>,
+                  ]}
+                >
+                  <div className="flex flex-col h-full">
+                    {/* Project Header with softer gradient */}
+                    <div className="p-6 bg-gradient-to-r from-slate-50 to-gray-50">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2">
+                        {project.title}
+                      </h3>
+                      <div className="mb-4">
+                        <div className="text-sm text-gray-500 mb-1">Type</div>
+                        <Tag color="cyan" className="mt-1 text-center">
+                          <span className="font-medium">Research:</span>{" "}
+                          {project.type}
+                        </Tag>
                       </div>
+                      <p className="text-gray-600 text-sm line-clamp-3 min-h-[4.5em]">
+                        {project.description}
+                      </p>
                     </div>
 
-                    {/* Research Group */}
-                    <div className="space-y-3">
-                      {project.researchGroup.members.map((member, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"
-                        >
-                          <div className="flex items-center space-x-3">
-                            {member.role === "Leader" ? (
-                              <CrownOutlined className="text-[#F2722B]" />
-                            ) : (
-                              <UserOutlined className="text-gray-400" />
-                            )}
-                            <div>
-                              <div className="font-medium">{member.name}</div>
-                              <Tag
-                                color={
-                                  member.role === "Leader"
-                                    ? "orange"
-                                    : "default"
-                                }
-                                className="rounded-full mt-1"
-                              >
-                                {member.role}
-                              </Tag>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    {/* Tags Section with softer background */}
+                    <div className="mt-auto px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                      <div className="text-sm text-gray-500 mb-1">Category</div>
+                      <Tag color="gold" className="mt-1">
+                        {project.category.name}
+                      </Tag>
                     </div>
                   </div>
-                </div>
-
-                {/* Right Column - Milestones */}
-                <div className="space-y-6">
-                  <div className="bg-green-50 p-6 rounded-xl">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                      <CalendarOutlined className="text-green-500 mr-2" />
-                      Project Milestones
-                    </h4>
-                    <Timeline className="mt-4">
-                      {project.projectMilestones.map((milestone) => (
-                        <Timeline.Item
-                          key={milestone.id}
-                          dot={
-                            <motion.div
-                              initial={{ scale: 0.8 }}
-                              animate={{ scale: 1 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              {milestone.status === "completed" ? (
-                                <CheckOutlined className="text-green-500" />
-                              ) : milestone.status === "in_progress" ? (
-                                <ClockCircleOutlined className="text-blue-500" />
-                              ) : (
-                                <ClockCircleOutlined className="text-gray-400" />
-                              )}
-                            </motion.div>
-                          }
-                          color={
-                            milestone.status === "completed"
-                              ? "green"
-                              : milestone.status === "in_progress"
-                              ? "blue"
-                              : "gray"
-                          }
-                        >
-                          <div className="flex items-center justify-between group">
-                            <div>
-                              <div className="font-medium">
-                                {milestone.title}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Deadline: {milestone.deadline}
-                              </div>
-                              <AnimatePresence mode="wait">
-                                <motion.div
-                                  key={milestone.status}
-                                  initial={{ opacity: 0, y: -10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: 10 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <Tag
-                                    color={
-                                      milestone.status === "completed"
-                                        ? "success"
-                                        : milestone.status === "in_progress"
-                                        ? "processing"
-                                        : "default"
-                                    }
-                                    className="mt-1"
-                                  >
-                                    {milestone.status === "completed"
-                                      ? "Completed"
-                                      : milestone.status === "in_progress"
-                                      ? "In Progress"
-                                      : "Pending"}
-                                  </Tag>
-                                </motion.div>
-                              </AnimatePresence>
-                            </div>
-                            <Dropdown
-                              menu={{
-                                items: getStatusMenuItems(
-                                  project.id,
-                                  milestone
-                                ),
-                              }}
-                              trigger={["click"]}
-                            >
-                              <Button
-                                type="text"
-                                icon={<MoreOutlined />}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              />
-                            </Dropdown>
-                          </div>
-                        </Timeline.Item>
-                      ))}
-                    </Timeline>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+                </Card>
+              </motion.div>
+            ))
+          ) : (
+            <div className="col-span-full">
+              <Empty
+                description={
+                  <span className="text-gray-500">
+                    No research projects found
+                  </span>
+                }
+                className="my-8"
+              />
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Update Milestones Modal */}
-      <Modal
-        title="Update Project Milestones"
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
-        width={600}
-      >
-        <Form form={form} layout="vertical">
-          <Form.List name="milestones">
-            {(fields) =>
-              fields.map((field) => (
-                <div key={field.key} className="border-b pb-4 mb-4">
-                  <Form.Item
-                    {...field}
-                    label="Milestone Title"
-                    name={[field.name, "title"]}
-                  >
-                    <Input disabled />
-                  </Form.Item>
-                  <Form.Item
-                    {...field}
-                    label="Deadline"
-                    name={[field.name, "deadline"]}
-                  >
-                    <DatePicker className="w-full" />
-                  </Form.Item>
-                  <Form.Item
-                    {...field}
-                    label="Status"
-                    name={[field.name, "status"]}
-                  >
-                    <Input.Select
-                      options={[
-                        { label: "Pending", value: "pending" },
-                        { label: "In Progress", value: "in_progress" },
-                        { label: "Completed", value: "completed" },
-                      ]}
-                    />
-                  </Form.Item>
-                </div>
-              ))
-            }
-          </Form.List>
-        </Form>
-      </Modal>
     </div>
   );
 };
