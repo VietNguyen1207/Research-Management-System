@@ -1,5 +1,22 @@
 import React, { useState } from "react";
-import { Card, Tag, Button, Input, Select, Empty, Tooltip, Badge } from "antd";
+import {
+  Card,
+  Tag,
+  Button,
+  Input,
+  Select,
+  Empty,
+  Tooltip,
+  Badge,
+  Row,
+  Col,
+  Statistic,
+  Avatar,
+  Space,
+  Progress,
+  Typography,
+  Divider,
+} from "antd";
 import {
   SearchOutlined,
   FilterOutlined,
@@ -7,11 +24,17 @@ import {
   TeamOutlined,
   CalendarOutlined,
   ArrowRightOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  BulbOutlined,
+  UserOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 const { Search } = Input;
+const { Title, Text, Paragraph } = Typography;
 
 const ActiveResearch = () => {
   const navigate = useNavigate();
@@ -153,24 +176,81 @@ const ActiveResearch = () => {
     return matchesSearch && matchesStatus && matchesDepartment;
   });
 
+  // Calculate statistics
+  const stats = {
+    totalProjects: projects.length,
+    activeProjects: projects.filter((p) => p.status === "active").length,
+    totalResearchers: [
+      ...new Set(
+        projects.flatMap((p) => p.researchers?.map((r) => r.id) || [])
+      ),
+    ].length,
+    completedMilestones: projects.reduce(
+      (acc, p) => acc + (p.completedMilestones || 0),
+      0
+    ),
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Softened Header Section */}
+        {/* Header Section */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <h2 className="text-4xl font-bold text-gray-800 mb-2">
+            <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
               Active Research Projects
             </h2>
-            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500]/70 rounded-full"></div>
+            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            View and manage your ongoing research projects
+            Explore and manage ongoing research initiatives and collaborations
           </p>
         </div>
 
-        {/* Filters Section with softer background */}
-        <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-6 border border-gray-100">
+        {/* Statistics Cards */}
+        <Row gutter={[16, 16]} className="mb-12">
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Total Projects</Text>}
+                value={stats.totalProjects}
+                prefix={<ProjectOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Active Projects</Text>}
+                value={stats.activeProjects}
+                prefix={<ClockCircleOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Total Researchers</Text>}
+                value={stats.totalResearchers}
+                prefix={<TeamOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={
+                  <Text className="text-gray-600">Completed Milestones</Text>
+                }
+                value={stats.completedMilestones}
+                prefix={<CheckCircleOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Filters Section */}
+        <Card className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -181,6 +261,7 @@ const ActiveResearch = () => {
                 allowClear
                 onChange={(e) => setSearchText(e.target.value)}
                 className="w-full"
+                prefix={<SearchOutlined className="text-gray-400" />}
               />
             </div>
             <div>
@@ -193,6 +274,7 @@ const ActiveResearch = () => {
                 onChange={setSelectedDepartment}
                 value={selectedDepartment}
                 className="w-full"
+                suffixIcon={<FilterOutlined className="text-gray-400" />}
               />
             </div>
             <div>
@@ -205,12 +287,13 @@ const ActiveResearch = () => {
                 onChange={setFilterStatus}
                 value={filterStatus}
                 className="w-full"
+                suffixIcon={<FilterOutlined className="text-gray-400" />}
               />
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Projects Grid with softer colors */}
+        {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.length > 0 ? (
             filteredProjects.map((project, index) => (
@@ -223,44 +306,101 @@ const ActiveResearch = () => {
                 <Card
                   className="h-full hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 overflow-hidden bg-white"
                   bodyStyle={{ padding: 0 }}
-                  actions={[
-                    <Tooltip title="View Details">
-                      <Button
-                        type="link"
-                        className="text-[#F2722B] hover:text-[#E65D1B]"
-                        icon={<ArrowRightOutlined />}
-                        onClick={() => handleViewProject(project)}
-                      >
-                        View Details
-                      </Button>
-                    </Tooltip>,
-                  ]}
                 >
-                  <div className="flex flex-col h-full">
-                    {/* Project Header with softer gradient */}
-                    <div className="p-6 bg-gradient-to-r from-slate-50 to-gray-50">
-                      <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2">
-                        {project.title}
-                      </h3>
-                      <div className="mb-4">
-                        <div className="text-sm text-gray-500 mb-1">Type</div>
-                        <Tag color="cyan" className="mt-1 text-center">
-                          <span className="font-medium">Research:</span>{" "}
-                          {project.type}
-                        </Tag>
-                      </div>
-                      <p className="text-gray-600 text-sm line-clamp-3 min-h-[4.5em]">
-                        {project.description}
-                      </p>
-                    </div>
-
-                    {/* Tags Section with softer background */}
-                    <div className="mt-auto px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-                      <div className="text-sm text-gray-500 mb-1">Category</div>
-                      <Tag color="gold" className="mt-1">
+                  <div className="p-6">
+                    {/* Project Type & Category */}
+                    <div className="flex justify-between items-center mb-4">
+                      <Tag color="cyan" className="text-sm">
+                        {project.type}
+                      </Tag>
+                      <Tag color="orange" className="text-sm">
                         {project.category.name}
                       </Tag>
                     </div>
+
+                    {/* Project Title */}
+                    <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2">
+                      {project.title}
+                    </h3>
+
+                    {/* Project Description */}
+                    <Paragraph className="text-gray-600 text-sm line-clamp-3 mb-4">
+                      {project.description}
+                    </Paragraph>
+
+                    {/* Project Progress */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <Text className="text-sm text-gray-500">Progress</Text>
+                        <Text className="text-sm font-medium">
+                          {project.progress || 0}%
+                        </Text>
+                      </div>
+                      <Progress
+                        percent={project.progress || 0}
+                        size="small"
+                        strokeColor={{
+                          "0%": "#F2722B",
+                          "100%": "#FFA500",
+                        }}
+                      />
+                    </div>
+
+                    {/* Budget Progress */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <Text className="text-sm text-gray-500">Budget</Text>
+                        <Text className="text-sm font-medium">
+                          ₫{(project.spentBudget || 0).toLocaleString()} / ₫
+                          {(project.totalBudget || 0).toLocaleString()}
+                        </Text>
+                      </div>
+                      <Progress
+                        percent={
+                          ((project.spentBudget || 0) /
+                            (project.totalBudget || 1)) *
+                          100
+                        }
+                        size="small"
+                        status={
+                          project.spentBudget > project.totalBudget
+                            ? "exception"
+                            : "active"
+                        }
+                        strokeColor={{
+                          "0%": "#52c41a",
+                          "100%": "#1890ff",
+                        }}
+                      />
+                    </div>
+
+                    {/* Project Details */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <TeamOutlined className="mr-2" />
+                        <span>
+                          {project.researchers?.length || 0} Researchers
+                        </span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <FileTextOutlined className="mr-2" />
+                        <span>
+                          {project.publications?.length || 0} Publications
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                    <Button
+                      type="primary"
+                      icon={<ArrowRightOutlined />}
+                      onClick={() => handleViewProject(project)}
+                      className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                    >
+                      View Details
+                    </Button>
                   </div>
                 </Card>
               </motion.div>
