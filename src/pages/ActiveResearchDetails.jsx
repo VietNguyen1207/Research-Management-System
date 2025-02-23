@@ -21,6 +21,8 @@ import {
   Col,
   Tooltip,
   InputNumber,
+  Typography,
+  Select,
 } from "antd";
 import {
   ProjectOutlined,
@@ -40,8 +42,12 @@ import {
   FileOutlined,
   DownloadOutlined,
   DeleteOutlined,
+  InfoCircleOutlined,
+  PaperClipOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
+
+const { Text } = Typography;
 
 // Move mock data outside the component
 const approvedProjects = [
@@ -325,7 +331,37 @@ const ActiveResearchDetails = () => {
           label="Description"
           rules={[{ required: true, message: "Please enter a description" }]}
         >
-          <Input.TextArea rows={4} />
+          <div className="border rounded-lg overflow-hidden">
+            <Input.TextArea
+              rows={4}
+              className="border-0 focus:shadow-none"
+              placeholder="Enter details about the budget usage..."
+            />
+            <div className="border-t bg-gray-50 p-2 flex items-center justify-between">
+              <Upload
+                maxCount={3}
+                multiple
+                beforeUpload={() => false}
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                showUploadList={{
+                  showPreviewIcon: true,
+                  showRemoveIcon: true,
+                  showDownloadIcon: true,
+                }}
+              >
+                <Button
+                  type="text"
+                  icon={<PaperClipOutlined />}
+                  className="hover:text-[#FF8C00]"
+                >
+                  Attach Files
+                </Button>
+              </Upload>
+              <Text type="secondary" className="text-xs">
+                Max 3 files (5MB each)
+              </Text>
+            </div>
+          </div>
         </Form.Item>
 
         <Form.Item className="mb-0">
@@ -627,29 +663,29 @@ const ActiveResearchDetails = () => {
                         </div>
 
                         {/* Milestones Timeline */}
-                        <Timeline className="mt-6">
-                          {project.projectMilestones.map((milestone) => (
-                            <Timeline.Item
-                              key={milestone.id}
-                              dot={
-                                <motion.div
-                                  initial={{ scale: 0.8 }}
-                                  animate={{ scale: 1 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="cursor-pointer"
-                                  onClick={() =>
-                                    handleStatusChange(
-                                      project.id,
-                                      milestone.id,
-                                      "completed"
-                                    )
-                                  }
-                                >
-                                  {getStatusStyle(milestone.status).icon}
-                                </motion.div>
-                              }
-                              color={getStatusStyle(milestone.status).color}
-                            >
+                        <Timeline
+                          className="mt-6"
+                          items={project.projectMilestones.map((milestone) => ({
+                            key: milestone.id,
+                            dot: (
+                              <motion.div
+                                initial={{ scale: 0.8 }}
+                                animate={{ scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  handleStatusChange(
+                                    project.id,
+                                    milestone.id,
+                                    "completed"
+                                  )
+                                }
+                              >
+                                {getStatusStyle(milestone.status).icon}
+                              </motion.div>
+                            ),
+                            color: getStatusStyle(milestone.status).color,
+                            children: (
                               <motion.div
                                 className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
                                 whileHover={{ scale: 1.02 }}
@@ -666,33 +702,71 @@ const ActiveResearchDetails = () => {
 
                                     {/* Budget Progress */}
                                     <div className="mt-3">
-                                      <div className="flex justify-between items-center mb-1">
+                                      <div className="flex justify-between items-center">
                                         <span className="text-sm text-gray-600">
                                           Budget Usage
                                         </span>
-                                        <span className="text-sm font-medium">
-                                          ₫
-                                          {milestone.spentBudget?.toLocaleString() ||
-                                            0}{" "}
-                                          / ₫
-                                          {milestone.budget?.toLocaleString() ||
-                                            0}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-medium text-gray-900">
+                                            ₫
+                                            {milestone.spentBudget?.toLocaleString() ||
+                                              0}
+                                          </span>
+                                          <Tooltip title="View Budget History">
+                                            <Button
+                                              type="text"
+                                              size="small"
+                                              icon={<InfoCircleOutlined />}
+                                              onClick={() =>
+                                                handleViewBudgetHistory(
+                                                  milestone
+                                                )
+                                              }
+                                              className="text-gray-400 hover:text-[#FF8C00]"
+                                            />
+                                          </Tooltip>
+                                        </div>
                                       </div>
-                                      <Progress
-                                        percent={
-                                          ((milestone.spentBudget || 0) /
-                                            (milestone.budget || 1)) *
-                                          100
-                                        }
-                                        size="small"
-                                        status={
-                                          milestone.spentBudget >
-                                          milestone.budget
-                                            ? "exception"
-                                            : "active"
-                                        }
-                                      />
+                                      {milestone.budgetHistory &&
+                                        milestone.budgetHistory.length > 0 && (
+                                          <div className="mt-2 space-y-2">
+                                            {milestone.budgetHistory.map(
+                                              (record, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg"
+                                                >
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-gray-600">
+                                                      ₫
+                                                      {record.amount.toLocaleString()}
+                                                    </span>
+                                                    <Tag
+                                                      color="blue"
+                                                      className="text-xs"
+                                                    >
+                                                      {record.date}
+                                                    </Tag>
+                                                  </div>
+                                                  {record.attachment && (
+                                                    <Button
+                                                      type="link"
+                                                      size="small"
+                                                      icon={<FileOutlined />}
+                                                      onClick={() =>
+                                                        handleDownloadAttachment(
+                                                          record.attachment
+                                                        )
+                                                      }
+                                                    >
+                                                      View Receipt
+                                                    </Button>
+                                                  )}
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
                                     </div>
 
                                     <motion.div
@@ -814,9 +888,9 @@ const ActiveResearchDetails = () => {
                                   </Dropdown>
                                 </div>
                               </motion.div>
-                            </Timeline.Item>
-                          ))}
-                        </Timeline>
+                            ),
+                          }))}
+                        />
                       </motion.div>
                     </div>
                   </div>
@@ -1137,7 +1211,7 @@ const ActiveResearchDetails = () => {
                       label="Status"
                       name={[field.name, "status"]}
                     >
-                      <Input.Select
+                      <Select
                         options={[
                           { label: "Pending", value: "pending" },
                           { label: "In Progress", value: "in_progress" },
@@ -1192,7 +1266,7 @@ const ActiveResearchDetails = () => {
             <Input prefix="₫" type="number" />
           </Form.Item>
           <Form.Item label="Category" name="category">
-            <Input.Select
+            <Select
               options={[
                 { label: "Equipment", value: "equipment" },
                 { label: "Materials", value: "materials" },
@@ -1225,7 +1299,7 @@ const ActiveResearchDetails = () => {
             <Input.TextArea rows={4} />
           </Form.Item>
           <Form.Item label="Assignee" name="assignee">
-            <Input.Select
+            <Select
               options={
                 selectedProject?.researchGroup?.members?.map((member) => ({
                   label: member.name,
@@ -1235,7 +1309,7 @@ const ActiveResearchDetails = () => {
             />
           </Form.Item>
           <Form.Item label="Priority" name="priority">
-            <Input.Select
+            <Select
               options={[
                 { label: "High", value: "high" },
                 { label: "Medium", value: "medium" },
