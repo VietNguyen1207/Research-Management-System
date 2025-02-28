@@ -14,6 +14,7 @@ import RegisterPaper from "../pages/lecturer/RegisterPaper";
 import PendingRequest from "../pages/PendingRequest";
 import ActiveResearchDetails from "../pages/ActiveResearchDetails";
 import ActiveResearch from "../pages/ActiveResearch";
+import ActivePaper from "../pages/lecturer/ActivePaper";
 import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
 
@@ -59,6 +60,10 @@ export const routes = [
             path: "active-research",
             element: <ActiveResearch />,
           },
+          {
+            path: "active-paper",
+            element: <ActivePaper />,
+          },
         ],
       },
       {
@@ -90,6 +95,14 @@ export const routes = [
         children: [
           // Add department head routes here
           { path: "pending-request", element: <PendingRequest /> },
+          {
+            path: "active-research-details",
+            element: <ActiveResearchDetails />,
+          },
+          {
+            path: "active-research",
+            element: <ActiveResearch />,
+          },
         ],
       },
       //Department + Office
