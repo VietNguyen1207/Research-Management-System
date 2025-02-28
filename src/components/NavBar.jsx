@@ -262,14 +262,14 @@ const NavBar = () => {
       case "Active Research":
         navigate("/active-research");
         break;
+      case "Active Paper":
+        navigate("/active-paper");
+        break;
       // case "Case Study Project":
       //   navigate("/register-case-study-paper");
       //   break;
       case "Pending Request":
         navigate("/pending-request");
-        break;
-      case "Active Project":
-        navigate("/papers");
         break;
       case "Department Quota":
         navigate("/department-quota");
