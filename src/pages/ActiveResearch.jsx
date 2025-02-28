@@ -6,13 +6,9 @@ import {
   Input,
   Select,
   Empty,
-  Tooltip,
-  Badge,
   Row,
   Col,
   Statistic,
-  Avatar,
-  Space,
   Progress,
   Typography,
   Divider,
@@ -22,12 +18,9 @@ import {
   FilterOutlined,
   ProjectOutlined,
   TeamOutlined,
-  CalendarOutlined,
   ArrowRightOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
-  BulbOutlined,
-  UserOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
@@ -45,9 +38,6 @@ const ActiveResearch = () => {
   const handleViewProject = (project) => {
     navigate(`/active-research-details`);
   };
-  // const handleViewProject = (project) => {
-  //   navigate(`/active-research/${project.id}`);
-  // };
 
   // Enhanced mock data
   const projects = [

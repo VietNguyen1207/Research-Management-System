@@ -48,18 +48,17 @@ export const routes = [
           </ProtectedRoutes>
         ),
         children: [
-          { path: "register-research-project", element: <RegisterResearch /> },
           { path: "create-group", element: <CreateGroup /> },
           { path: "view-group", element: <ViewGroup /> },
           { path: "manage-group", element: <ManageGroup /> },
-          {
-            path: "active-research-details",
-            element: <ActiveResearchDetails />,
-          },
-          {
-            path: "active-research",
-            element: <ActiveResearch />,
-          },
+          // {
+          //   path: "active-research-details",
+          //   element: <ActiveResearchDetails />,
+          // },
+          // {
+          //   path: "active-research",
+          //   element: <ActiveResearch />,
+          // },
           {
             path: "active-paper",
             element: <ActivePaper />,
@@ -75,6 +74,7 @@ export const routes = [
         ),
         children: [
           // Add other lecturer routes here
+          { path: "register-research-project", element: <RegisterResearch /> },
           {
             path: "register-paper",
             element: <RegisterPaper />,
