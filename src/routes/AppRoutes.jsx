@@ -15,6 +15,7 @@ import PendingRequest from "../pages/PendingRequest";
 import ActiveResearchDetails from "../pages/ActiveResearchDetails";
 import ActiveResearch from "../pages/ActiveResearch";
 import ActivePaper from "../pages/lecturer/ActivePaper";
+import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
 import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
 
@@ -48,22 +49,17 @@ export const routes = [
           </ProtectedRoutes>
         ),
         children: [
-          { path: "register-research-project", element: <RegisterResearch /> },
           { path: "create-group", element: <CreateGroup /> },
           { path: "view-group", element: <ViewGroup /> },
           { path: "manage-group", element: <ManageGroup /> },
-          {
-            path: "active-research-details",
-            element: <ActiveResearchDetails />,
-          },
-          {
-            path: "active-research",
-            element: <ActiveResearch />,
-          },
-          {
-            path: "active-paper",
-            element: <ActivePaper />,
-          },
+          // {
+          //   path: "active-research-details",
+          //   element: <ActiveResearchDetails />,
+          // },
+          // {
+          //   path: "active-research",
+          //   element: <ActiveResearch />,
+          // },
         ],
       },
       {
@@ -75,14 +71,20 @@ export const routes = [
         ),
         children: [
           // Add other lecturer routes here
+          { path: "register-research-project", element: <RegisterResearch /> },
           {
             path: "register-paper",
             element: <RegisterPaper />,
           },
-          // {
-          //   path: "register-case-study-paper",
-          //   element: <RegisterCaseStudy />,
-          // },
+          {
+            path: "active-paper",
+            element: <ActivePaper />,
+          },
+
+          {
+            path: "active-paper-details",
+            element: <ActivePaperDetails />,
+          },
         ],
       },
       {

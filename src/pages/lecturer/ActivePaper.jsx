@@ -282,7 +282,8 @@ const ActivePaper = () => {
 
   const handleViewPaperDetails = (paper) => {
     // Navigate to paper details page
-    navigate(`/active-paper-details/${paper.id}`);
+    // navigate(`/active-paper-details/${paper.id}`);
+    navigate(`/active-paper-details`);
   };
 
   return (
