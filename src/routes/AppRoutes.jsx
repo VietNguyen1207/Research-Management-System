@@ -15,6 +15,7 @@ import PendingRequest from "../pages/PendingRequest";
 import ActiveResearchDetails from "../pages/ActiveResearchDetails";
 import ActiveResearch from "../pages/ActiveResearch";
 import ActivePaper from "../pages/lecturer/ActivePaper";
+import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
 import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
 
@@ -59,10 +60,6 @@ export const routes = [
           //   path: "active-research",
           //   element: <ActiveResearch />,
           // },
-          {
-            path: "active-paper",
-            element: <ActivePaper />,
-          },
         ],
       },
       {
@@ -79,10 +76,15 @@ export const routes = [
             path: "register-paper",
             element: <RegisterPaper />,
           },
-          // {
-          //   path: "register-case-study-paper",
-          //   element: <RegisterCaseStudy />,
-          // },
+          {
+            path: "active-paper",
+            element: <ActivePaper />,
+          },
+
+          {
+            path: "active-paper-details",
+            element: <ActivePaperDetails />,
+          },
         ],
       },
       {
