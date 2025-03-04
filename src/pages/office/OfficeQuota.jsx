@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   Card,
@@ -8,6 +8,17 @@ import {
   Tag,
   Tooltip,
   Progress,
+  Modal,
+  Form,
+  InputNumber,
+  Space,
+  Typography,
+  Divider,
+  Row,
+  Col,
+  Statistic,
+  Alert,
+  message,
 } from "antd";
 import {
   SearchOutlined,
@@ -18,10 +29,28 @@ import {
   MailOutlined,
   EyeOutlined,
   WalletOutlined,
+  PlusOutlined,
+  EditOutlined,
+  HistoryOutlined,
+  BarChartOutlined,
+  CheckCircleOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
+import { motion } from "framer-motion";
+
+const { Title, Text, Paragraph } = Typography;
+const { Search } = Input;
 
 const OfficeQuota = () => {
-  // Mock data for departments
+  const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
+  const [isProjectModalVisible, setIsProjectModalVisible] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [form] = Form.useForm();
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [budgetRangeFilter, setBudgetRangeFilter] = useState(null);
+
+  // Enhanced mock data
   const departmentsData = [
     {
       key: 1,
@@ -36,9 +65,28 @@ const OfficeQuota = () => {
       projectTypes: {
         research: 2,
         conference: 2,
-        caseStudy: 1,
+        journal: 1,
       },
       status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-15",
+          amount: 200000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+        {
+          date: "2024-02-01",
+          amount: 300000000,
+          type: "Additional Funding",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 5,
+        conference: 3,
+        journal: 2,
+      },
     },
     {
       key: 2,
@@ -53,9 +101,118 @@ const OfficeQuota = () => {
       projectTypes: {
         research: 1,
         conference: 1,
-        caseStudy: 1,
+        journal: 1,
       },
       status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-10",
+          amount: 400000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 3,
+        conference: 2,
+        journal: 2,
+      },
+    },
+    {
+      key: 3,
+      name: "Electrical Engineering",
+      headOfDepartment: "Dr. Sarah Johnson",
+      email: "sarah.j@university.edu",
+      phone: "+84 456 789 123",
+      ongoingProjects: 4,
+      totalBudget: 600000000,
+      usedBudget: 450000000,
+      remainingBudget: 150000000,
+      projectTypes: {
+        research: 2,
+        conference: 1,
+        journal: 1,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-20",
+          amount: 400000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+        {
+          date: "2024-02-15",
+          amount: 200000000,
+          type: "Additional Funding",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 4,
+        conference: 2,
+        journal: 2,
+      },
+    },
+    {
+      key: 4,
+      name: "Mechanical Engineering",
+      headOfDepartment: "Prof. Michael Chen",
+      email: "michael.chen@university.edu",
+      phone: "+84 789 123 456",
+      ongoingProjects: 2,
+      totalBudget: 300000000,
+      usedBudget: 280000000,
+      remainingBudget: 20000000,
+      projectTypes: {
+        research: 1,
+        conference: 1,
+        journal: 0,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-05",
+          amount: 300000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 3,
+        conference: 2,
+        journal: 1,
+      },
+    },
+    {
+      key: 5,
+      name: "Business Administration",
+      headOfDepartment: "Dr. Lisa Wong",
+      email: "lisa.wong@university.edu",
+      phone: "+84 321 654 987",
+      ongoingProjects: 3,
+      totalBudget: 250000000,
+      usedBudget: 100000000,
+      remainingBudget: 150000000,
+      projectTypes: {
+        research: 1,
+        conference: 1,
+        journal: 1,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-25",
+          amount: 250000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 2,
+        conference: 2,
+        journal: 1,
+      },
     },
   ];
 
@@ -65,7 +222,11 @@ const OfficeQuota = () => {
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
-        <div className="space-y-2">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-2"
+        >
           <div className="flex items-center space-x-2">
             <BankOutlined className="text-[#F2722B] text-xl" />
             <div className="text-lg font-semibold text-gray-800">{text}</div>
@@ -84,35 +245,48 @@ const OfficeQuota = () => {
               <span>{record.phone}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       ),
     },
     {
       title: "Projects Overview",
       key: "projects",
       render: (_, record) => (
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <TeamOutlined className="text-[#F2722B]" />
-            <span className="text-base font-medium">
-              Active Projects: {record.ongoingProjects}
-            </span>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <TeamOutlined className="text-[#F2722B]" />
+              <span className="text-base font-medium">
+                Active Projects: {record.ongoingProjects}
+              </span>
+            </div>
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEditProjectQuotas(record)}
+              className="text-[#F2722B]"
+            />
           </div>
           <div className="grid grid-cols-1 gap-2">
             <Tag color="blue" className="text-center">
               <span className="font-medium">Research:</span>{" "}
-              {record.projectTypes.research}
+              {record.projectTypes.research}/{record.projectQuotas.research}
             </Tag>
             <Tag color="green" className="text-center">
               <span className="font-medium">Conference:</span>{" "}
-              {record.projectTypes.conference}
+              {record.projectTypes.conference}/{record.projectQuotas.conference}
             </Tag>
             <Tag color="orange" className="text-center">
               <span className="font-medium">Journal:</span>{" "}
-              {record.projectTypes.caseStudy}
+              {record.projectTypes.journal}/{record.projectQuotas.journal}
             </Tag>
           </div>
-        </div>
+        </motion.div>
       ),
     },
     {
@@ -121,13 +295,26 @@ const OfficeQuota = () => {
       render: (_, record) => {
         const usagePercentage = (record.usedBudget / record.totalBudget) * 100;
         return (
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <WalletOutlined className="text-[#F2722B]" />
-              <span className="font-medium">Total Budget:</span>
-              <span className="text-green-600">
-                ₫{record.totalBudget.toLocaleString()}
-              </span>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <WalletOutlined className="text-[#F2722B]" />
+                <span className="font-medium">Total Budget:</span>
+                <span className="text-green-600">
+                  ₫{record.totalBudget.toLocaleString()}
+                </span>
+              </div>
+              <Button
+                type="text"
+                icon={<HistoryOutlined />}
+                onClick={() => handleViewBudgetHistory(record)}
+                className="text-[#F2722B]"
+              />
             </div>
             <Progress
               percent={Math.round(usagePercentage)}
@@ -149,7 +336,7 @@ const OfficeQuota = () => {
                 </div>
               </Tooltip>
             </div>
-          </div>
+          </motion.div>
         );
       },
     },
@@ -171,11 +358,16 @@ const OfficeQuota = () => {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <div className="space-y-2">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-2"
+        >
           <Button
             type="primary"
             icon={<DollarOutlined />}
-            className="w-full bg-[#F2722B] hover:bg-[#F2722B]/90 border-none"
+            className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
             onClick={() => handleAssignBudget(record)}
           >
             Assign Budget
@@ -188,52 +380,225 @@ const OfficeQuota = () => {
           >
             View Details
           </Button>
-        </div>
+        </motion.div>
       ),
     },
   ];
 
   const handleAssignBudget = (record) => {
-    console.log("Assign budget for:", record.name);
+    setSelectedDepartment(record);
+    form.resetFields();
+    setIsBudgetModalVisible(true);
+  };
+
+  const handleEditProjectQuotas = (record) => {
+    setSelectedDepartment(record);
+    form.setFieldsValue({
+      researchQuota: record.projectQuotas?.research || 0,
+      conferenceQuota: record.projectQuotas?.conference || 0,
+      journalQuota: record.projectQuotas?.journal || 0,
+    });
+    setIsProjectModalVisible(true);
+  };
+
+  const handleViewBudgetHistory = (record) => {
+    // Implement budget history view
   };
 
   const handleViewDetails = (record) => {
-    console.log("View details for:", record.name);
+    // Implement detailed view
   };
 
+  const handleBudgetSubmit = async (values) => {
+    try {
+      // API call to update budget
+      message.success("Budget allocated successfully");
+      setIsBudgetModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      message.error("Failed to allocate budget");
+      console.error("Budget allocation error:", error);
+    }
+  };
+
+  const handleProjectQuotaSubmit = async (values) => {
+    try {
+      // API call to update project quotas
+      message.success("Project quotas updated successfully");
+      setIsProjectModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      message.error("Failed to update project quotas");
+      console.error("Project quota update error:", error);
+    }
+  };
+
+  const handleSearch = (value) => {
+    setSearchText(value);
+  };
+
+  const handleStatusFilter = (value) => {
+    setStatusFilter(value);
+  };
+
+  const handleBudgetRangeFilter = (value) => {
+    setBudgetRangeFilter(value);
+  };
+
+  const filteredData = departmentsData.filter((dept) => {
+    const matchesSearch =
+      searchText === "" ||
+      dept.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      dept.headOfDepartment.toLowerCase().includes(searchText.toLowerCase());
+
+    const matchesStatus =
+      !statusFilter || dept.status.toLowerCase() === statusFilter.toLowerCase();
+
+    const matchesBudget =
+      !budgetRangeFilter ||
+      (budgetRangeFilter === "high" && dept.totalBudget > 500000000) ||
+      (budgetRangeFilter === "medium" &&
+        dept.totalBudget >= 100000000 &&
+        dept.totalBudget <= 500000000) ||
+      (budgetRangeFilter === "low" && dept.totalBudget < 100000000);
+
+    return matchesSearch && matchesStatus && matchesBudget;
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Departments Quota Overview
-          </h2>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            <div className="text-sm text-gray-500">
-              Manage and monitor department quotas and project allocations
-            </div>
-            <div className="flex gap-4">
-              <Input.Search
-                placeholder="Search Departments"
-                className="w-64"
-                prefix={<SearchOutlined className="text-gray-400" />}
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-block">
+            <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
+              Department Quota Management
+            </h2>
+            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
+          </div>
+          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+            Manage and monitor department budgets and project allocations
+          </p>
+        </div>
+
+        {/* Statistics Cards */}
+        <Row gutter={[16, 16]} className="mb-12">
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Total Departments</Text>}
+                value={departmentsData.length}
+                prefix={<BankOutlined className="text-[#F2722B]" />}
               />
-              <Select
-                placeholder="Filter by Status"
-                className="w-40"
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Total Budget</Text>}
+                value={departmentsData.reduce(
+                  (sum, dept) => sum + dept.totalBudget,
+                  0
+                )}
+                prefix={<DollarOutlined className="text-[#F2722B]" />}
+                suffix="₫"
+                formatter={(value) => `${value.toLocaleString()}`}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Active Projects</Text>}
+                value={departmentsData.reduce(
+                  (sum, dept) => sum + dept.ongoingProjects,
+                  0
+                )}
+                prefix={<TeamOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={
+                  <Text className="text-gray-600">Budget Utilization</Text>
+                }
+                value={Math.round(
+                  (departmentsData.reduce(
+                    (sum, dept) => sum + dept.usedBudget,
+                    0
+                  ) /
+                    departmentsData.reduce(
+                      (sum, dept) => sum + dept.totalBudget,
+                      0
+                    )) *
+                    100
+                )}
+                suffix="%"
+                prefix={<BarChartOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Filters Section */}
+        <Card className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Departments
+              </label>
+              <Search
+                placeholder="Search by name or head of department..."
                 allowClear
+                className="w-full"
+                prefix={<SearchOutlined className="text-gray-400" />}
+                onChange={(e) => handleSearch(e.target.value)}
+                value={searchText}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <Select
+                placeholder="Filter by status"
+                allowClear
+                className="w-full"
+                onChange={handleStatusFilter}
+                value={statusFilter}
               >
                 <Select.Option value="active">Active</Select.Option>
                 <Select.Option value="inactive">Inactive</Select.Option>
               </Select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Budget Range
+              </label>
+              <Select
+                placeholder="Filter by budget range"
+                allowClear
+                className="w-full"
+                onChange={handleBudgetRangeFilter}
+                value={budgetRangeFilter}
+              >
+                <Select.Option value="high">High (&gt;500M₫)</Select.Option>
+                <Select.Option value="medium">
+                  Medium (100M₫-500M₫)
+                </Select.Option>
+                <Select.Option value="low">Low (&lt;100M₫)</Select.Option>
+              </Select>
+            </div>
           </div>
-        </div>
+        </Card>
 
-        <Card className="shadow-md rounded-lg" bodyStyle={{ padding: "24px" }}>
+        {/* Main Table */}
+        <Card className="shadow-lg rounded-xl border-0">
           <Table
             columns={columns}
-            dataSource={departmentsData}
+            dataSource={filteredData}
             pagination={{
               pageSize: 5,
               className: "custom-pagination",
@@ -241,6 +606,112 @@ const OfficeQuota = () => {
             rowClassName="align-top hover:bg-gray-50"
           />
         </Card>
+
+        {/* Budget Allocation Modal */}
+        <Modal
+          title="Allocate Budget"
+          open={isBudgetModalVisible}
+          onCancel={() => {
+            setIsBudgetModalVisible(false);
+            form.resetFields();
+          }}
+          footer={null}
+        >
+          <Form form={form} onFinish={handleBudgetSubmit} layout="vertical">
+            <Form.Item
+              name="amount"
+              label="Budget Amount (₫)"
+              rules={[{ required: true }]}
+            >
+              <InputNumber
+                className="w-full"
+                formatter={(value) =>
+                  `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+              />
+            </Form.Item>
+            <Form.Item
+              name="type"
+              label="Allocation Type"
+              rules={[{ required: true }]}
+            >
+              <Select>
+                <Select.Option value="initial">
+                  Initial Allocation
+                </Select.Option>
+                <Select.Option value="additional">
+                  Additional Funding
+                </Select.Option>
+                <Select.Option value="adjustment">
+                  Budget Adjustment
+                </Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea rows={4} />
+            </Form.Item>
+            <Form.Item>
+              <Space className="w-full justify-end">
+                <Button onClick={() => setIsBudgetModalVisible(false)}>
+                  Cancel
+                </Button>
+                <Button type="primary" htmlType="submit">
+                  Allocate Budget
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Project Quota Modal */}
+        <Modal
+          title="Edit Project Quotas"
+          open={isProjectModalVisible}
+          onCancel={() => {
+            setIsProjectModalVisible(false);
+            form.resetFields();
+          }}
+          footer={null}
+        >
+          <Form
+            form={form}
+            onFinish={handleProjectQuotaSubmit}
+            layout="vertical"
+          >
+            <Form.Item
+              name="researchQuota"
+              label="Research Projects Quota"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={0} className="w-full" />
+            </Form.Item>
+            <Form.Item
+              name="conferenceQuota"
+              label="Conference Projects Quota"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={0} className="w-full" />
+            </Form.Item>
+            <Form.Item
+              name="journalQuota"
+              label="Journal Projects Quota"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={0} className="w-full" />
+            </Form.Item>
+            <Form.Item>
+              <Space className="w-full justify-end">
+                <Button onClick={() => setIsProjectModalVisible(false)}>
+                  Cancel
+                </Button>
+                <Button type="primary" htmlType="submit">
+                  Update Quotas
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
       </div>
     </div>
   );
