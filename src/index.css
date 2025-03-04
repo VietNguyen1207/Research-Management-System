@@ -18,3 +18,16 @@
 .ant-tag {
   @apply transition-all duration-200 ease-in-out;
 }
+
+.custom-pagination .ant-pagination-item-active {
+  border-color: #f2722b !important;
+  background-color: #f2722b !important;
+}
+
+.custom-pagination .ant-pagination-item-active a {
+  color: white !important;
+}
+
+.ant-table-row:hover {
+  background-color: rgba(242, 114, 43, 0.05) !important;
+}

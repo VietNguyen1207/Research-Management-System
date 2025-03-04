@@ -51,53 +51,18 @@ const OfficeQuota = () => {
   const [budgetRangeFilter, setBudgetRangeFilter] = useState(null);
 
   // Enhanced mock data
-  const departmentsData = [
+  const lecturersData = [
     {
       key: 1,
-      name: "Computer Science",
-      headOfDepartment: "Dr. Emily Smith",
+      name: "Dr. Emily Smith",
       email: "emily.smith@university.edu",
       phone: "+84 123 456 789",
-      ongoingProjects: 5,
-      totalBudget: 500000000,
-      usedBudget: 320000000,
-      remainingBudget: 180000000,
-      projectTypes: {
-        research: 2,
-        conference: 2,
-        journal: 1,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-15",
-          amount: 200000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-        {
-          date: "2024-02-01",
-          amount: 300000000,
-          type: "Additional Funding",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 5,
-        conference: 3,
-        journal: 2,
-      },
-    },
-    {
-      key: 2,
-      name: "Information Technology",
-      headOfDepartment: "Prof. John Doe",
-      email: "john.doe@university.edu",
-      phone: "+84 987 654 321",
+      department: "Computer Science",
+      title: "Associate Professor",
       ongoingProjects: 3,
-      totalBudget: 400000000,
-      usedBudget: 150000000,
-      remainingBudget: 250000000,
+      totalBudget: 150000000,
+      usedBudget: 95000000,
+      remainingBudget: 55000000,
       projectTypes: {
         research: 1,
         conference: 1,
@@ -106,64 +71,35 @@ const OfficeQuota = () => {
       status: "Active",
       budgetHistory: [
         {
-          date: "2024-01-10",
-          amount: 400000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 3,
-        conference: 2,
-        journal: 2,
-      },
-    },
-    {
-      key: 3,
-      name: "Electrical Engineering",
-      headOfDepartment: "Dr. Sarah Johnson",
-      email: "sarah.j@university.edu",
-      phone: "+84 456 789 123",
-      ongoingProjects: 4,
-      totalBudget: 600000000,
-      usedBudget: 450000000,
-      remainingBudget: 150000000,
-      projectTypes: {
-        research: 2,
-        conference: 1,
-        journal: 1,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-20",
-          amount: 400000000,
+          date: "2024-01-15",
+          amount: 100000000,
           type: "Initial Allocation",
           approvedBy: "Admin",
         },
         {
-          date: "2024-02-15",
-          amount: 200000000,
+          date: "2024-02-01",
+          amount: 50000000,
           type: "Additional Funding",
           approvedBy: "Admin",
         },
       ],
       projectQuotas: {
-        research: 4,
+        research: 2,
         conference: 2,
-        journal: 2,
+        journal: 1,
       },
     },
     {
-      key: 4,
-      name: "Mechanical Engineering",
-      headOfDepartment: "Prof. Michael Chen",
-      email: "michael.chen@university.edu",
-      phone: "+84 789 123 456",
+      key: 2,
+      name: "Prof. John Doe",
+      email: "john.doe@university.edu",
+      phone: "+84 987 654 321",
+      department: "Information Technology",
+      title: "Professor",
       ongoingProjects: 2,
-      totalBudget: 300000000,
-      usedBudget: 280000000,
-      remainingBudget: 20000000,
+      totalBudget: 120000000,
+      usedBudget: 45000000,
+      remainingBudget: 75000000,
       projectTypes: {
         research: 1,
         conference: 1,
@@ -172,45 +108,108 @@ const OfficeQuota = () => {
       status: "Active",
       budgetHistory: [
         {
-          date: "2024-01-05",
-          amount: 300000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 3,
-        conference: 2,
-        journal: 1,
-      },
-    },
-    {
-      key: 5,
-      name: "Business Administration",
-      headOfDepartment: "Dr. Lisa Wong",
-      email: "lisa.wong@university.edu",
-      phone: "+84 321 654 987",
-      ongoingProjects: 3,
-      totalBudget: 250000000,
-      usedBudget: 100000000,
-      remainingBudget: 150000000,
-      projectTypes: {
-        research: 1,
-        conference: 1,
-        journal: 1,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-25",
-          amount: 250000000,
+          date: "2024-01-10",
+          amount: 120000000,
           type: "Initial Allocation",
           approvedBy: "Admin",
         },
       ],
       projectQuotas: {
         research: 2,
-        conference: 2,
+        conference: 1,
+        journal: 1,
+      },
+    },
+    {
+      key: 3,
+      name: "Dr. Sarah Johnson",
+      email: "sarah.j@university.edu",
+      phone: "+84 456 789 123",
+      department: "Electrical Engineering",
+      title: "Assistant Professor",
+      ongoingProjects: 2,
+      totalBudget: 100000000,
+      usedBudget: 75000000,
+      remainingBudget: 25000000,
+      projectTypes: {
+        research: 1,
+        conference: 1,
+        journal: 0,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-20",
+          amount: 100000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 2,
+        conference: 1,
+        journal: 1,
+      },
+    },
+    {
+      key: 4,
+      name: "Prof. Michael Chen",
+      email: "michael.chen@university.edu",
+      phone: "+84 789 123 456",
+      department: "Mechanical Engineering",
+      title: "Professor",
+      ongoingProjects: 1,
+      totalBudget: 80000000,
+      usedBudget: 60000000,
+      remainingBudget: 20000000,
+      projectTypes: {
+        research: 1,
+        conference: 0,
+        journal: 0,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-05",
+          amount: 80000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 2,
+        conference: 1,
+        journal: 1,
+      },
+    },
+    {
+      key: 5,
+      name: "Dr. Lisa Wong",
+      email: "lisa.wong@university.edu",
+      phone: "+84 321 654 987",
+      department: "Business Administration",
+      title: "Associate Professor",
+      ongoingProjects: 2,
+      totalBudget: 90000000,
+      usedBudget: 40000000,
+      remainingBudget: 50000000,
+      projectTypes: {
+        research: 1,
+        conference: 1,
+        journal: 0,
+      },
+      status: "Active",
+      budgetHistory: [
+        {
+          date: "2024-01-25",
+          amount: 90000000,
+          type: "Initial Allocation",
+          approvedBy: "Admin",
+        },
+      ],
+      projectQuotas: {
+        research: 2,
+        conference: 1,
         journal: 1,
       },
     },
@@ -218,7 +217,7 @@ const OfficeQuota = () => {
 
   const columns = [
     {
-      title: "Department Information",
+      title: "Lecturer Information",
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
@@ -234,7 +233,7 @@ const OfficeQuota = () => {
           <div className="text-sm text-gray-500 pl-6 space-y-1">
             <div className="flex items-center space-x-2">
               <TeamOutlined className="text-gray-400" />
-              <span>{record.headOfDepartment}</span>
+              <span>{record.title}</span>
             </div>
             <div className="flex items-center space-x-2">
               <MailOutlined className="text-gray-400" />
@@ -243,6 +242,10 @@ const OfficeQuota = () => {
             <div className="flex items-center space-x-2">
               <PhoneOutlined className="text-gray-400" />
               <span>{record.phone}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <BankOutlined className="text-gray-400" />
+              <span>{record.department}</span>
             </div>
           </div>
         </motion.div>
@@ -445,22 +448,23 @@ const OfficeQuota = () => {
     setBudgetRangeFilter(value);
   };
 
-  const filteredData = departmentsData.filter((dept) => {
+  const filteredData = lecturersData.filter((lecturer) => {
     const matchesSearch =
       searchText === "" ||
-      dept.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      dept.headOfDepartment.toLowerCase().includes(searchText.toLowerCase());
+      lecturer.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      lecturer.department.toLowerCase().includes(searchText.toLowerCase());
 
     const matchesStatus =
-      !statusFilter || dept.status.toLowerCase() === statusFilter.toLowerCase();
+      !statusFilter ||
+      lecturer.status.toLowerCase() === statusFilter.toLowerCase();
 
     const matchesBudget =
       !budgetRangeFilter ||
-      (budgetRangeFilter === "high" && dept.totalBudget > 500000000) ||
+      (budgetRangeFilter === "high" && lecturer.totalBudget > 50000000) ||
       (budgetRangeFilter === "medium" &&
-        dept.totalBudget >= 100000000 &&
-        dept.totalBudget <= 500000000) ||
-      (budgetRangeFilter === "low" && dept.totalBudget < 100000000);
+        lecturer.totalBudget >= 20000000 &&
+        lecturer.totalBudget <= 50000000) ||
+      (budgetRangeFilter === "low" && lecturer.totalBudget < 20000000);
 
     return matchesSearch && matchesStatus && matchesBudget;
   });
@@ -472,12 +476,12 @@ const OfficeQuota = () => {
         <div className="text-center mb-16">
           <div className="inline-block">
             <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
-              Department Quota Management
+              Lecturer Quota Management
             </h2>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Manage and monitor department budgets and project allocations
+            Manage and monitor lecturer budgets and project allocations
           </p>
         </div>
 
@@ -486,8 +490,8 @@ const OfficeQuota = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
-                title={<Text className="text-gray-600">Total Departments</Text>}
-                value={departmentsData.length}
+                title={<Text className="text-gray-600">Total Lecturers</Text>}
+                value={lecturersData.length}
                 prefix={<BankOutlined className="text-[#F2722B]" />}
               />
             </Card>
@@ -496,8 +500,8 @@ const OfficeQuota = () => {
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={<Text className="text-gray-600">Total Budget</Text>}
-                value={departmentsData.reduce(
-                  (sum, dept) => sum + dept.totalBudget,
+                value={lecturersData.reduce(
+                  (sum, lecturer) => sum + lecturer.totalBudget,
                   0
                 )}
                 prefix={<DollarOutlined className="text-[#F2722B]" />}
@@ -510,8 +514,8 @@ const OfficeQuota = () => {
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={<Text className="text-gray-600">Active Projects</Text>}
-                value={departmentsData.reduce(
-                  (sum, dept) => sum + dept.ongoingProjects,
+                value={lecturersData.reduce(
+                  (sum, lecturer) => sum + lecturer.ongoingProjects,
                   0
                 )}
                 prefix={<TeamOutlined className="text-[#F2722B]" />}
@@ -525,12 +529,12 @@ const OfficeQuota = () => {
                   <Text className="text-gray-600">Budget Utilization</Text>
                 }
                 value={Math.round(
-                  (departmentsData.reduce(
-                    (sum, dept) => sum + dept.usedBudget,
+                  (lecturersData.reduce(
+                    (sum, lecturer) => sum + lecturer.usedBudget,
                     0
                   ) /
-                    departmentsData.reduce(
-                      (sum, dept) => sum + dept.totalBudget,
+                    lecturersData.reduce(
+                      (sum, lecturer) => sum + lecturer.totalBudget,
                       0
                     )) *
                     100
@@ -547,10 +551,10 @@ const OfficeQuota = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Departments
+                Search Lecturers
               </label>
               <Search
-                placeholder="Search by name or head of department..."
+                placeholder="Search by name or department..."
                 allowClear
                 className="w-full"
                 prefix={<SearchOutlined className="text-gray-400" />}
@@ -584,11 +588,9 @@ const OfficeQuota = () => {
                 onChange={handleBudgetRangeFilter}
                 value={budgetRangeFilter}
               >
-                <Select.Option value="high">High (&gt;500M₫)</Select.Option>
-                <Select.Option value="medium">
-                  Medium (100M₫-500M₫)
-                </Select.Option>
-                <Select.Option value="low">Low (&lt;100M₫)</Select.Option>
+                <Select.Option value="high">High (&gt;50M₫)</Select.Option>
+                <Select.Option value="medium">Medium (20M₫-50M₫)</Select.Option>
+                <Select.Option value="low">Low (&lt;20M₫)</Select.Option>
               </Select>
             </div>
           </div>
