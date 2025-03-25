@@ -18,6 +18,8 @@ import ActivePaper from "../pages/lecturer/ActivePaper";
 import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
 import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
+import Timeline from "../pages/office/TimelineManagement";
+import TimelineManagement from "../pages/office/TimelineManagement";
 
 export const routes = [
   {
@@ -111,11 +113,14 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["department", "office"]}>
+          <ProtectedRoutes allowedRoles={["department", "office", "admin"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
-        children: [{ path: "department-quota", element: <DepartmentQuota /> }],
+        children: [
+          { path: "department-quota", element: <DepartmentQuota /> },
+          { path: "timeline-management", element: <TimelineManagement /> },
+        ],
       },
       // Office
       {
