@@ -16,6 +16,10 @@ import {
   ProjectOutlined,
   UserOutlined,
   FieldTimeOutlined,
+  SolutionOutlined,
+  FundOutlined,
+  FileTextOutlined,
+  AuditOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -54,29 +58,29 @@ const navItems = [
     ],
   },
   {
-    icon: <FileSearchOutlined />,
+    icon: <FileTextOutlined />,
     label: "Paper Project",
     badge: "3",
     subItems: [
-      { icon: <FileSearchOutlined />, label: "Active Paper" },
+      { icon: <FileTextOutlined />, label: "Active Paper" },
       { icon: <FormOutlined />, label: "Completed Paper" },
       { icon: <ProjectOutlined />, label: "Paper Archived" },
     ],
   },
   {
-    icon: <ProjectOutlined />,
+    icon: <AuditOutlined />,
     label: "Request",
     subItems: [
-      { icon: <ProjectOutlined />, label: "Pending Request" },
+      { icon: <AuditOutlined />, label: "Pending Request" },
       { icon: <FormOutlined />, label: "Request Progress" },
       { icon: <TeamOutlined />, label: "Request Record" },
     ],
   },
   {
-    icon: <ProjectOutlined />,
+    icon: <FundOutlined />,
     label: "Quotas",
     subItems: [
-      { icon: <ProjectOutlined />, label: "Department Quota" },
+      { icon: <FundOutlined />, label: "Department Quota" },
       { icon: <FormOutlined />, label: "Office Quota" },
     ],
   },
