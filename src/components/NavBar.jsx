@@ -15,6 +15,7 @@ import {
   FileSearchOutlined,
   ProjectOutlined,
   UserOutlined,
+  FieldTimeOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -80,6 +81,11 @@ const navItems = [
     ],
   },
   {
+    key: "timeline-management",
+    icon: <FieldTimeOutlined />,
+    label: "Timeline Management",
+  },
+  {
     icon: <AppstoreOutlined />,
     label: "Menu",
     subItems: [
@@ -127,6 +133,7 @@ const NavBar = () => {
     "Research Project",
     "Paper Project",
     "Request",
+    "Timeline Management",
     "Quotas",
   ];
   const adminNavItems = [
@@ -136,6 +143,7 @@ const NavBar = () => {
     "Paper Project",
     "Request",
     "Quotas",
+    "Timeline Management",
     "Menu",
   ];
 
@@ -285,8 +293,15 @@ const NavBar = () => {
   };
 
   const handleItemClick = (item) => {
-    if (item.label === "Quotas") {
-      navigate("/quotas");
+    switch (item.label) {
+      case "Timeline Management":
+        navigate("/timeline-management");
+        break;
+      case "Quotas":
+        navigate("/quotas");
+        break;
+      default:
+        break;
     }
     setSelectedItem(item);
   };
