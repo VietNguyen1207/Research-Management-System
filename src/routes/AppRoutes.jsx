@@ -20,6 +20,7 @@ import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
 import Timeline from "../pages/office/TimelineManagement";
 import TimelineManagement from "../pages/office/TimelineManagement";
+import AllTimelines from "../pages/office/AllTimelines";
 
 export const routes = [
   {
@@ -120,6 +121,10 @@ export const routes = [
         children: [
           { path: "department-quota", element: <DepartmentQuota /> },
           { path: "timeline-management", element: <TimelineManagement /> },
+          {
+            path: "/all-timelines",
+            element: <AllTimelines />,
+          },
         ],
       },
       // Office

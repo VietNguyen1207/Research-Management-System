@@ -35,6 +35,7 @@ import {
 } from "@ant-design/icons";
 import moment from "moment";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -65,6 +66,8 @@ const TimelineManagement = () => {
   const [groupForm] = Form.useForm();
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+
+  const navigate = useNavigate();
 
   // Mock data for demonstration - replace with API calls in production
   useEffect(() => {
@@ -524,6 +527,14 @@ const TimelineManagement = () => {
             Manage and control system-wide timelines for registration periods,
             reviews, submissions, and other important events
           </p>
+          <Button
+            type="primary"
+            icon={<CalendarOutlined />}
+            onClick={() => navigate("/all-timelines")}
+            className="mt-4 bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
+          >
+            View All Timelines
+          </Button>
         </div>
 
         <Row gutter={[24, 24]}>
