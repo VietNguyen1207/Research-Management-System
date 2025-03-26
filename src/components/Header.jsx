@@ -22,7 +22,67 @@ const Header = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: "invitation",
+      sender: "Dr. Sarah Johnson",
+      groupName: "AI Research Group",
+      groupType: "research",
+      role: "Member",
+      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
+      read: false,
+      responded: false,
+    },
+    {
+      id: 2,
+      type: "update",
+      title: "Project Milestone Reached",
+      message:
+        "The Machine Learning project has completed Phase 1 successfully",
+      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+      read: false,
+    },
+    {
+      id: 3,
+      type: "invitation",
+      sender: "Prof. Michael Chen",
+      groupName: "Computer Science Department Council",
+      groupType: "department",
+      role: "Secretary",
+      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+      read: true,
+      responded: false,
+    },
+    {
+      id: 4,
+      type: "response",
+      user: "Dr. Emily White",
+      groupName: "Data Science Lab",
+      accepted: true,
+      timestamp: new Date(Date.now() - 86400000), // 1 day ago
+      read: true,
+    },
+    {
+      id: 5,
+      type: "update",
+      title: "Timeline Updated",
+      message: "Research proposal submission deadline extended to next week",
+      timestamp: new Date(Date.now() - 172800000), // 2 days ago
+      read: true,
+    },
+    {
+      id: 6,
+      type: "invitation",
+      sender: "Prof. Robert Brown",
+      groupName: "Research Ethics Committee",
+      groupType: "department",
+      role: "Member",
+      timestamp: new Date(Date.now() - 259200000), // 3 days ago
+      read: false,
+      responded: false,
+    },
+  ]);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());

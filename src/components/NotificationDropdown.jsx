@@ -31,18 +31,17 @@ const NotificationDropdown = ({
 }) => {
   const [loading, setLoading] = useState(false);
 
-  // Group notifications by type
-  const invitations = notifications.filter((n) => n.type === "invitation");
-  const updates = notifications.filter((n) => n.type === "update");
-  const responses = notifications.filter((n) => n.type === "response");
+  // Filter unread notifications
+  const unreadNotifications = notifications.filter((n) => !n.read);
 
   const renderNotificationContent = (notification) => {
     switch (notification.type) {
       case "invitation":
         return (
-          <div className="flex flex-col gap-2 w-full">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex items-start gap-3">
               <Avatar
+                size={40}
                 icon={
                   notification.groupType === "research" ? (
                     <TeamOutlined />
@@ -50,36 +49,50 @@ const NotificationDropdown = ({
                     <BankOutlined />
                   )
                 }
-                className={
+                className={`${
                   notification.groupType === "research"
-                    ? "bg-blue-500"
-                    : "bg-green-500"
-                }
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                    : "bg-gradient-to-r from-green-500 to-green-600"
+                } shadow-lg`}
               />
               <div className="flex-1">
-                <Typography.Text strong>{notification.sender}</Typography.Text>
-                <Typography.Text> invited you to join </Typography.Text>
-                <Typography.Text strong>
-                  {notification.groupName}
-                </Typography.Text>
-                <Typography.Text> as </Typography.Text>
-                <Typography.Text strong>{notification.role}</Typography.Text>
+                <div className="flex flex-col">
+                  <Typography.Text strong className="text-base">
+                    New Invitation
+                  </Typography.Text>
+                  <Typography.Text className="text-gray-600">
+                    <span className="font-semibold text-orange-600">
+                      {notification.sender}
+                    </span>{" "}
+                    invited you to join{" "}
+                    <span className="font-semibold text-orange-600">
+                      {notification.groupName}
+                    </span>{" "}
+                    as{" "}
+                    <span className="font-semibold text-orange-600">
+                      {notification.role}
+                    </span>
+                  </Typography.Text>
+                  <Typography.Text className="text-xs text-gray-400 mt-2">
+                    {dayjs(notification.timestamp).fromNow()}
+                  </Typography.Text>
+                </div>
               </div>
             </div>
             {!notification.responded && (
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end mt-1">
                 <Button
-                  size="small"
-                  type="text"
-                  danger
+                  size="middle"
+                  className="hover:bg-red-50 hover:text-red-600 transition-all"
                   icon={<CloseCircleOutlined />}
                   onClick={() => onDecline(notification.id)}
                 >
                   Decline
                 </Button>
                 <Button
-                  size="small"
+                  size="middle"
                   type="primary"
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 border-none shadow-md"
                   icon={<CheckCircleOutlined />}
                   onClick={() => onAccept(notification.id)}
                 >
@@ -92,29 +105,55 @@ const NotificationDropdown = ({
 
       case "update":
         return (
-          <div className="flex items-center gap-2">
-            <Avatar icon={<ClockCircleOutlined />} className="bg-orange-500" />
-            <div>
-              <Typography.Text strong>{notification.title}</Typography.Text>
-              <Typography.Text>: {notification.message}</Typography.Text>
+          <div className="flex items-start gap-3">
+            <Avatar
+              size={40}
+              icon={<ClockCircleOutlined />}
+              className="bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg"
+            />
+            <div className="flex-1">
+              <Typography.Text strong className="text-base block mb-1">
+                {notification.title}
+              </Typography.Text>
+              <Typography.Text className="text-gray-600 block">
+                {notification.message}
+              </Typography.Text>
+              <Typography.Text className="text-xs text-gray-400 mt-2 block">
+                {dayjs(notification.timestamp).fromNow()}
+              </Typography.Text>
             </div>
           </div>
         );
 
       case "response":
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-3">
             <Avatar
+              size={40}
               icon={<UserAddOutlined />}
-              className={notification.accepted ? "bg-green-500" : "bg-red-500"}
+              className={`shadow-lg ${
+                notification.accepted
+                  ? "bg-gradient-to-r from-green-500 to-green-600"
+                  : "bg-gradient-to-r from-red-500 to-red-600"
+              }`}
             />
-            <div>
-              <Typography.Text strong>{notification.user}</Typography.Text>
-              <Typography.Text>
-                {notification.accepted ? " accepted " : " declined "}
-                your invitation to join
+            <div className="flex-1">
+              <Typography.Text strong className="text-base block mb-1">
+                Response Received
               </Typography.Text>
-              <Typography.Text strong>{notification.groupName}</Typography.Text>
+              <Typography.Text className="text-gray-600 block">
+                <span className="font-semibold text-orange-600">
+                  {notification.user}
+                </span>{" "}
+                {notification.accepted ? "accepted" : "declined"} your
+                invitation to join{" "}
+                <span className="font-semibold text-orange-600">
+                  {notification.groupName}
+                </span>
+              </Typography.Text>
+              <Typography.Text className="text-xs text-gray-400 mt-2 block">
+                {dayjs(notification.timestamp).fromNow()}
+              </Typography.Text>
             </div>
           </div>
         );
@@ -128,27 +167,31 @@ const NotificationDropdown = ({
     {
       key: "1",
       label: (
-        <span>
-          Invitations
-          {invitations.length > 0 && (
-            <Badge count={invitations.length} style={{ marginLeft: 8 }} />
-          )}
+        <span className="flex items-center gap-2">
+          <BellOutlined />
+          All
         </span>
       ),
       children: (
         <List
-          className="max-h-[400px] overflow-y-auto"
-          dataSource={invitations}
+          className="max-h-[400px] overflow-y-auto custom-scrollbar"
+          dataSource={notifications}
           renderItem={(item) => (
-            <List.Item className={!item.read ? "bg-blue-50" : ""}>
+            <List.Item
+              className={`border-b-0 ${
+                !item.read ? "bg-orange-50/50" : ""
+              } hover:bg-orange-50 transition-all duration-200 p-3`}
+            >
               {renderNotificationContent(item)}
-              <Typography.Text className="text-xs text-gray-500 absolute bottom-1 right-2">
-                {dayjs(item.timestamp).fromNow()}
-              </Typography.Text>
             </List.Item>
           )}
           locale={{
-            emptyText: <Empty description="No invitations" />,
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No notifications"
+              />
+            ),
           }}
         />
       ),
@@ -156,48 +199,36 @@ const NotificationDropdown = ({
     {
       key: "2",
       label: (
-        <span>
-          Updates
-          {updates.length > 0 && (
-            <Badge count={updates.length} style={{ marginLeft: 8 }} />
-          )}
+        <span className="flex items-center gap-2">
+          <Badge
+            count={unreadNotifications.length}
+            size="small"
+            className="animate-pulse"
+            style={{
+              backgroundColor: "#f97316",
+              boxShadow: "0 0 0 2px rgba(249, 115, 22, 0.1)",
+            }}
+          >
+            <span className="mr-2">Unread</span>
+          </Badge>
         </span>
       ),
       children: (
         <List
-          className="max-h-[400px] overflow-y-auto"
-          dataSource={updates}
+          className="max-h-[400px] overflow-y-auto custom-scrollbar"
+          dataSource={unreadNotifications}
           renderItem={(item) => (
-            <List.Item className={!item.read ? "bg-blue-50" : ""}>
+            <List.Item className="border-b-0 bg-orange-50/50">
               {renderNotificationContent(item)}
-              <Typography.Text className="text-xs text-gray-500 absolute bottom-1 right-2">
-                {dayjs(item.timestamp).fromNow()}
-              </Typography.Text>
             </List.Item>
           )}
           locale={{
-            emptyText: <Empty description="No updates" />,
-          }}
-        />
-      ),
-    },
-    {
-      key: "3",
-      label: "Responses",
-      children: (
-        <List
-          className="max-h-[400px] overflow-y-auto"
-          dataSource={responses}
-          renderItem={(item) => (
-            <List.Item className={!item.read ? "bg-blue-50" : ""}>
-              {renderNotificationContent(item)}
-              <Typography.Text className="text-xs text-gray-500 absolute bottom-1 right-2">
-                {dayjs(item.timestamp).fromNow()}
-              </Typography.Text>
-            </List.Item>
-          )}
-          locale={{
-            emptyText: <Empty description="No responses" />,
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No unread notifications"
+              />
+            ),
           }}
         />
       ),
@@ -205,17 +236,31 @@ const NotificationDropdown = ({
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-lg w-[400px] border border-gray-200">
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-        <Typography.Title level={5} className="m-0">
+    <div className="bg-white rounded-xl shadow-xl w-[420px] border border-orange-100">
+      <div className="p-4 border-b border-orange-100 flex justify-between items-center bg-gradient-to-r from-orange-50 to-orange-100/50">
+        <Typography.Title level={5} className="m-0 flex items-center gap-2">
+          <BellOutlined className="text-orange-500" />
           Notifications
         </Typography.Title>
-        <Button type="link" size="small" onClick={() => onMarkAsRead()}>
+        <Button
+          type="link"
+          size="small"
+          className="text-orange-600 hover:text-orange-700"
+          onClick={() => onMarkAsRead()}
+        >
           Mark all as read
         </Button>
       </div>
       <Spin spinning={loading}>
-        <Tabs items={items} className="px-2" style={{ maxHeight: "600px" }} />
+        <Tabs
+          items={items}
+          className="px-2"
+          style={{ maxHeight: "600px" }}
+          tabBarStyle={{
+            marginBottom: 0,
+            padding: "0 8px",
+          }}
+        />
       </Spin>
     </div>
   );
