@@ -31,3 +31,40 @@
 .ant-table-row:hover {
   background-color: rgba(242, 114, 43, 0.05) !important;
 }
+
+/* Notification dropdown customization */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #fdba74 #fff;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #fff;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #fdba74;
+  border-radius: 20px;
+  border: 2px solid #fff;
+}
+
+/* Animation for new notifications */
+@keyframes softPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-soft-pulse {
+  animation: softPulse 2s infinite;
+}
