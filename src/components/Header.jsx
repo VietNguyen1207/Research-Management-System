@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ExperimentOutlined,
   UserOutlined,
@@ -16,16 +16,30 @@ import { Dropdown, Avatar, Space, Badge, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../auth/authSlice";
+import NotificationDropdown from "./NotificationDropdown";
 
 const Header = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
     message.success("Logged out successfully");
     navigate("/login");
+  };
+
+  const handleAcceptInvitation = async (notificationId) => {
+    // Handle invitation acceptance
+  };
+
+  const handleDeclineInvitation = async (notificationId) => {
+    // Handle invitation decline
+  };
+
+  const handleMarkAllAsRead = async () => {
+    // Handle marking all notifications as read
   };
 
   const items = [
@@ -102,26 +116,40 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <button className="flex items-center hover:bg-[#FFFFFF15] p-2 rounded-lg transition-colors duration-200">
-                <Badge
-                  count="15+"
-                  offset={[-2, 2]}
-                  style={{
-                    backgroundColor: "#D2691E",
-                    padding: "0 6px",
-                    fontWeight: "600",
-                    fontSize: "12px",
-                    minWidth: "20px",
-                    height: "20px",
-                    borderColor: "transparent",
-                  }}
-                >
-                  <BellOutlined
-                    className="text-2xl text-white"
-                    style={{ fontWeight: 600 }}
+              <Dropdown
+                overlay={
+                  <NotificationDropdown
+                    notifications={notifications}
+                    onAccept={handleAcceptInvitation}
+                    onDecline={handleDeclineInvitation}
+                    onMarkAsRead={handleMarkAllAsRead}
                   />
-                </Badge>
-              </button>
+                }
+                trigger={["click"]}
+                placement="bottomRight"
+                arrow
+              >
+                <button className="flex items-center hover:bg-[#FFFFFF15] p-2 rounded-lg transition-colors duration-200">
+                  <Badge
+                    count={notifications.filter((n) => !n.read).length}
+                    offset={[-2, 2]}
+                    style={{
+                      backgroundColor: "#D2691E",
+                      padding: "0 6px",
+                      fontWeight: "600",
+                      fontSize: "12px",
+                      minWidth: "20px",
+                      height: "20px",
+                      borderColor: "transparent",
+                    }}
+                  >
+                    <BellOutlined
+                      className="text-2xl text-white"
+                      style={{ fontWeight: 600 }}
+                    />
+                  </Badge>
+                </button>
+              </Dropdown>
 
               <Dropdown
                 menu={{ items }}
