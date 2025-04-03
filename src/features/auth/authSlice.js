@@ -33,13 +33,32 @@ export const loginUser = createAsyncThunk(
         }
       }
 
-      const data = await response.json();
-      console.log("Login response data:", data);
+      const responseData = await response.json();
+      console.log("Login response data:", responseData);
 
-      // If your API doesn't return the expected format, transform it here
+      // Map role integer to string based on backend enum
+      const roleMap = {
+        0: "admin",
+        1: "lecturer",
+        2: "student",
+        3: "department", // Accounting_Department
+        4: "office",
+      };
+
+      // Extract the user data from the response
+      const userData = responseData.data;
+
+      // Transform the response to match your expected format
       return {
-        user: data.user || { role: "lecturer" }, // Ensure we have a user object
-        token: data.token || data.accessToken, // Handle different token formats
+        user: {
+          id: userData.userId,
+          email: userData.email,
+          full_name: userData.fullName,
+          status: userData.status,
+          role: roleMap[userData.role] || "unknown",
+          groups: userData.groups,
+        },
+        token: userData.accessToken,
       };
     } catch (error) {
       console.error("Login fetch error:", error);
@@ -67,6 +86,22 @@ export const checkAuthState = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
+  }
+);
+
+// Add a logout thunk
+export const logoutUser = createAsyncThunk(
+  "auth/logout",
+  async (_, { dispatch }) => {
+    // Clear local storage
+    localStorage.removeItem("authToken");
+
+    // You could also invalidate any cached API data
+    if (apiSlice.util && apiSlice.util.resetApiState) {
+      dispatch(apiSlice.util.resetApiState());
+    }
+
+    return null;
   }
 );
 
@@ -137,6 +172,11 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(checkAuthState.rejected, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;

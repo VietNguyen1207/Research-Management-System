@@ -1,15 +1,17 @@
 import React from "react";
-import { Input, Checkbox, Form, Spin } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Input, Checkbox, Form, Spin, Button } from "antd";
+import { UserOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../features/auth/authSlice";
+import { loginUser, logoutUser } from "../features/auth/authSlice";
 import { message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { store } from "../app/store";
 
 const Login = () => {
   const dispatch = useDispatch();
-  const { isLoading, error } = useSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated } = useSelector(
+    (state) => state.auth
+  );
   const navigate = useNavigate();
 
   const onFinish = async (values) => {
@@ -39,6 +41,18 @@ const Login = () => {
     }
   };
 
+  // Test logout function
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser());
+      message.success("Logged out successfully");
+      console.log("Auth state after logout:", store.getState().auth);
+    } catch (error) {
+      console.error("Logout error:", error);
+      message.error("Logout failed");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -48,6 +62,18 @@ const Login = () => {
           <p className="mt-2 text-sm text-gray-600">
             Please sign in to your account
           </p>
+          {/* Temporary logout button for testing */}
+          {isAuthenticated && (
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              className="mt-4"
+            >
+              Test Logout
+            </Button>
+          )}
         </div>
 
         {/* Form Section */}
