@@ -15,7 +15,7 @@ import {
 import { Dropdown, Avatar, Space, Badge, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "../auth/authSlice";
+// import { logoutUser } from "../auth/authSlice";
 import NotificationDropdown from "./NotificationDropdown";
 
 const Header = () => {
