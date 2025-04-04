@@ -216,20 +216,59 @@ const Header = () => {
                 trigger={["click"]}
                 placement="bottomRight"
               >
-                <button className="flex items-center space-x-3 hover:bg-[#FFFFFF15] py-2 px-4 rounded-lg transition-all duration-200 border border-white/30">
+                <button className="flex items-center space-x-3 hover:bg-[#FFFFFF30] py-2 px-4 rounded-lg transition-all duration-200 border border-white/30 group relative cursor-pointer">
                   <Avatar
                     size={32}
-                    icon={<UserOutlined />}
+                    src={user?.profileImageUrl || null}
+                    icon={!user?.profileImageUrl && <UserOutlined />}
                     className="bg-[#D2691E]"
                   />
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium text-white">
+                  <div className="flex flex-col items-start ml-2 min-w-[160px]">
+                    <span className="font-semibold text-white tracking-wide text-[15px] drop-shadow-sm">
                       {user?.full_name}
                     </span>
-                    <span className="text-xs text-white/80">
-                      {user?.role?.charAt(0).toUpperCase() +
-                        user?.role?.slice(1)}
-                    </span>
+                    <div className="flex flex-col w-full">
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-white/95 bg-white/20 px-1.5 py-0.5 rounded-md shadow-sm backdrop-blur-sm">
+                          {user?.role?.charAt(0).toUpperCase() +
+                            user?.role?.slice(1)}
+                        </span>
+                        {user?.role === "lecturer" && user?.level && (
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-amber-50 bg-gradient-to-r from-amber-600/70 to-orange-600/70 px-1.5 py-0.5 rounded-md shadow-sm backdrop-blur-sm">
+                            {user.level}
+                          </span>
+                        )}
+                      </div>
+                      {user?.department?.departmentName && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-1 h-1 rounded-full bg-white/40 mr-1.5"></div>
+                          <span className="text-[10px] text-white/80 truncate max-w-[180px]">
+                            {user.department.departmentName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Dropdown indicator */}
+                  <div className="flex items-center ml-1">
+                    <svg
+                      className="w-4 h-4 text-white/70 group-hover:text-white transition-transform duration-300 group-hover:-rotate-180"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
+                    Click to see options
                   </div>
                 </button>
               </Dropdown>
