@@ -184,6 +184,7 @@ const authSlice = createSlice({
     tokenExpiresAt: localStorage.getItem("tokenExpiresAt") || null,
     isAuthenticated: !!localStorage.getItem("authToken"),
     isLoading: false,
+    authChecked: false,
     error: null,
   },
   reducers: {
@@ -234,15 +235,22 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload || "Login failed";
       })
+      .addCase(checkAuthState.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(checkAuthState.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        state.authChecked = true;
       })
       .addCase(checkAuthState.rejected, (state) => {
+        state.isLoading = false;
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+        state.authChecked = true;
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
@@ -285,5 +293,6 @@ export const { setCredentials, logOut, updateToken } = authSlice.actions;
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 export const selectAuthToken = (state) => state.auth.token;
+export const selectAuthChecked = (state) => state.auth.authChecked;
 
 export default authSlice.reducer;
