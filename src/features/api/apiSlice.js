@@ -1,8 +1,9 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// Create an enhanced base query with auth headers
+const apiUrl = import.meta.env.VITE_API_URL || "https://localhost:7045/api";
+
 const baseQueryWithAuth = fetchBaseQuery({
-  baseUrl: "https://localhost:7045/api",
+  baseUrl: apiUrl,
   prepareHeaders: (headers, { getState }) => {
     // Get token from state and add to headers
     const token = getState().auth.token;
