@@ -103,17 +103,41 @@ export const checkAuthState = createAsyncThunk(
 // Add a logout thunk
 export const logoutUser = createAsyncThunk(
   "auth/logout",
-  async (_, { dispatch }) => {
-    // Clear local storage
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("tokenExpiresAt");
-    localStorage.removeItem("userData");
+  async (_, { getState, dispatch, rejectWithValue }) => {
+    try {
+      // Get refresh token from state
+      const { refreshToken } = getState().auth;
 
-    // Reset API state to clear cache
-    dispatch(apiSlice.util.resetApiState());
+      if (refreshToken) {
+        // Call logout API endpoint
+        await dispatch(
+          authApiSlice.endpoints.logout.initiate({ refreshToken })
+        ).unwrap();
+      }
 
-    return null;
+      // Clear local storage
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("tokenExpiresAt");
+      localStorage.removeItem("userData");
+
+      // Reset API state to clear cache
+      dispatch(apiSlice.util.resetApiState());
+
+      return null;
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still clear storage even if API call fails
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("tokenExpiresAt");
+      localStorage.removeItem("userData");
+
+      // Reset API state
+      dispatch(apiSlice.util.resetApiState());
+
+      return null;
+    }
   }
 );
 
