@@ -1,23 +1,55 @@
 import React from "react";
-import { Input, Checkbox, Form } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Input, Checkbox, Form, Spin, Button } from "antd";
+import { UserOutlined, LockOutlined, LogoutOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../auth/authSlice";
+import { loginUser, logoutUser } from "../features/auth/authSlice";
 import { message } from "antd";
 import { useNavigate } from "react-router-dom";
+import { store } from "../app/store";
 
 const Login = () => {
   const dispatch = useDispatch();
-  const { isLoading, error } = useSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated } = useSelector(
+    (state) => state.auth
+  );
   const navigate = useNavigate();
 
   const onFinish = async (values) => {
     try {
+      console.log("Login attempt with:", values);
       const result = await dispatch(loginUser(values)).unwrap();
+      console.log("Login result:", result);
+
+      // Log auth state after login
+      console.log("Auth state after login:", store.getState().auth);
+
       message.success("Login successful!");
-      navigate("/");
+
+      // Force navigation with a longer delay and debugging
+      setTimeout(() => {
+        console.log("Attempting navigation to /");
+        navigate("/", { replace: true });
+        // Double-check if we navigated
+        setTimeout(
+          () => console.log("Current location:", window.location.pathname),
+          100
+        );
+      }, 500);
     } catch (error) {
+      console.error("Login error:", error);
       message.error(error || "Login failed");
+    }
+  };
+
+  // Test logout function
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser());
+      message.success("Logged out successfully");
+      console.log("Auth state after logout:", store.getState().auth);
+    } catch (error) {
+      console.error("Logout error:", error);
+      message.error("Logout failed");
     }
   };
 
@@ -30,6 +62,18 @@ const Login = () => {
           <p className="mt-2 text-sm text-gray-600">
             Please sign in to your account
           </p>
+          {/* Temporary logout button for testing */}
+          {isAuthenticated && (
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              className="mt-4"
+            >
+              Test Logout
+            </Button>
+          )}
         </div>
 
         {/* Form Section */}
@@ -90,12 +134,21 @@ const Login = () => {
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="text-red-500 text-sm text-center">{error}</div>
+          )}
+
           {/* Submit Button */}
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F2722B] transition-all duration-200"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F2722B] transition-all duration-200 disabled:opacity-70"
             >
+              {isLoading ? (
+                <Spin size="small" className="mr-2 text-white" />
+              ) : null}
               Sign in
             </button>
           </div>
