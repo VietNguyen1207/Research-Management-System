@@ -266,10 +266,6 @@ const Header = () => {
                       ></path>
                     </svg>
                   </div>
-                  {/* Tooltip */}
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
-                    Click to see options
-                  </div>
                 </button>
               </Dropdown>
             </>
