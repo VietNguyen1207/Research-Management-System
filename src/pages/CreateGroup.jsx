@@ -33,6 +33,7 @@ import {
   useGetStudentsQuery,
   useGetAcademicUsersQuery,
 } from "../features/user/userApiSlice";
+import { useCreateResearchGroupMutation } from "../features/group/groupApiSlice";
 
 const { Option } = Select;
 
@@ -69,6 +70,10 @@ const CreateGroup = () => {
     isLoading: isLoadingAcademicUsers,
     isError: isAcademicUsersError,
   } = useGetAcademicUsersQuery(undefined, { skip: !isLecturer });
+
+  // Add the create mutation
+  const [createResearchGroup, { isLoading: isCreating }] =
+    useCreateResearchGroupMutation();
 
   // Update autocomplete options based on user role
   useEffect(() => {
@@ -292,38 +297,100 @@ const CreateGroup = () => {
     );
   };
 
-  const onFinish = (values) => {
-    // Check if any member is already assigned as Leader
-    const hasLeader = members.some((member) => member.role === "Leader");
+  const onFinish = async (values) => {
+    try {
+      // Check if any member is already assigned as Leader
+      const hasLeader = members.some((member) => member.role === "Leader");
 
-    // Create the group creator object
-    const groupCreator = {
-      userId: user.userId,
-      email: user.email,
-      fullName: user.fullName || user.email,
-      // If there's already a Leader among members, creator becomes a Member
-      role: hasLeader ? "Member" : "Leader",
-      userType: isLecturer ? "Lecturer" : "Student",
-      isCreator: true,
-    };
+      // Map our string roles to the backend's number roles
+      const getRoleNumber = (roleString) => {
+        switch (roleString) {
+          case "Leader":
+            return 0;
+          case "Member":
+            return 1;
+          default:
+            return 1; // Default to Member
+        }
+      };
 
-    const groupData = {
-      ...values,
-      creator: groupCreator,
-      members: [...members],
-      allMembers: [groupCreator, ...members],
-    };
+      // Get the full name of the user from the auth state
+      console.log("User object:", user); // Debug user object
 
-    // Only students need to select supervisors
-    if (!isLecturer && lecturersData) {
-      groupData.supervisors =
-        values.lecturer_ids?.map((id) =>
-          lecturersData.lecturers.find((lecturer) => lecturer.userId === id)
-        ) || [];
+      // Determine the name to use - we need to ensure it's not undefined
+      const creatorName = user.fullName || "John Doe"; // Use a fallback name if fullName is missing
+
+      // Create the creator member with a guaranteed name
+      const creatorMember = {
+        memberName: creatorName, // This MUST be provided
+        memberEmail: user.email,
+        role: hasLeader ? 1 : 0, // If someone else is Leader, creator is Member (1)
+      };
+
+      console.log("Creator member:", creatorMember);
+
+      // Filter members without fullName and add a name for them
+      const processedMembers = members.map((member) => {
+        if (!member.fullName) {
+          // If a member doesn't have a name, use their email username as fallback
+          const emailName = member.email.split("@")[0];
+          return {
+            ...member,
+            fullName: emailName,
+          };
+        }
+        return member;
+      });
+
+      // Prepare the members array with proper names
+      const otherMembers = processedMembers.map((member) => ({
+        memberName: member.fullName, // This should now always have a value
+        memberEmail: member.email,
+        role: getRoleNumber(member.role),
+      }));
+
+      // Start with creator and other members
+      const allMembers = [creatorMember, ...otherMembers];
+
+      // Add supervisors if this is a student group
+      if (!isLecturer && values.lecturer_ids?.length) {
+        const supervisors = values.lecturer_ids.map((id) => {
+          const lecturer = lecturersData.lecturers.find((l) => l.userId === id);
+          return {
+            memberName: lecturer.fullName || lecturer.email.split("@")[0], // Fallback if name is missing
+            memberEmail: lecturer.email,
+            role: 2, // Supervisor role
+          };
+        });
+
+        allMembers.push(...supervisors);
+      }
+
+      // Prepare the request payload
+      const requestPayload = {
+        groupName: values.group_name,
+        members: allMembers,
+      };
+
+      console.log("Sending request:", requestPayload);
+
+      // Call the API
+      const response = await createResearchGroup(requestPayload).unwrap();
+      console.log("Group created:", response);
+
+      message.success("Group created successfully!");
+
+      // Optionally, redirect to the groups page or clear the form
+      form.resetFields();
+      setMembers([]);
+    } catch (error) {
+      console.error("Failed to create group:", error);
+      message.error(
+        `Failed to create group: ${
+          error.data?.message || error.message || "Unknown error"
+        }`
+      );
     }
-
-    console.log("Group data:", groupData);
-    message.success("Group created successfully!");
   };
 
   // Function to get label for lecturer in select
@@ -690,6 +757,7 @@ const CreateGroup = () => {
               type="primary"
               htmlType="submit"
               icon={<SendOutlined />}
+              loading={isCreating}
               className="rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
             >
               Create Group

@@ -18,6 +18,16 @@ export const groupApiSlice = apiSlice.injectEndpoints({
         }));
       },
     }),
+
+    // New endpoint for creating a research group
+    createResearchGroup: builder.mutation({
+      query: (groupData) => ({
+        url: "/research-groups",
+        method: "POST",
+        body: groupData,
+      }),
+      invalidatesTags: ["Groups"],
+    }),
   }),
 });
 
@@ -52,4 +62,5 @@ const getMemberStatusString = (status) => {
   return statusMap[status] || "Unknown";
 };
 
-export const { useGetGroupsByUserQuery } = groupApiSlice;
+export const { useGetGroupsByUserQuery, useCreateResearchGroupMutation } =
+  groupApiSlice;
