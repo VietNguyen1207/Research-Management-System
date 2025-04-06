@@ -32,8 +32,12 @@ const getGroupTypeString = (groupType) => {
 
 const getMemberRoleString = (role) => {
   const roleMap = {
-    0: "Student",
-    1: "Council",
+    0: "Leader",
+    1: "Member",
+    2: "Supervisor",
+    3: "Council Chairman",
+    4: "Secretary",
+    5: "Council Member",
   };
   return roleMap[role] || "Unknown";
 };
@@ -43,6 +47,7 @@ const getMemberStatusString = (status) => {
     0: "Pending",
     1: "Active",
     2: "Inactive",
+    3: "Rejected",
   };
   return statusMap[status] || "Unknown";
 };

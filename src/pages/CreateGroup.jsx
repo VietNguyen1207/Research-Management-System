@@ -9,6 +9,7 @@ import {
   Tag,
   Space,
   Tooltip,
+  Alert,
 } from "antd";
 import {
   UserOutlined,
@@ -30,6 +31,12 @@ const CreateGroup = () => {
   const [lecturers, setLecturers] = useState([]);
   const [emailInput, setEmailInput] = useState("");
 
+  // Check if user is a lecturer
+  const isLecturer = user?.role === "lecturer";
+
+  // Set member limit based on role
+  const maxMembers = isLecturer ? 10 : 5;
+
   // Mock data - replace with API calls
   const availableLecturers = [
     { id: 1, name: "Dr. Emily Smith", email: "emily.smith@university.edu" },
@@ -38,15 +45,15 @@ const CreateGroup = () => {
   ];
 
   const handleAddMember = () => {
-    if (emailInput && members.length < 5) {
+    if (emailInput && members.length < maxMembers) {
       if (!members.some((member) => member.email === emailInput)) {
         setMembers([...members, { email: emailInput, role: "Member" }]);
         setEmailInput("");
       } else {
         message.error("This member is already added!");
       }
-    } else if (members.length >= 5) {
-      message.warning("Maximum 5 students allowed in a group!");
+    } else if (members.length >= maxMembers) {
+      message.warning(`Maximum ${maxMembers} members allowed in a group!`);
     }
   };
 
@@ -63,8 +70,20 @@ const CreateGroup = () => {
   };
 
   const onFinish = (values) => {
-    console.log("Form values:", values);
-    console.log("Members:", members);
+    const groupData = {
+      ...values,
+      members,
+    };
+
+    // Only students need to select supervisors
+    if (!isLecturer) {
+      groupData.supervisors =
+        values.lecturer_ids?.map((id) =>
+          availableLecturers.find((lecturer) => lecturer.id === id)
+        ) || [];
+    }
+
+    console.log("Group data:", groupData);
     message.success("Group created successfully!");
   };
 
@@ -74,8 +93,24 @@ const CreateGroup = () => {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Create New Group</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Form a research group with your colleagues and supervisors
+            {isLecturer
+              ? "Create a research group for your research project"
+              : "Form a capstone project group with your colleagues and supervisors"}
           </p>
+          {isLecturer && (
+            <div className="mt-2">
+              <Tag color="blue" className="px-3 py-1">
+                Research Group
+              </Tag>
+            </div>
+          )}
+          {!isLecturer && (
+            <div className="mt-2">
+              <Tag color="orange" className="px-3 py-1">
+                Capstone Project Group
+              </Tag>
+            </div>
+          )}
         </div>
 
         <Form
@@ -100,47 +135,52 @@ const CreateGroup = () => {
             </Form.Item>
           </div>
 
-          <Divider>Supervisors</Divider>
+          {/* Supervisors section - only show for students */}
+          {!isLecturer && (
+            <>
+              <Divider>Supervisors</Divider>
+              <Form.Item
+                label="Select Supervisors"
+                name="lecturer_ids"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select at least one supervisor!",
+                  },
+                  {
+                    validator: (_, value) =>
+                      value && value.length <= 2
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error("Maximum 2 supervisors allowed!")
+                          ),
+                  },
+                ]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Select supervisors (max 2)"
+                  className="rounded-lg"
+                  maxTagCount={2}
+                >
+                  {availableLecturers.map((lecturer) => (
+                    <Option key={lecturer.id} value={lecturer.id}>
+                      {lecturer.name} ({lecturer.email})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </>
+          )}
 
-          {/* Lecturer Selection */}
-          <Form.Item
-            label="Select Supervisors"
-            name="lecturer_ids"
-            rules={[
-              {
-                required: true,
-                message: "Please select at least one supervisor!",
-              },
-              {
-                validator: (_, value) =>
-                  value && value.length <= 2
-                    ? Promise.resolve()
-                    : Promise.reject(
-                        new Error("Maximum 2 supervisors allowed!")
-                      ),
-              },
-            ]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Select supervisors (max 2)"
-              className="rounded-lg"
-              maxTagCount={2}
-            >
-              {availableLecturers.map((lecturer) => (
-                <Option key={lecturer.id} value={lecturer.id}>
-                  {lecturer.name} ({lecturer.email})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Divider>Group Members</Divider>
+          <Divider>
+            {isLecturer ? "Research Group Members" : "Student Members"}
+          </Divider>
 
           {/* Member Addition */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Add Members (max 5 students)
+              Add Members (max {maxMembers})
             </label>
             <div className="flex space-x-2">
               <Input
@@ -159,6 +199,9 @@ const CreateGroup = () => {
               >
                 Add
               </Button>
+            </div>
+            <div className="mt-2 text-gray-500 text-xs">
+              {members.length} of {maxMembers} members added
             </div>
           </div>
 

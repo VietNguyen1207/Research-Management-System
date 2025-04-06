@@ -8,6 +8,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   StopOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { useGetGroupsByUserQuery } from "../features/group/groupApiSlice";
@@ -55,6 +56,12 @@ const ViewGroup = () => {
             {statusString}
           </Tag>
         );
+      case 3: // Rejected
+        return (
+          <Tag icon={<CloseCircleOutlined />} color="red">
+            {statusString}
+          </Tag>
+        );
       default:
         return null;
     }
@@ -99,6 +106,10 @@ const ViewGroup = () => {
                 <div className="flex items-center space-x-3">
                   {member.role === 0 ? (
                     <CrownOutlined className="text-[#F2722B]" />
+                  ) : member.role === 2 ? (
+                    <UserOutlined className="text-blue-500" />
+                  ) : member.role === 3 ? (
+                    <UserOutlined className="text-purple-500" />
                   ) : (
                     <UserOutlined className="text-gray-400" />
                   )}
@@ -107,7 +118,17 @@ const ViewGroup = () => {
                     {member.memberEmail}
                   </span>
                   <Tag
-                    color={member.role === 0 ? "orange" : "default"}
+                    color={
+                      member.role === 0
+                        ? "orange"
+                        : member.role === 2
+                        ? "blue"
+                        : member.role === 3
+                        ? "purple"
+                        : member.role === 4
+                        ? "cyan"
+                        : "default"
+                    }
                     className="rounded-full"
                   >
                     {member.roleString}
