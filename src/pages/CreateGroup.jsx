@@ -314,40 +314,40 @@ const CreateGroup = () => {
         }
       };
 
-      // Get the full name of the user from the auth state
-      console.log("User object:", user); // Debug user object
+      // Get the full name from the user object in auth state
+      console.log("Auth user object:", user);
 
-      // Determine the name to use - we need to ensure it's not undefined
-      const creatorName = user.fullName || "John Doe"; // Use a fallback name if fullName is missing
+      // The user's name might be in user.fullName or user.full_name depending on how it's stored
+      // In your login response, it's "fullName" but in the auth state it might be "full_name"
+      const creatorName = user.fullName || user.full_name;
 
-      // Create the creator member with a guaranteed name
+      // Only include memberName if we actually have it
       const creatorMember = {
-        memberName: creatorName, // This MUST be provided
         memberEmail: user.email,
         role: hasLeader ? 1 : 0, // If someone else is Leader, creator is Member (1)
       };
 
+      // Only add the memberName if it exists
+      if (creatorName) {
+        creatorMember.memberName = creatorName;
+      }
+
       console.log("Creator member:", creatorMember);
 
-      // Filter members without fullName and add a name for them
-      const processedMembers = members.map((member) => {
-        if (!member.fullName) {
-          // If a member doesn't have a name, use their email username as fallback
-          const emailName = member.email.split("@")[0];
-          return {
-            ...member,
-            fullName: emailName,
-          };
-        }
-        return member;
-      });
+      // Process other members to ensure they have names when required
+      const otherMembers = members.map((member) => {
+        const memberObj = {
+          memberEmail: member.email,
+          role: getRoleNumber(member.role),
+        };
 
-      // Prepare the members array with proper names
-      const otherMembers = processedMembers.map((member) => ({
-        memberName: member.fullName, // This should now always have a value
-        memberEmail: member.email,
-        role: getRoleNumber(member.role),
-      }));
+        // Only include memberName if we have it
+        if (member.fullName) {
+          memberObj.memberName = member.fullName;
+        }
+
+        return memberObj;
+      });
 
       // Start with creator and other members
       const allMembers = [creatorMember, ...otherMembers];
@@ -356,11 +356,18 @@ const CreateGroup = () => {
       if (!isLecturer && values.lecturer_ids?.length) {
         const supervisors = values.lecturer_ids.map((id) => {
           const lecturer = lecturersData.lecturers.find((l) => l.userId === id);
-          return {
-            memberName: lecturer.fullName || lecturer.email.split("@")[0], // Fallback if name is missing
+
+          const supervisorObj = {
             memberEmail: lecturer.email,
             role: 2, // Supervisor role
           };
+
+          // Only include memberName if we have it
+          if (lecturer.fullName) {
+            supervisorObj.memberName = lecturer.fullName;
+          }
+
+          return supervisorObj;
         });
 
         allMembers.push(...supervisors);
