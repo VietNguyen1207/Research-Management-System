@@ -11,7 +11,7 @@ import {
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import { useGetGroupsByUserQuery } from "../features/group/groupApiSlice";
+import { useGetUserGroupsQuery } from "../features/user/userApiSlice";
 import { selectCurrentUser } from "../features/auth/authSlice";
 
 const ViewGroup = () => {
@@ -24,7 +24,7 @@ const ViewGroup = () => {
     isError,
     error,
     refetch,
-  } = useGetGroupsByUserQuery(userId, {
+  } = useGetUserGroupsQuery(userId, {
     skip: !userId,
   });
 

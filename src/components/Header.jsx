@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   ExperimentOutlined,
   UserOutlined,
@@ -17,89 +17,25 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/auth/authSlice";
 import NotificationDropdown from "./NotificationDropdown";
+import { useGetUserNotificationsQuery } from "../features/notification/notificationApiSlice";
 
 const Header = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "invitation",
-      sender: "Dr. Sarah Johnson",
-      groupName: "AI Research Group",
-      groupType: "research",
-      role: "Member",
-      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
-      read: false,
-      responded: false,
-    },
-    {
-      id: 2,
-      type: "update",
-      title: "Project Milestone Reached",
-      message:
-        "The Machine Learning project has completed Phase 1 successfully",
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-      read: false,
-    },
-    {
-      id: 3,
-      type: "invitation",
-      sender: "Prof. Michael Chen",
-      groupName: "Computer Science Department Council",
-      groupType: "department",
-      role: "Secretary",
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-      read: true,
-      responded: false,
-    },
-    {
-      id: 4,
-      type: "response",
-      user: "Dr. Emily White",
-      groupName: "Data Science Lab",
-      accepted: true,
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-      read: true,
-    },
-    {
-      id: 5,
-      type: "update",
-      title: "Timeline Updated",
-      message: "Research proposal submission deadline extended to next week",
-      timestamp: new Date(Date.now() - 172800000), // 2 days ago
-      read: true,
-    },
-    {
-      id: 6,
-      type: "invitation",
-      sender: "Prof. Robert Brown",
-      groupName: "Research Ethics Committee",
-      groupType: "department",
-      role: "Member",
-      timestamp: new Date(Date.now() - 259200000), // 3 days ago
-      read: false,
-      responded: false,
-    },
-  ]);
+
+  // Get real notifications from API
+  const { data: notifications = [] } = useGetUserNotificationsQuery(user?.id, {
+    skip: !user?.id,
+  });
+
+  // Count unread notifications
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
     message.success("Logged out successfully");
     navigate("/login");
-  };
-
-  const handleAcceptInvitation = async (notificationId) => {
-    // Handle invitation acceptance
-  };
-
-  const handleDeclineInvitation = async (notificationId) => {
-    // Handle invitation decline
-  };
-
-  const handleMarkAllAsRead = async () => {
-    // Handle marking all notifications as read
   };
 
   const items = [
@@ -177,21 +113,14 @@ const Header = () => {
           ) : (
             <>
               <Dropdown
-                overlay={
-                  <NotificationDropdown
-                    notifications={notifications}
-                    onAccept={handleAcceptInvitation}
-                    onDecline={handleDeclineInvitation}
-                    onMarkAsRead={handleMarkAllAsRead}
-                  />
-                }
+                overlay={<NotificationDropdown />}
                 trigger={["click"]}
                 placement="bottomRight"
                 arrow
               >
                 <button className="flex items-center hover:bg-[#FFFFFF15] p-2 rounded-lg transition-colors duration-200">
                   <Badge
-                    count={notifications.filter((n) => !n.read).length}
+                    count={unreadCount}
                     offset={[-2, 2]}
                     style={{
                       backgroundColor: "#D2691E",

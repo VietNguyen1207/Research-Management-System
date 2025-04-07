@@ -26,6 +26,7 @@ import {
   SearchOutlined,
   BankOutlined,
   CrownOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -34,6 +35,7 @@ import {
   useGetAcademicUsersQuery,
 } from "../features/user/userApiSlice";
 import { useCreateResearchGroupMutation } from "../features/group/groupApiSlice";
+import ErrorFeedback from "../components/ErrorFeedback";
 
 const { Option } = Select;
 
@@ -43,6 +45,8 @@ const CreateGroup = () => {
   const [members, setMembers] = useState([]);
   const [emailInput, setEmailInput] = useState("");
   const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
+  const [error, setError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
 
   // Check if user is a lecturer
   const isLecturer = user?.role === "lecturer";
@@ -297,7 +301,56 @@ const CreateGroup = () => {
     );
   };
 
+  // Function to clear error
+  const clearError = () => {
+    setError(null);
+  };
+
+  // Function to validate form before submission
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // For students: Validate minimum number of members
+    if (!isLecturer && members.length < 3) {
+      errors.members = "Student groups need at least 3 other student members";
+      isValid = false;
+    }
+
+    // For lecturers: Validate at least one member
+    if (isLecturer && members.length < 1) {
+      errors.members = "Please add at least one member to your group";
+      isValid = false;
+    }
+
+    // Validate group name
+    if (!form.getFieldValue("group_name")) {
+      errors.group_name = "Please provide a group name";
+      isValid = false;
+    }
+
+    // For students: Validate supervisor selection
+    if (!isLecturer && !form.getFieldValue("lecturer_ids")?.length) {
+      errors.supervisors = "Please select at least one supervisor";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  // Update onFinish to use the validation
   const onFinish = async (values) => {
+    // Clear any previous errors
+    setError(null);
+
+    // Validate form before submission
+    if (!validateForm()) {
+      // Scroll to the top where errors will be displayed
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     try {
       // Check if any member is already assigned as Leader
       const hasLeader = members.some((member) => member.role === "Leader");
@@ -315,10 +368,6 @@ const CreateGroup = () => {
       };
 
       // Get the full name from the user object in auth state
-      console.log("Auth user object:", user);
-
-      // The user's name might be in user.fullName or user.full_name depending on how it's stored
-      // In your login response, it's "fullName" but in the auth state it might be "full_name"
       const creatorName = user.fullName || user.full_name;
 
       // Only include memberName if we actually have it
@@ -331,8 +380,6 @@ const CreateGroup = () => {
       if (creatorName) {
         creatorMember.memberName = creatorName;
       }
-
-      console.log("Creator member:", creatorMember);
 
       // Process other members to ensure they have names when required
       const otherMembers = members.map((member) => {
@@ -379,24 +426,24 @@ const CreateGroup = () => {
         members: allMembers,
       };
 
-      console.log("Sending request:", requestPayload);
-
       // Call the API
       const response = await createResearchGroup(requestPayload).unwrap();
-      console.log("Group created:", response);
 
-      message.success("Group created successfully!");
+      message.success({
+        content: "Group created successfully!",
+        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+        duration: 5,
+      });
 
       // Optionally, redirect to the groups page or clear the form
       form.resetFields();
       setMembers([]);
     } catch (error) {
       console.error("Failed to create group:", error);
-      message.error(
-        `Failed to create group: ${
-          error.data?.message || error.message || "Unknown error"
-        }`
-      );
+      setError(error);
+
+      // Scroll to the top where error will be displayed
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -443,6 +490,30 @@ const CreateGroup = () => {
           )}
         </div>
 
+        {/* Display error feedback if there's an error */}
+        {error && <ErrorFeedback error={error} onClose={clearError} />}
+
+        {/* Display form validation errors if any */}
+        {Object.keys(formErrors).length > 0 && (
+          <Alert
+            type="warning"
+            className="mb-6 rounded-lg shadow-sm"
+            showIcon
+            message="Please correct the following issues:"
+            description={
+              <ul className="list-disc list-inside mt-2">
+                {Object.entries(formErrors).map(([field, message]) => (
+                  <li key={field} className="text-amber-700">
+                    {message}
+                  </li>
+                ))}
+              </ul>
+            }
+            closable
+            onClose={() => setFormErrors({})}
+          />
+        )}
+
         <Form
           form={form}
           name="create_group"
@@ -456,11 +527,18 @@ const CreateGroup = () => {
               label="Group Name"
               name="group_name"
               rules={[{ required: true, message: "Please input group name!" }]}
+              validateStatus={formErrors.group_name ? "error" : ""}
+              help={formErrors.group_name}
             >
               <Input
                 prefix={<TeamOutlined className="text-gray-400" />}
                 placeholder="Enter group name"
                 className="rounded-lg"
+                onChange={() => {
+                  if (formErrors.group_name) {
+                    setFormErrors({ ...formErrors, group_name: undefined });
+                  }
+                }}
               />
             </Form.Item>
           </div>
@@ -501,6 +579,8 @@ const CreateGroup = () => {
                             ),
                     },
                   ]}
+                  validateStatus={formErrors.supervisors ? "error" : ""}
+                  help={formErrors.supervisors}
                 >
                   <Select
                     mode="multiple"
@@ -542,6 +622,14 @@ const CreateGroup = () => {
                         {menu}
                       </div>
                     )}
+                    onChange={() => {
+                      if (formErrors.supervisors) {
+                        setFormErrors({
+                          ...formErrors,
+                          supervisors: undefined,
+                        });
+                      }
+                    }}
                   >
                     {lecturersData?.lecturersByDepartment?.map((dept) => (
                       <Select.OptGroup
@@ -591,11 +679,18 @@ const CreateGroup = () => {
             {isLecturer ? "Research Group Members" : "Student Members"}
           </Divider>
 
-          {/* Member Addition */}
+          {/* Member Addition - with error indication */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Add Members (max {maxMembers})
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Add Members (max {maxMembers})
+              </label>
+              {formErrors.members && (
+                <span className="text-red-500 text-sm">
+                  {formErrors.members}
+                </span>
+              )}
+            </div>
             <div className="flex space-x-2">
               <AutoComplete
                 value={emailInput}
@@ -620,7 +715,9 @@ const CreateGroup = () => {
               >
                 <Input
                   prefix={<SearchOutlined className="text-gray-400" />}
-                  className="rounded-lg"
+                  className={`rounded-lg ${
+                    formErrors.members ? "border-red-300" : ""
+                  }`}
                   onPressEnter={handleAddMember}
                   suffix={
                     (
@@ -629,20 +726,36 @@ const CreateGroup = () => {
                       <Spin size="small" />
                     ) : null
                   }
+                  onChange={() => {
+                    if (formErrors.members && members.length > 0) {
+                      setFormErrors({ ...formErrors, members: undefined });
+                    }
+                  }}
                 />
               </AutoComplete>
               <Button
                 type="default"
                 icon={<PlusOutlined />}
                 onClick={handleAddMember}
-                className="rounded-lg border-[#F2722B] text-[#F2722B] hover:text-[#D2691E] hover:border-[#D2691E]"
+                className={`rounded-lg ${
+                  formErrors.members
+                    ? "border-red-300 text-red-500 hover:text-red-700"
+                    : "border-[#F2722B] text-[#F2722B] hover:text-[#D2691E] hover:border-[#D2691E]"
+                }`}
               >
                 Add
               </Button>
             </div>
             <div className="mt-2 text-gray-500 text-xs flex justify-between">
-              <span>
+              <span
+                className={formErrors.members ? "text-red-500 font-medium" : ""}
+              >
                 {members.length} of {maxMembers} members added
+                {!isLecturer && (
+                  <span className="ml-1">
+                    ({!isLecturer ? "minimum 3 required" : ""})
+                  </span>
+                )}
               </span>
               {(isLecturer ? isAcademicUsersError : isStudentsError) && (
                 <span className="text-red-500">

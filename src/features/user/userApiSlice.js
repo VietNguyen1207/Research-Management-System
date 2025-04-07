@@ -90,11 +90,73 @@ export const userApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["AcademicUsers"],
     }),
+
+    // New endpoint to get user groups
+    getUserGroups: builder.query({
+      query: (userId) => `/users/${userId}/groups`,
+      transformResponse: (response) => {
+        if (!response.data) return [];
+
+        // Transform the enum values to readable strings
+        return response.data.map((group) => ({
+          ...group,
+          groupTypeString: getGroupTypeString(group.groupType),
+          members: group.members.map((member) => ({
+            ...member,
+            roleString: getMemberRoleString(member.role),
+            statusString: getMemberStatusString(member.status),
+          })),
+        }));
+      },
+      providesTags: (result, error, userId) =>
+        result
+          ? [
+              ...result.map(({ groupId }) => ({ type: "Groups", id: groupId })),
+              { type: "Groups", id: "LIST" },
+              { type: "UserGroups", id: userId },
+            ]
+          : [
+              { type: "Groups", id: "LIST" },
+              { type: "UserGroups", id: userId },
+            ],
+    }),
   }),
 });
+
+// Helper functions to map enum values to strings (moved from groupApiSlice)
+const getGroupTypeString = (groupType) => {
+  const groupTypeMap = {
+    0: "Student",
+    1: "Council",
+  };
+  return groupTypeMap[groupType] || "Unknown";
+};
+
+const getMemberRoleString = (role) => {
+  const roleMap = {
+    0: "Leader",
+    1: "Member",
+    2: "Supervisor",
+    3: "Council Chairman",
+    4: "Secretary",
+    5: "Council Member",
+  };
+  return roleMap[role] || "Unknown";
+};
+
+const getMemberStatusString = (status) => {
+  const statusMap = {
+    0: "Pending",
+    1: "Active",
+    2: "Inactive",
+    3: "Rejected",
+  };
+  return statusMap[status] || "Unknown";
+};
 
 export const {
   useGetLecturersQuery,
   useGetStudentsQuery,
   useGetAcademicUsersQuery,
+  useGetUserGroupsQuery,
 } = userApiSlice;
