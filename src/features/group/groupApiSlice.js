@@ -10,7 +10,17 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Groups", "UserGroups"],
     }),
+
+    createCouncilGroup: builder.mutation({
+      query: (councilData) => ({
+        url: "/council-groups",
+        method: "POST",
+        body: councilData,
+      }),
+      invalidatesTags: ["Groups", "UserGroups"],
+    }),
   }),
 });
 
-export const { useCreateResearchGroupMutation } = groupApiSlice;
+export const { useCreateResearchGroupMutation, useCreateCouncilGroupMutation } =
+  groupApiSlice;

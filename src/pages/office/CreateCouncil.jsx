@@ -15,6 +15,7 @@ import {
 import { UserOutlined, TeamOutlined, BankOutlined } from "@ant-design/icons";
 import { useGetDepartmentsQuery } from "../../features/department/departmentApiSlice";
 import { useGetLecturersQuery } from "../../features/user/userApiSlice";
+import { useCreateCouncilGroupMutation } from "../../features/group/groupApiSlice";
 
 const { Option } = Select;
 
@@ -40,6 +41,10 @@ const CreateCouncil = () => {
     isLoading: isLoadingLecturers,
     isError: isLecturersError,
   } = useGetLecturersQuery();
+
+  // Council creation mutation
+  const [createCouncilGroup, { isLoading: isCreating }] =
+    useCreateCouncilGroupMutation();
 
   // Debug - log the lecturers data
   useEffect(() => {
@@ -87,16 +92,49 @@ const CreateCouncil = () => {
 
   const handleSubmit = async (values) => {
     try {
-      console.log("Form values:", values);
+      // Map the members according to their roles
+      const formattedMembers = [];
 
-      // Log the complete council data for debugging
-      console.log("Council data:", {
-        councilName: values.councilName,
-        departmentId: selectedDepartment,
-        chairman: selectedMembers.chairman,
-        secretary: selectedMembers.secretary,
-        members: selectedMembers.members,
-      });
+      // Add chairman with Council_Chairman role (3)
+      if (selectedMembers.chairman) {
+        formattedMembers.push({
+          memberName: selectedMembers.chairman.fullName,
+          memberEmail: selectedMembers.chairman.email,
+          role: 3, // Council_Chairman
+        });
+      }
+
+      // Add secretary with Secretary role (4)
+      if (selectedMembers.secretary) {
+        formattedMembers.push({
+          memberName: selectedMembers.secretary.fullName,
+          memberEmail: selectedMembers.secretary.email,
+          role: 4, // Secretary
+        });
+      }
+
+      // Add regular members with Council_Member role (5)
+      if (selectedMembers.members.length > 0) {
+        selectedMembers.members.forEach((member) => {
+          formattedMembers.push({
+            memberName: member.fullName,
+            memberEmail: member.email,
+            role: 5, // Council_Member
+          });
+        });
+      }
+
+      // Prepare the request payload
+      const requestPayload = {
+        groupName: values.councilName,
+        members: formattedMembers,
+        groupDepartment: Number(selectedDepartment),
+      };
+
+      console.log("Council request payload:", requestPayload);
+
+      // Call the API
+      const response = await createCouncilGroup(requestPayload).unwrap();
 
       message.success("Council created successfully");
       form.resetFields();
@@ -107,7 +145,10 @@ const CreateCouncil = () => {
       });
       setSelectedDepartment(null);
     } catch (error) {
-      message.error("Failed to create council");
+      console.error("Failed to create council:", error);
+      message.error(
+        "Failed to create council: " + (error.data?.message || "Unknown error")
+      );
     }
   };
 
@@ -256,7 +297,7 @@ const CreateCouncil = () => {
                       placeholder="Select chairman"
                       onChange={(value) => {
                         const chairman = lecturersData.lecturers.find(
-                          (l) => l.userId === value
+                          (l) => l.email === value
                         );
                         setSelectedMembers((prev) => ({ ...prev, chairman }));
                       }}
@@ -271,7 +312,7 @@ const CreateCouncil = () => {
                       }
                     >
                       {filterLecturers().map((lecturer) => (
-                        <Option key={lecturer.userId} value={lecturer.userId}>
+                        <Option key={lecturer.userId} value={lecturer.email}>
                           <div className="flex items-center">
                             <Avatar
                               size="small"
@@ -309,7 +350,7 @@ const CreateCouncil = () => {
                       placeholder="Select secretary"
                       onChange={(value) => {
                         const secretary = lecturersData.lecturers.find(
-                          (l) => l.userId === value
+                          (l) => l.email === value
                         );
                         setSelectedMembers((prev) => ({ ...prev, secretary }));
                       }}
@@ -324,7 +365,7 @@ const CreateCouncil = () => {
                       }
                     >
                       {filterLecturers().map((lecturer) => (
-                        <Option key={lecturer.userId} value={lecturer.userId}>
+                        <Option key={lecturer.userId} value={lecturer.email}>
                           <div className="flex items-center">
                             <Avatar
                               size="small"
@@ -366,7 +407,7 @@ const CreateCouncil = () => {
                       placeholder="Select members"
                       onChange={(values) => {
                         const members = lecturersData.lecturers.filter((l) =>
-                          values.includes(l.userId)
+                          values.includes(l.email)
                         );
                         setSelectedMembers((prev) => ({ ...prev, members }));
                       }}
@@ -382,7 +423,7 @@ const CreateCouncil = () => {
                       maxTagCount={3}
                     >
                       {filterLecturers().map((lecturer) => (
-                        <Option key={lecturer.userId} value={lecturer.userId}>
+                        <Option key={lecturer.userId} value={lecturer.email}>
                           <div className="flex items-center">
                             <Avatar
                               size="small"
@@ -421,11 +462,13 @@ const CreateCouncil = () => {
               <Button
                 type="primary"
                 htmlType="submit"
+                loading={isCreating}
                 className="w-full bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#FF8C00]/90 hover:to-[#FFA500]/90"
                 disabled={
                   !selectedDepartment ||
                   isLoadingLecturers ||
-                  isLoadingDepartments
+                  isLoadingDepartments ||
+                  isCreating
                 }
               >
                 Create Council
