@@ -237,6 +237,16 @@ const NavBar = () => {
               ),
             };
           }
+          if (user.role === "student") {
+            return {
+              ...item,
+              subItems: item.subItems.filter(
+                (subItem) =>
+                  subItem.label === "View Group" ||
+                  subItem.label === "Create Group"
+              ),
+            };
+          }
         }
 
         return item;
