@@ -23,6 +23,8 @@ import {
   Empty,
   Skeleton,
   Result,
+  Input,
+  AutoComplete,
 } from "antd";
 import {
   TeamOutlined,
@@ -34,8 +36,14 @@ import {
   UserOutlined,
   InfoCircleOutlined,
   UserAddOutlined,
+  UserSwitchOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
+import {
+  useGetCouncilGroupsQuery,
+  useReInviteGroupMemberMutation,
+} from "../../features/group/groupApiSlice";
+import { useGetLecturersQuery } from "../../features/user/userApiSlice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -46,6 +54,8 @@ const ManageCouncil = () => {
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [inviteForm] = Form.useForm();
+  const [emailInput, setEmailInput] = useState("");
+  const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
 
   // Fetch council groups using the API
   const {
@@ -56,8 +66,53 @@ const ManageCouncil = () => {
     refetch,
   } = useGetCouncilGroupsQuery();
 
+  // Add this to fetch lecturers data
+  const { data: lecturersData, isLoading: isLoadingLecturers } =
+    useGetLecturersQuery();
+
+  // Inside the component, add the re-invite mutation
+  const [reInviteMember, { isLoading: isReInviting }] =
+    useReInviteGroupMemberMutation();
+
   // Transformed data for UI display
   const councils = councilsData?.data || [];
+
+  // Add this effect to update autocomplete options
+  useEffect(() => {
+    if (!emailInput || !lecturersData?.lecturers) {
+      setAutoCompleteOptions([]);
+      return;
+    }
+
+    const inputLower = emailInput.toLowerCase();
+    const filteredLecturers = lecturersData.lecturers.filter(
+      (lecturer) =>
+        lecturer.email.toLowerCase().includes(inputLower) ||
+        lecturer.fullName.toLowerCase().includes(inputLower)
+    );
+
+    const options = filteredLecturers.map((lecturer) => ({
+      value: lecturer.email,
+      label: (
+        <div className="flex items-center space-x-2">
+          <Avatar
+            size="small"
+            icon={<UserOutlined />}
+            className="bg-blue-500"
+          />
+          <div className="flex flex-col">
+            <div className="font-medium">{lecturer.fullName}</div>
+            <div className="text-xs text-gray-500">
+              {lecturer.levelText} • {lecturer.email}
+            </div>
+          </div>
+        </div>
+      ),
+      lecturer: lecturer,
+    }));
+
+    setAutoCompleteOptions(options);
+  }, [emailInput, lecturersData]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -65,7 +120,7 @@ const ManageCouncil = () => {
         return "success";
       case 0: // Pending
         return "warning";
-      case 2: // Declined
+      case 3: // Rejected
         return "error";
       default:
         return "default";
@@ -78,7 +133,7 @@ const ManageCouncil = () => {
         return <CheckCircleOutlined className="text-green-500" />;
       case 0: // Pending
         return <ClockCircleOutlined className="text-yellow-500" />;
-      case 2: // Declined
+      case 3: // Declined
         return <CloseCircleOutlined className="text-red-500" />;
       default:
         return null;
@@ -126,35 +181,147 @@ const ManageCouncil = () => {
   };
 
   const handleInviteMember = (council, role, memberId) => {
+    // For Chairman and Secretary roles, keep the original check
+    // For Council Members, check against the maximum allowed members
+    const hasAcceptedMemberWithSameRole =
+      role === 5
+        ? council.members.filter((m) => m.role === 5 && m.status === 1)
+            .length >= 3
+        : council.members.some((m) => m.role === role && m.status === 1);
+
+    if (hasAcceptedMemberWithSameRole) {
+      const message =
+        role === 5
+          ? "Maximum number of council members (3) has been reached"
+          : "This position has already been filled by another member";
+
+      message.warning(message);
+      return;
+    }
+
     setSelectedCouncil(council);
     setSelectedRole(role);
     setIsInviteModalVisible(true);
+
+    // Temporarily close the details modal when the invite modal opens
+    setIsModalVisible(false);
   };
 
-  const handleInviteSubmit = async (values) => {
-    // Implement invitation functionality
-    // This would typically be an API call
-    message.success("Invitation feature to be implemented");
+  const handleInviteModalCancel = () => {
     setIsInviteModalVisible(false);
-    inviteForm.resetFields();
+    // Reopen the details modal
+    setIsModalVisible(true);
   };
 
-  const renderMembersList = (members) => (
-    <List
-      itemLayout="horizontal"
-      dataSource={members}
-      renderItem={(member) => (
-        <List.Item>
+  // Handle selecting a lecturer from the dropdown
+  const handleSelectLecturer = (email, option) => {
+    const lecturer = option.lecturer;
+    // Update form value when a lecturer is selected
+    inviteForm.setFieldsValue({
+      email,
+      selectedLecturerId: lecturer.userId,
+    });
+  };
+
+  // Update the handleInviteSubmit function
+  const handleInviteSubmit = async (values) => {
+    try {
+      // Get selected lecturer details
+      const selectedLecturer = lecturersData?.lecturers.find(
+        (l) => l.email === values.email
+      );
+
+      if (!selectedLecturer) {
+        message.error("Please select a valid lecturer");
+        return;
+      }
+
+      // Prepare the request body
+      const reInviteData = {
+        groupId: selectedCouncil.groupId,
+        memberEmail: selectedLecturer.email,
+        memberName: selectedLecturer.fullName,
+        role: selectedRole, // We already track this
+        message: `You have been invited to join the ${
+          selectedCouncil.groupName
+        } council as a ${
+          selectedRole === 3
+            ? "Chairman"
+            : selectedRole === 4
+            ? "Secretary"
+            : "Council Member"
+        }.`,
+      };
+
+      // Call the API
+      await reInviteMember(reInviteData).unwrap();
+
+      message.success(`Invitation sent to ${selectedLecturer.fullName}`);
+
+      // Close invite modal
+      setIsInviteModalVisible(false);
+
+      // Reopen details modal
+      setIsModalVisible(true);
+
+      // Reset form
+      inviteForm.resetFields();
+
+      // Refetch the data to show updated council info
+      refetch();
+    } catch (error) {
+      message.error(
+        "Failed to send invitation: " + (error.data?.message || "Unknown error")
+      );
+    }
+  };
+
+  const renderMembersList = (members) => {
+    // Group members by role for better organization
+    const chairmen = members.filter((m) => m.role === 3);
+    const secretaries = members.filter((m) => m.role === 4);
+    const councilMembers = members.filter((m) => m.role === 5);
+
+    // Function to render a single member with appropriate styling
+    const renderMember = (member) => {
+      // For Chairman and Secretary roles, keep the original check
+      // For Council Members (role 5), check against the maximum allowed members (3)
+      const hasAcceptedMemberWithSameRole =
+        member.role === 5
+          ? selectedCouncil.members.filter(
+              (m) => m.role === 5 && m.status === 1
+            ).length >= 3
+          : selectedCouncil.members.some(
+              (m) =>
+                m.role === member.role &&
+                m.status === 1 &&
+                m.groupMemberId !== member.groupMemberId
+            );
+
+      // Update the tooltip message to be more specific
+      const tooltipMessage =
+        member.role === 5
+          ? "Maximum number of council members (3) has been reached"
+          : "This position has already been filled by another member";
+
+      return (
+        <List.Item key={member.groupMemberId}>
           <List.Item.Meta
             avatar={
               <Avatar
                 style={{
                   backgroundColor:
+                    member.role === 3
+                      ? "#1890ff" // Chairman - blue
+                      : member.role === 4
+                      ? "#52c41a" // Secretary - green
+                      : "#f56a00", // Council Member - orange
+                  border:
                     getStatusColor(member.status) === "success"
-                      ? "#52c41a"
+                      ? "2px solid #52c41a"
                       : getStatusColor(member.status) === "warning"
-                      ? "#faad14"
-                      : "#ff4d4f",
+                      ? "2px solid #faad14"
+                      : "2px solid #ff4d4f",
                 }}
               >
                 {member.memberName.charAt(0)}
@@ -164,7 +331,17 @@ const ManageCouncil = () => {
               <div className="flex justify-between items-center">
                 <Space>
                   <Text strong>{member.memberName}</Text>
-                  <Text type="secondary">({member.roleText})</Text>
+                  <Tag
+                    color={
+                      member.role === 3
+                        ? "blue"
+                        : member.role === 4
+                        ? "green"
+                        : "orange"
+                    }
+                  >
+                    {member.roleText}
+                  </Tag>
                 </Space>
                 <Tag
                   icon={getStatusIcon(member.status)}
@@ -177,7 +354,7 @@ const ManageCouncil = () => {
             description={
               <div className="flex justify-between items-center">
                 <Text type="secondary">{member.memberEmail}</Text>
-                {member.status === 2 && ( // Declined status
+                {member.status === 3 && !hasAcceptedMemberWithSameRole && (
                   <Button
                     icon={<UserAddOutlined />}
                     onClick={() =>
@@ -195,13 +372,82 @@ const ManageCouncil = () => {
                     </Space>
                   </Button>
                 )}
+                {member.status === 3 && hasAcceptedMemberWithSameRole && (
+                  <Tooltip title={tooltipMessage}>
+                    <Button
+                      icon={<UserAddOutlined />}
+                      disabled
+                      className="border-none min-w-[90px] flex items-center justify-center opacity-50"
+                      size="small"
+                    >
+                      <Space>
+                        <span>Filled</span>
+                      </Space>
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             }
           />
         </List.Item>
-      )}
-    />
-  );
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        {chairmen.length > 0 && (
+          <div>
+            <div className="flex items-center mb-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500 mr-2"></div>
+              <Text strong className="text-blue-500">
+                Chairman
+              </Text>
+            </div>
+            <List
+              itemLayout="horizontal"
+              dataSource={chairmen}
+              renderItem={renderMember}
+              className="bg-blue-50 rounded-lg p-2"
+            />
+          </div>
+        )}
+
+        {secretaries.length > 0 && (
+          <div>
+            <div className="flex items-center mb-2">
+              <div className="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
+              <Text strong className="text-green-500">
+                Secretary
+              </Text>
+            </div>
+            <List
+              itemLayout="horizontal"
+              dataSource={secretaries}
+              renderItem={renderMember}
+              className="bg-green-50 rounded-lg p-2"
+            />
+          </div>
+        )}
+
+        {councilMembers.length > 0 && (
+          <div>
+            <div className="flex items-center mb-2">
+              <div className="w-4 h-4 rounded-full bg-orange-500 mr-2"></div>
+              <Text strong className="text-orange-500">
+                Council Members
+              </Text>
+            </div>
+            <List
+              itemLayout="horizontal"
+              dataSource={councilMembers}
+              renderItem={renderMember}
+              className="bg-orange-50 rounded-lg p-2"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Enhanced Statistics Cards Skeleton
   const StatisticsSkeleton = () => (
@@ -468,13 +714,16 @@ const ManageCouncil = () => {
                         <Text type="secondary">Member Acceptance</Text>
                         <Text strong>{`${
                           council.members.filter((m) => m.status === 1).length
-                        }/${council.members.length}`}</Text>
+                        }/${
+                          council.members.filter((m) => m.status !== 3).length
+                        }`}</Text>
                       </div>
                       <Progress
                         percent={Math.round(
                           (council.members.filter((m) => m.status === 1)
                             .length /
-                            council.members.length) *
+                            council.members.filter((m) => m.status !== 3)
+                              .length) *
                             100
                         )}
                         size="small"
@@ -486,35 +735,30 @@ const ManageCouncil = () => {
                       />
                     </div>
 
+                    {/* Role summary section */}
                     <div className="flex justify-between items-center">
-                      <Avatar.Group
-                        maxCount={3}
-                        maxStyle={{
-                          color: "#f56a00",
-                          backgroundColor: "#fde3cf",
-                        }}
-                      >
-                        {council.members.map((member) => (
-                          <Tooltip
-                            title={`${member.memberName} (${member.statusText})`}
-                            key={member.groupMemberId}
-                          >
-                            <Avatar
-                              style={{
-                                backgroundColor:
-                                  getStatusColor(member.status) === "success"
-                                    ? "#52c41a"
-                                    : getStatusColor(member.status) ===
-                                      "warning"
-                                    ? "#faad14"
-                                    : "#ff4d4f",
-                              }}
-                            >
-                              {member.memberName.charAt(0)}
-                            </Avatar>
+                      <div className="flex space-x-2">
+                        {council.members.some((m) => m.role === 3) && (
+                          <Tooltip title="Chairman">
+                            <Avatar className="bg-blue-500">C</Avatar>
                           </Tooltip>
-                        ))}
-                      </Avatar.Group>
+                        )}
+                        {council.members.some((m) => m.role === 4) && (
+                          <Tooltip title="Secretary">
+                            <Avatar className="bg-green-500">S</Avatar>
+                          </Tooltip>
+                        )}
+                        <Tooltip
+                          title={`Council Members (${
+                            council.members.filter((m) => m.role === 5).length
+                          })`}
+                        >
+                          <Avatar className="bg-orange-500">
+                            {council.members.filter((m) => m.role === 5).length}
+                          </Avatar>
+                        </Tooltip>
+                      </div>
+
                       <Space>
                         <Badge
                           status="success"
@@ -528,6 +772,25 @@ const ManageCouncil = () => {
                           }
                         />
                       </Space>
+                    </div>
+
+                    {/* Status indicators */}
+                    <div className="flex flex-wrap gap-2">
+                      <Tag color="success" icon={<CheckCircleOutlined />}>
+                        {council.members.filter((m) => m.status === 1).length}{" "}
+                        Accepted
+                      </Tag>
+                      <Tag color="warning" icon={<ClockCircleOutlined />}>
+                        {council.members.filter((m) => m.status === 0).length}{" "}
+                        Pending
+                      </Tag>
+                      {council.members.filter((m) => m.status === 2).length >
+                        0 && (
+                        <Tag color="error" icon={<CloseCircleOutlined />}>
+                          {council.members.filter((m) => m.status === 2).length}{" "}
+                          Rejected
+                        </Tag>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -576,6 +839,115 @@ const ManageCouncil = () => {
             </div>
           </Modal>
         )}
+
+        {/* Replacement Invitation Modal */}
+        <Modal
+          title={
+            <div className="flex items-center">
+              <UserSwitchOutlined className="text-orange-500 mr-2" />
+              <span>Replace Council Member</span>
+            </div>
+          }
+          open={isInviteModalVisible}
+          onCancel={handleInviteModalCancel}
+          footer={null}
+          zIndex={1001}
+          maskClosable={false}
+        >
+          <Form
+            form={inviteForm}
+            layout="vertical"
+            onFinish={handleInviteSubmit}
+          >
+            <div className="space-y-4">
+              <div className="bg-orange-50 p-3 rounded-lg mb-4">
+                <Text>
+                  You are replacing a{" "}
+                  {selectedRole === 3
+                    ? "Chairman"
+                    : selectedRole === 4
+                    ? "Secretary"
+                    : "Council Member"}{" "}
+                  who declined their invitation.
+                </Text>
+              </div>
+
+              <Form.Item
+                label="New Member"
+                name="email"
+                rules={[
+                  { required: true, message: "Please select a lecturer" },
+                ]}
+              >
+                <AutoComplete
+                  value={emailInput}
+                  options={autoCompleteOptions}
+                  onSelect={handleSelectLecturer}
+                  onChange={setEmailInput}
+                  onSearch={setEmailInput}
+                  style={{ width: "100%" }}
+                  notFoundContent={
+                    emailInput ? (
+                      <div className="p-3 text-gray-500 flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <SearchOutlined className="text-gray-300 text-xl mb-2" />
+                          <span>No lecturers found</span>
+                          <span className="text-xs mt-1">
+                            You can still add this email manually
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 text-gray-500 flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <TeamOutlined className="text-gray-300 text-xl mb-2" />
+                          <span>Type to search for lecturers</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                >
+                  <Input
+                    className="rounded-lg py-2"
+                    style={{ paddingLeft: "40px" }}
+                    placeholder="Search for lecturers by name or email"
+                    suffix={isLoadingLecturers ? <Spin size="small" /> : null}
+                    prefix={
+                      <SearchOutlined
+                        className="text-gray-400"
+                        style={{
+                          position: "absolute",
+                          left: "12px",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                        }}
+                      />
+                    }
+                  />
+                </AutoComplete>
+              </Form.Item>
+
+              {/* Add a hidden field to store the selected lecturer ID */}
+              <Form.Item name="selectedLecturerId" hidden={true}>
+                <Input />
+              </Form.Item>
+
+              <Form.Item className="mb-0">
+                <div className="flex justify-end space-x-2">
+                  <Button onClick={handleInviteModalCancel}>Cancel</Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isReInviting}
+                    className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+                  >
+                    Send Invitation
+                  </Button>
+                </div>
+              </Form.Item>
+            </div>
+          </Form>
+        </Modal>
       </div>
     </div>
   );

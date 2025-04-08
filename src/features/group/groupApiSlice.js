@@ -41,6 +41,15 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["CouncilGroups"],
     }),
+
+    reInviteGroupMember: builder.mutation({
+      query: (inviteData) => ({
+        url: "/groups/re-invite",
+        method: "POST",
+        body: inviteData,
+      }),
+      invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
+    }),
   }),
 });
 
@@ -72,7 +81,9 @@ const getStatusName = (status) => {
     case 1:
       return "Accepted";
     case 2:
-      return "Declined";
+      return "Inactive";
+    case 3:
+      return "Rejected";
     default:
       return "Unknown Status";
   }
@@ -82,4 +93,5 @@ export const {
   useCreateResearchGroupMutation,
   useCreateCouncilGroupMutation,
   useGetCouncilGroupsQuery,
+  useReInviteGroupMemberMutation,
 } = groupApiSlice;
