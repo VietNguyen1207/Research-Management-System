@@ -19,6 +19,10 @@ import {
   Select,
   Form,
   message,
+  Spin,
+  Empty,
+  Skeleton,
+  Result,
 } from "antd";
 import {
   TeamOutlined,
@@ -31,130 +35,37 @@ import {
   InfoCircleOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
+import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ManageCouncil = () => {
-  const [councils, setCouncils] = useState([]);
   const [selectedCouncil, setSelectedCouncil] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [inviteForm] = Form.useForm();
 
-  // Mock data for councils
-  useEffect(() => {
-    // Fetch councils from the backend or use mock data
-    const mockCouncils = [
-      {
-        id: 1,
-        name: "AI Research Council",
-        expertise: "AI",
-        createdDate: "2024-03-15",
-        description: "Review and evaluate AI research proposals",
-        members: [
-          {
-            id: 1,
-            name: "Dr. John Smith",
-            role: "Chairman",
-            status: "Accepted",
-            avatar: "JS",
-            education: "Professor",
-          },
-          {
-            id: 2,
-            name: "Dr. Sarah Johnson",
-            role: "Secretary",
-            status: "Pending",
-            avatar: "SJ",
-            education: "Associate Professor",
-          },
-          {
-            id: 3,
-            name: "Prof. Michael Brown",
-            role: "Member",
-            status: "Accepted",
-            avatar: "MB",
-            education: "Professor",
-          },
-          {
-            id: 4,
-            name: "Dr. Lisa Chen",
-            role: "Member",
-            status: "Pending",
-            avatar: "LC",
-            education: "Senior Lecturer",
-          },
-        ],
-      },
-      {
-        id: 2,
-        name: "IoT Review Council",
-        expertise: "IoT",
-        createdDate: "2024-03-10",
-        description: "Evaluate IoT research and development proposals",
-        members: [
-          {
-            id: 5,
-            name: "Dr. Emily White",
-            role: "Chairman",
-            status: "Accepted",
-            avatar: "EW",
-            education: "Professor",
-          },
-          {
-            id: 6,
-            name: "Dr. James Green",
-            role: "Secretary",
-            status: "Declined",
-            avatar: "JG",
-            education: "Doctor",
-          },
-          {
-            id: 7,
-            name: "Prof. David Lee",
-            role: "Member",
-            status: "Accepted",
-            avatar: "DL",
-            education: "Professor",
-          },
-        ],
-      },
-    ];
-    setCouncils(mockCouncils);
-  }, []);
+  // Fetch council groups using the API
+  const {
+    data: councilsData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetCouncilGroupsQuery();
 
-  // Mock data for available lecturers to invite
-  const availableLecturers = [
-    {
-      id: 8,
-      name: "Dr. Rachel Adams",
-      expertise: "AI",
-      education: "Professor",
-    },
-    {
-      id: 9,
-      name: "Dr. Tom Wilson",
-      expertise: "IoT",
-      education: "Associate Professor",
-    },
-    {
-      id: 10,
-      name: "Prof. Karen Davis",
-      expertise: "Data Science",
-      education: "Professor",
-    },
-    // Add more as needed
-  ];
+  // Transformed data for UI display
+  const councils = councilsData?.data || [];
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Accepted":
+      case 1: // Accepted
         return "success";
-      case "Pending":
+      case 0: // Pending
         return "warning";
-      case "Declined":
+      case 2: // Declined
         return "error";
       default:
         return "default";
@@ -163,11 +74,11 @@ const ManageCouncil = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Accepted":
+      case 1: // Accepted
         return <CheckCircleOutlined className="text-green-500" />;
-      case "Pending":
+      case 0: // Pending
         return <ClockCircleOutlined className="text-yellow-500" />;
-      case "Declined":
+      case 2: // Declined
         return <CloseCircleOutlined className="text-red-500" />;
       default:
         return null;
@@ -175,6 +86,14 @@ const ManageCouncil = () => {
   };
 
   const getCouncilStats = () => {
+    if (!councils.length)
+      return {
+        totalCouncils: 0,
+        totalMembers: 0,
+        acceptedMembers: 0,
+        pendingMembers: 0,
+      };
+
     const totalCouncils = councils.length;
     const totalMembers = councils.reduce(
       (acc, council) => acc + council.members.length,
@@ -182,12 +101,12 @@ const ManageCouncil = () => {
     );
     const acceptedMembers = councils.reduce(
       (acc, council) =>
-        acc + council.members.filter((m) => m.status === "Accepted").length,
+        acc + council.members.filter((m) => m.status === 1).length,
       0
     );
     const pendingMembers = councils.reduce(
       (acc, council) =>
-        acc + council.members.filter((m) => m.status === "Pending").length,
+        acc + council.members.filter((m) => m.status === 0).length,
       0
     );
 
@@ -213,48 +132,11 @@ const ManageCouncil = () => {
   };
 
   const handleInviteSubmit = async (values) => {
-    try {
-      // Here you would typically make an API call to send the invitation
-      const newMember = {
-        id: values.lecturer,
-        name: availableLecturers.find((l) => l.id === values.lecturer).name,
-        role: selectedRole,
-        status: "Pending",
-        avatar: "NA",
-        education: availableLecturers.find((l) => l.id === values.lecturer)
-          .education,
-      };
-
-      // Update the councils state with the new member
-      setCouncils(
-        councils.map((council) => {
-          if (council.id === selectedCouncil.id) {
-            return {
-              ...council,
-              members: [...council.members, newMember],
-            };
-          }
-          return council;
-        })
-      );
-
-      message.success("Invitation sent successfully");
-      setIsInviteModalVisible(false);
-      inviteForm.resetFields();
-    } catch (error) {
-      message.error("Failed to send invitation");
-    }
-  };
-
-  const filterAvailableLecturers = (role) => {
-    const selectedIds = selectedCouncil?.members.map((m) => m.id) || [];
-    return availableLecturers.filter(
-      (lecturer) =>
-        !selectedIds.includes(lecturer.id) &&
-        lecturer.expertise === selectedCouncil?.expertise &&
-        ((role === "Chairman" && lecturer.education === "Professor") ||
-          role !== "Chairman")
-    );
+    // Implement invitation functionality
+    // This would typically be an API call
+    message.success("Invitation feature to be implemented");
+    setIsInviteModalVisible(false);
+    inviteForm.resetFields();
   };
 
   const renderMembersList = (members) => (
@@ -275,34 +157,34 @@ const ManageCouncil = () => {
                       : "#ff4d4f",
                 }}
               >
-                {member.avatar}
+                {member.memberName.charAt(0)}
               </Avatar>
             }
             title={
               <div className="flex justify-between items-center">
                 <Space>
-                  <Text strong>{member.name}</Text>
-                  <Text type="secondary">({member.education})</Text>
+                  <Text strong>{member.memberName}</Text>
+                  <Text type="secondary">({member.roleText})</Text>
                 </Space>
                 <Tag
                   icon={getStatusIcon(member.status)}
                   color={getStatusColor(member.status)}
                 >
-                  {member.status}
+                  {member.statusText}
                 </Tag>
               </div>
             }
             description={
               <div className="flex justify-between items-center">
-                <Text type="secondary">Role: {member.role}</Text>
-                {member.status === "Declined" && (
+                <Text type="secondary">{member.memberEmail}</Text>
+                {member.status === 2 && ( // Declined status
                   <Button
                     icon={<UserAddOutlined />}
                     onClick={() =>
                       handleInviteMember(
                         selectedCouncil,
                         member.role,
-                        member.id
+                        member.userId
                       )
                     }
                     className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] text-white border-none min-w-[90px] flex items-center justify-center"
@@ -321,56 +203,145 @@ const ManageCouncil = () => {
     />
   );
 
-  const renderInviteModal = () => (
-    <Modal
-      title="Invite New Member"
-      open={isInviteModalVisible}
-      onCancel={() => {
-        setIsInviteModalVisible(false);
-        inviteForm.resetFields();
-      }}
-      footer={null}
-      zIndex={2000}
-      maskStyle={{
-        backgroundColor: "rgba(0, 0, 0, 0.45)",
-        backdropFilter: "blur(2px)",
-      }}
-    >
-      <Form form={inviteForm} layout="vertical" onFinish={handleInviteSubmit}>
-        <Form.Item
-          name="lecturer"
-          label="Select Lecturer"
-          rules={[{ required: true, message: "Please select a lecturer" }]}
-        >
-          <Select placeholder="Choose a lecturer">
-            {filterAvailableLecturers(selectedRole).map((lecturer) => (
-              <Option key={lecturer.id} value={lecturer.id}>
-                <div className="flex justify-between">
-                  <span>{lecturer.name}</span>
-                  <Tag color="blue">{lecturer.education}</Tag>
+  // Enhanced Statistics Cards Skeleton
+  const StatisticsSkeleton = () => (
+    <Row gutter={[16, 16]} className="mb-8">
+      {[
+        {
+          icon: <BookOutlined className="text-[#FF8C00]" />,
+          title: "Total Councils",
+        },
+        {
+          icon: <TeamOutlined className="text-[#FF8C00]" />,
+          title: "Total Members",
+        },
+        {
+          icon: <CheckCircleOutlined className="text-[#FF8C00]" />,
+          title: "Accepted Members",
+        },
+        {
+          icon: <ClockCircleOutlined className="text-[#FF8C00]" />,
+          title: "Pending Members",
+        },
+      ].map((stat, index) => (
+        <Col xs={24} sm={12} lg={6} key={index}>
+          <Card className="hover:shadow-lg transition-all duration-300 border border-gray-200">
+            <div className="flex items-start">
+              <div className="mr-3 mt-1">{stat.icon}</div>
+              <div className="flex-1">
+                <div className="text-gray-600 font-medium mb-2">
+                  {stat.title}
                 </div>
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item>
-          <div className="flex justify-end space-x-2">
-            <Button onClick={() => setIsInviteModalVisible(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-            >
-              Send Invitation
-            </Button>
-          </div>
-        </Form.Item>
-      </Form>
-    </Modal>
+                <Skeleton.Input style={{ width: 60 }} active size="small" />
+              </div>
+            </div>
+          </Card>
+        </Col>
+      ))}
+    </Row>
   );
+
+  // Enhanced Council Cards Skeleton with animated gradient
+  const CouncilCardsSkeleton = () => (
+    <List
+      grid={{
+        gutter: [16, 16],
+        xs: 1,
+        sm: 1,
+        md: 2,
+        lg: 2,
+        xl: 3,
+        xxl: 3,
+      }}
+      dataSource={[1, 2, 3, 4, 5, 6]}
+      renderItem={(item) => (
+        <List.Item>
+          <Card
+            className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
+            title={
+              <div className="flex justify-between items-center">
+                <Skeleton.Input style={{ width: 180 }} active size="small" />
+                <Skeleton.Input style={{ width: 80 }} active size="small" />
+              </div>
+            }
+          >
+            <div className="space-y-6">
+              <Skeleton active paragraph={{ rows: 1 }} />
+
+              <div>
+                <div className="flex justify-between mb-2">
+                  <Skeleton.Input style={{ width: 120 }} active size="small" />
+                  <Skeleton.Input style={{ width: 40 }} active size="small" />
+                </div>
+                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="absolute top-0 left-0 h-full w-full animate-pulse bg-gradient-to-r from-blue-300 to-green-300 rounded-full"></div>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map((avatar) => (
+                    <div
+                      key={avatar}
+                      className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 animate-pulse"
+                    />
+                  ))}
+                </div>
+                <Skeleton.Input style={{ width: 80 }} active size="small" />
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-center">
+              <Skeleton.Button active style={{ width: 100 }} />
+            </div>
+          </Card>
+        </List.Item>
+      )}
+    />
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-block">
+              <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FF8C00] to-[#FFA500] mb-2">
+                Manage Review Councils
+              </h2>
+              <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#FF8C00] to-[#FFA500] rounded-full"></div>
+            </div>
+            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+              Track and manage the status of academic review councils
+            </p>
+          </div>
+
+          {/* Statistics Cards Skeleton */}
+          <StatisticsSkeleton />
+
+          {/* Council Cards Skeleton */}
+          <CouncilCardsSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex justify-center items-center flex-col">
+        <Result
+          status="error"
+          title="Failed to load council groups"
+          subTitle={error?.data?.message || "Please try again later"}
+          extra={[
+            <Button type="primary" key="retry" onClick={refetch}>
+              Try Again
+            </Button>,
+          ]}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -444,111 +415,126 @@ const ManageCouncil = () => {
         </Row>
 
         {/* Councils List */}
-        <List
-          grid={{ gutter: [16, 16], xs: 1, sm: 1, md: 2, lg: 2, xl: 3, xxl: 3 }}
-          dataSource={councils}
-          renderItem={(council) => (
-            <List.Item>
-              <Card
-                className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
-                title={
-                  <div className="flex justify-between items-center">
-                    <Text strong className="text-lg">
-                      {council.name}
-                    </Text>
-                    <Tag color="orange" className="rounded-full px-3">
-                      {council.expertise}
-                    </Tag>
-                  </div>
-                }
-                actions={[
-                  <Button
-                    type="primary"
-                    onClick={() => showCouncilDetails(council)}
-                    className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-                  >
-                    View Details
-                  </Button>,
-                ]}
-              >
-                <div className="space-y-4">
-                  <Text type="secondary" className="block">
-                    <CalendarOutlined className="mr-2" />
-                    Created: {council.createdDate}
-                  </Text>
-
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <Text type="secondary">Member Acceptance</Text>
-                      <Text strong>{`${
-                        council.members.filter((m) => m.status === "Accepted")
-                          .length
-                      }/${council.members.length}`}</Text>
+        {councils.length === 0 ? (
+          <Empty
+            description="No council groups found"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <List
+            grid={{
+              gutter: [16, 16],
+              xs: 1,
+              sm: 1,
+              md: 2,
+              lg: 2,
+              xl: 3,
+              xxl: 3,
+            }}
+            dataSource={councils}
+            renderItem={(council) => (
+              <List.Item>
+                <Card
+                  className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
+                  title={
+                    <div className="flex justify-between items-center">
+                      <Text strong className="text-lg">
+                        {council.groupName}
+                      </Text>
+                      <Tag color="orange" className="rounded-full px-3">
+                        {new Date(council.createdAt).toLocaleDateString()}
+                      </Tag>
                     </div>
-                    <Progress
-                      percent={Math.round(
-                        (council.members.filter((m) => m.status === "Accepted")
-                          .length /
-                          council.members.length) *
-                          100
-                      )}
-                      size="small"
-                      status="active"
-                      strokeColor={{
-                        "0%": "#108ee9",
-                        "100%": "#87d068",
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <Avatar.Group
-                      maxCount={3}
-                      maxStyle={{
-                        color: "#f56a00",
-                        backgroundColor: "#fde3cf",
-                      }}
+                  }
+                  actions={[
+                    <Button
+                      type="primary"
+                      onClick={() => showCouncilDetails(council)}
+                      className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
                     >
-                      {council.members.map((member) => (
-                        <Tooltip
-                          title={`${member.name} (${member.status})`}
-                          key={member.id}
-                        >
-                          <Avatar
-                            style={{
-                              backgroundColor:
-                                getStatusColor(member.status) === "success"
-                                  ? "#52c41a"
-                                  : getStatusColor(member.status) === "warning"
-                                  ? "#faad14"
-                                  : "#ff4d4f",
-                            }}
-                          >
-                            {member.avatar}
-                          </Avatar>
-                        </Tooltip>
-                      ))}
-                    </Avatar.Group>
-                    <Space>
-                      <Badge
-                        status="success"
-                        text={
-                          <Text type="secondary">
-                            {`${
-                              council.members.filter(
-                                (m) => m.status === "Accepted"
-                              ).length
-                            } Accepted`}
-                          </Text>
-                        }
+                      View Details
+                    </Button>,
+                  ]}
+                >
+                  <div className="space-y-4">
+                    <Text type="secondary" className="block">
+                      <CalendarOutlined className="mr-2" />
+                      Created:{" "}
+                      {new Date(council.createdAt).toLocaleDateString()}
+                    </Text>
+
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <Text type="secondary">Member Acceptance</Text>
+                        <Text strong>{`${
+                          council.members.filter((m) => m.status === 1).length
+                        }/${council.members.length}`}</Text>
+                      </div>
+                      <Progress
+                        percent={Math.round(
+                          (council.members.filter((m) => m.status === 1)
+                            .length /
+                            council.members.length) *
+                            100
+                        )}
+                        size="small"
+                        status="active"
+                        strokeColor={{
+                          "0%": "#108ee9",
+                          "100%": "#87d068",
+                        }}
                       />
-                    </Space>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <Avatar.Group
+                        maxCount={3}
+                        maxStyle={{
+                          color: "#f56a00",
+                          backgroundColor: "#fde3cf",
+                        }}
+                      >
+                        {council.members.map((member) => (
+                          <Tooltip
+                            title={`${member.memberName} (${member.statusText})`}
+                            key={member.groupMemberId}
+                          >
+                            <Avatar
+                              style={{
+                                backgroundColor:
+                                  getStatusColor(member.status) === "success"
+                                    ? "#52c41a"
+                                    : getStatusColor(member.status) ===
+                                      "warning"
+                                    ? "#faad14"
+                                    : "#ff4d4f",
+                              }}
+                            >
+                              {member.memberName.charAt(0)}
+                            </Avatar>
+                          </Tooltip>
+                        ))}
+                      </Avatar.Group>
+                      <Space>
+                        <Badge
+                          status="success"
+                          text={
+                            <Text type="secondary">
+                              {`${
+                                council.members.filter((m) => m.status === 1)
+                                  .length
+                              } Accepted`}
+                            </Text>
+                          }
+                        />
+                      </Space>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </List.Item>
-          )}
-        />
+                </Card>
+              </List.Item>
+            )}
+          />
+        )}
 
         {/* Council Details Modal */}
         {selectedCouncil && (
@@ -556,11 +542,8 @@ const ManageCouncil = () => {
             title={
               <div className="flex items-center space-x-2">
                 <Text strong className="text-xl">
-                  {selectedCouncil.name}
+                  {selectedCouncil.groupName}
                 </Text>
-                <Tag color="orange" className="rounded-full">
-                  {selectedCouncil.expertise}
-                </Tag>
               </div>
             }
             open={isModalVisible}
@@ -581,10 +564,10 @@ const ManageCouncil = () => {
             <div className="space-y-6">
               <Descriptions bordered column={1}>
                 <Descriptions.Item label={<Text strong>Created Date</Text>}>
-                  {selectedCouncil.createdDate}
+                  {new Date(selectedCouncil.createdAt).toLocaleString()}
                 </Descriptions.Item>
-                <Descriptions.Item label={<Text strong>Description</Text>}>
-                  {selectedCouncil.description}
+                <Descriptions.Item label={<Text strong>Status</Text>}>
+                  {selectedCouncil.status === 1 ? "Active" : "Inactive"}
                 </Descriptions.Item>
                 <Descriptions.Item label={<Text strong>Members</Text>}>
                   {renderMembersList(selectedCouncil.members)}
@@ -593,9 +576,6 @@ const ManageCouncil = () => {
             </div>
           </Modal>
         )}
-
-        {/* Render Invite Modal */}
-        {renderInviteModal()}
       </div>
     </div>
   );
