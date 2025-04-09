@@ -383,6 +383,14 @@ const ViewGroup = () => {
     }
   };
 
+  const handleReviewProject = (group) => {
+    // Navigate to the PendingRequest page
+    window.location.href = "/review-project";
+
+    // Alternatively, if you're using react-router-dom:
+    // navigate('/pending-request');
+  };
+
   const renderMembersList = (members) => {
     // Group members by role for better organization
     // Handle both regular groups and council groups
@@ -960,7 +968,17 @@ const ViewGroup = () => {
                     >
                       View Details
                     </Button>,
-                  ]}
+                    group.groupType === 1 && (
+                      <Button
+                        type="primary"
+                        onClick={() => handleReviewProject(group)}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+                        icon={<BookOutlined />}
+                      >
+                        Review Projects
+                      </Button>
+                    ),
+                  ].filter(Boolean)}
                 >
                   <div className="space-y-4">
                     <Text type="secondary" className="block">

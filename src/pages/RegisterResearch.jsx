@@ -68,9 +68,23 @@ const RegisterResearch = () => {
 
   const onFinish = async (values) => {
     try {
-      // Format dates for API
+      // Function to format dates with fixed time at noon (12:00 PM)
       const formatDate = (date) => {
-        return date ? moment(date).format("YYYY-MM-DD") : null;
+        if (!date) return null;
+
+        // We're already working with a moment object from DatePicker
+        // Just set the time to 12:00 PM
+        const dateWithTime = date.clone(); // Clone to avoid mutating the original
+
+        dateWithTime.set({
+          hour: 12,
+          minute: 0,
+          second: 0,
+          millisecond: 0,
+        });
+
+        // Return in ISO format
+        return dateWithTime.format("YYYY-MM-DDTHH:mm:ss");
       };
 
       // Transform milestones to match API requirements

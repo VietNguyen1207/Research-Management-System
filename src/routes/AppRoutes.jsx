@@ -21,6 +21,7 @@ import ManageCouncil from "../pages/office/ManageCouncil";
 import Timeline from "../pages/office/TimelineManagement";
 import TimelineManagement from "../pages/office/TimelineManagement";
 import AllTimelines from "../pages/office/AllTimelines";
+import ReviewProject from "../pages/lecturer/ReviewProject";
 
 export const routes = [
   {
@@ -93,7 +94,9 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["lecturer", "department", "office"]}>
+          <ProtectedRoutes
+            allowedRoles={["lecturer", "department", "office", "student"]}
+          >
             <Outlet />
           </ProtectedRoutes>
         ),
@@ -107,6 +110,10 @@ export const routes = [
           {
             path: "active-research",
             element: <ActiveResearch />,
+          },
+          {
+            path: "review-project",
+            element: <ReviewProject />,
           },
         ],
       },
