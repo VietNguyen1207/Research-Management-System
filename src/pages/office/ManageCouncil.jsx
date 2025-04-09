@@ -56,6 +56,7 @@ const ManageCouncil = () => {
   const [inviteForm] = Form.useForm();
   const [emailInput, setEmailInput] = useState("");
   const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
+  const [isModalContentLoading, setIsModalContentLoading] = useState(false);
 
   // Fetch council groups using the API
   const {
@@ -171,8 +172,14 @@ const ManageCouncil = () => {
   const stats = getCouncilStats();
 
   const showCouncilDetails = (council) => {
-    setSelectedCouncil(council);
     setIsModalVisible(true);
+    setIsModalContentLoading(true);
+
+    // Simulate loading delay (remove this in production and use actual data loading state)
+    setTimeout(() => {
+      setSelectedCouncil(council);
+      setIsModalContentLoading(false);
+    }, 800);
   };
 
   const handleModalClose = () => {
@@ -241,7 +248,7 @@ const ManageCouncil = () => {
         groupId: selectedCouncil.groupId,
         memberEmail: selectedLecturer.email,
         memberName: selectedLecturer.fullName,
-        role: selectedRole, // We already track this
+        role: selectedRole,
         message: `You have been invited to join the ${
           selectedCouncil.groupName
         } council as a ${
@@ -261,14 +268,38 @@ const ManageCouncil = () => {
       // Close invite modal
       setIsInviteModalVisible(false);
 
-      // Reopen details modal
-      setIsModalVisible(true);
-
       // Reset form
       inviteForm.resetFields();
 
       // Refetch the data to show updated council info
-      refetch();
+      const response = await refetch();
+
+      // Show loading indicator in modal
+      setIsModalContentLoading(true);
+
+      // Reopen details modal with loading indicator
+      setIsModalVisible(true);
+
+      if (response.data) {
+        // Find the updated council from the refetched data
+        const updatedCouncil = response.data.data.find(
+          (c) => c.groupId === selectedCouncil.groupId
+        );
+
+        if (updatedCouncil) {
+          // Set updated council data with a small delay to show loading effect
+          setTimeout(() => {
+            setSelectedCouncil(updatedCouncil);
+            setIsModalContentLoading(false);
+          }, 800);
+        } else {
+          // If council not found for some reason, stop loading
+          setIsModalContentLoading(false);
+        }
+      } else {
+        // If refetch didn't return data, stop loading
+        setIsModalContentLoading(false);
+      }
     } catch (error) {
       message.error(
         "Failed to send invitation: " + (error.data?.message || "Unknown error")
@@ -546,6 +577,130 @@ const ManageCouncil = () => {
     />
   );
 
+  // Add this new skeleton component for the council details modal
+  const CouncilDetailsSkeleton = () => (
+    <div className="space-y-6 animate-pulse">
+      <Descriptions bordered column={1}>
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Created Date
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 200 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Status
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 80 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Members
+            </Text>
+          }
+        >
+          <div className="space-y-8">
+            {/* Chairman section skeleton */}
+            <div>
+              <div className="flex items-center mb-2">
+                <div className="w-4 h-4 rounded-full bg-blue-300 mr-2"></div>
+                <Text strong className="text-blue-300">
+                  Chairman
+                </Text>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-blue-200 mr-3"></div>
+                  <div className="flex-grow">
+                    <Skeleton.Input
+                      style={{ width: "80%" }}
+                      active
+                      size="small"
+                      className="mb-2"
+                    />
+                    <Skeleton.Input
+                      style={{ width: "60%" }}
+                      active
+                      size="small"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Secretary section skeleton */}
+            <div>
+              <div className="flex items-center mb-2">
+                <div className="w-4 h-4 rounded-full bg-green-300 mr-2"></div>
+                <Text strong className="text-green-300">
+                  Secretary
+                </Text>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-green-200 mr-3"></div>
+                  <div className="flex-grow">
+                    <Skeleton.Input
+                      style={{ width: "80%" }}
+                      active
+                      size="small"
+                      className="mb-2"
+                    />
+                    <Skeleton.Input
+                      style={{ width: "60%" }}
+                      active
+                      size="small"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Council members section skeleton */}
+            <div>
+              <div className="flex items-center mb-2">
+                <div className="w-4 h-4 rounded-full bg-orange-300 mr-2"></div>
+                <Text strong className="text-orange-300">
+                  Council Members
+                </Text>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-4">
+                {/* Multiple council members */}
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="flex items-center mb-4 last:mb-0">
+                    <div className="w-10 h-10 rounded-full bg-orange-200 mr-3"></div>
+                    <div className="flex-grow">
+                      <Skeleton.Input
+                        style={{ width: "80%" }}
+                        active
+                        size="small"
+                        className="mb-2"
+                      />
+                      <Skeleton.Input
+                        style={{ width: "60%" }}
+                        active
+                        size="small"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Descriptions.Item>
+      </Descriptions>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -800,45 +955,51 @@ const ManageCouncil = () => {
         )}
 
         {/* Council Details Modal */}
-        {selectedCouncil && (
-          <Modal
-            title={
-              <div className="flex items-center space-x-2">
-                <Text strong className="text-xl">
-                  {selectedCouncil.groupName}
-                </Text>
-              </div>
-            }
-            open={isModalVisible}
-            onCancel={handleModalClose}
-            width={700}
-            footer={[
-              <Button
-                key="close"
-                onClick={handleModalClose}
-                className="hover:bg-gray-100"
-              >
-                Close
-              </Button>,
-            ]}
-            zIndex={1000}
-            className="council-details-modal"
-          >
-            <div className="space-y-6">
-              <Descriptions bordered column={1}>
-                <Descriptions.Item label={<Text strong>Created Date</Text>}>
-                  {new Date(selectedCouncil.createdAt).toLocaleString()}
-                </Descriptions.Item>
-                <Descriptions.Item label={<Text strong>Status</Text>}>
-                  {selectedCouncil.status === 1 ? "Active" : "Inactive"}
-                </Descriptions.Item>
-                <Descriptions.Item label={<Text strong>Members</Text>}>
-                  {renderMembersList(selectedCouncil.members)}
-                </Descriptions.Item>
-              </Descriptions>
+        <Modal
+          title={
+            <div className="flex items-center space-x-2">
+              <Text strong className="text-xl">
+                {selectedCouncil
+                  ? selectedCouncil.groupName
+                  : "Council Details"}
+              </Text>
             </div>
-          </Modal>
-        )}
+          }
+          open={isModalVisible}
+          onCancel={handleModalClose}
+          width={700}
+          footer={[
+            <Button
+              key="close"
+              onClick={handleModalClose}
+              className="hover:bg-gray-100"
+            >
+              Close
+            </Button>,
+          ]}
+          zIndex={1000}
+          className="council-details-modal"
+        >
+          <div className="space-y-6">
+            {isModalContentLoading ? (
+              <CouncilDetailsSkeleton />
+            ) : (
+              selectedCouncil && (
+                <Descriptions bordered column={1}>
+                  <Descriptions.Item label={<Text strong>Created Date</Text>}>
+                    {new Date(selectedCouncil.createdAt).toLocaleString()}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Status</Text>}>
+                    {selectedCouncil.status === 1 ? "Active" : "Inactive"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Members</Text>}>
+                    {renderMembersList(selectedCouncil.members)}
+                  </Descriptions.Item>
+                </Descriptions>
+              )
+            )}
+          </div>
+        </Modal>
 
         {/* Replacement Invitation Modal */}
         <Modal
