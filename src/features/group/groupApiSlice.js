@@ -41,45 +41,67 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["CouncilGroups"],
     }),
+
+    reInviteGroupMember: builder.mutation({
+      query: (inviteData) => ({
+        url: "/groups/re-invite",
+        method: "POST",
+        body: inviteData,
+      }),
+      invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
+    }),
+
+    getStudentGroups: builder.query({
+      query: (userId) => `/users/${userId}/groups?groupType=0`,
+      transformResponse: (response) => {
+        if (!response.data) return [];
+
+        // Transform the response to include student groups only
+        return response.data
+          .filter((group) => group.groupType === 0) // Filter for Student groups (type 0)
+          .map((group) => ({
+            ...group,
+            groupTypeString: "Student",
+            members: group.members.map((member) => ({
+              ...member,
+              roleString: getRoleName(member.role),
+              statusString: getStatusName(member.status),
+            })),
+          }));
+      },
+      providesTags: ["StudentGroups", "UserGroups"],
+    }),
   }),
 });
 
 // Helper function to convert role numbers to readable text
 const getRoleName = (role) => {
-  switch (role) {
-    case 0:
-      return "Leader";
-    case 1:
-      return "Member";
-    case 2:
-      return "Supervisor";
-    case 3:
-      return "Chairman";
-    case 4:
-      return "Secretary";
-    case 5:
-      return "Council Member";
-    default:
-      return "Unknown Role";
-  }
+  const roleMap = {
+    0: "Leader",
+    1: "Member",
+    2: "Supervisor",
+    3: "Council Chairman",
+    4: "Secretary",
+    5: "Council Member",
+  };
+  return roleMap[role] || "Unknown";
 };
 
 // Helper function to convert status numbers to readable text
 const getStatusName = (status) => {
-  switch (status) {
-    case 0:
-      return "Pending";
-    case 1:
-      return "Accepted";
-    case 2:
-      return "Declined";
-    default:
-      return "Unknown Status";
-  }
+  const statusMap = {
+    0: "Pending",
+    1: "Accepted",
+    2: "Inactive",
+    3: "Rejected",
+  };
+  return statusMap[status] || "Unknown Status";
 };
 
 export const {
   useCreateResearchGroupMutation,
   useCreateCouncilGroupMutation,
   useGetCouncilGroupsQuery,
+  useReInviteGroupMemberMutation,
+  useGetStudentGroupsQuery,
 } = groupApiSlice;

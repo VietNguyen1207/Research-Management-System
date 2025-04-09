@@ -17,6 +17,8 @@ import {
   Select,
   Timeline,
   Collapse,
+  Spin,
+  Empty,
 } from "antd";
 import {
   EditOutlined,
@@ -33,12 +35,29 @@ import {
   SearchOutlined,
   GlobalOutlined,
   CrownOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
+import { useGetMyProjectsQuery } from "../features/project/projectApiSlice";
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Option } = Select;
+
+// Project Type enum mapping
+const PROJECT_TYPE = {
+  0: "Research",
+  1: "Conference",
+  2: "Journal",
+};
+
+// Project Status enum mapping
+const PROJECT_STATUS = {
+  0: "Pending",
+  1: "Approved",
+  2: "Work in progress",
+  3: "Rejected",
+};
 
 const STATUS_COLORS = {
   pending: "gold",
@@ -46,6 +65,7 @@ const STATUS_COLORS = {
   rejected: "red",
   "in review": "blue",
   "revision needed": "orange",
+  "work in progress": "cyan",
 };
 // status
 const STATUS_OPTIONS = [
@@ -60,11 +80,9 @@ const STATUS_OPTIONS = [
 // request
 const REQUEST_OPTIONS = [
   { value: "all", label: "All Type" },
-  { value: "research", label: "Research" },
-  { value: "conference", label: "Conference" },
-  { value: "case study", label: "Case Study" },
-  // { value: "approved", label: "Approved" },
-  // { value: "rejected", label: "Rejected" },
+  { value: "0", label: "Research" },
+  { value: "1", label: "Conference" },
+  { value: "2", label: "Journal" },
 ];
 
 // department
@@ -73,8 +91,6 @@ const DEPARTMENT_OPTIONS = [
   { value: "information technology", label: "Information Technology" },
   { value: "computer science", label: "Computer Science" },
   { value: "software engineering", label: "Software Engineering" },
-  // { value: "approved", label: "Approved" },
-  // { value: "rejected", label: "Rejected" },
 ];
 
 // category
@@ -83,9 +99,14 @@ const CATEGORY_OPTIONS = [
   { value: "ai & machine learning", label: "AI & Machine Learning" },
   { value: "data science", label: "Data Science" },
   { value: "cybersecurity", label: "Cybersecurity" },
-  // { value: "approved", label: "Approved" },
-  // { value: "rejected", label: "Rejected" },
 ];
+
+// Add this constant for document types
+const DOCUMENT_TYPE = {
+  0: "Project Document",
+  1: "Research Publication",
+  2: "Council Document",
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
@@ -103,267 +124,51 @@ const PendingRequest = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [searchText, setSearchText] = useState("");
 
-  // Mock data - replace with actual API call
-  const pendingRequests = [
-    {
-      id: 1,
-      type: "Research",
-      title: "AI-Driven Healthcare Solutions",
-      description:
-        "A comprehensive study on implementing AI solutions in healthcare systems to improve patient care and operational efficiency.",
+  // Fetch projects data from API
+  const {
+    data: projectsData,
+    isLoading,
+    isError,
+    error,
+  } = useGetMyProjectsQuery();
 
-      // Project Details
-      objectives: [
-        "Develop AI algorithms for patient diagnosis",
-        "Optimize hospital resource allocation",
-        "Improve healthcare data management systems",
-      ],
-      methodology:
-        "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation. Machine learning algorithms will be developed using Python and TensorFlow, followed by rigorous testing in simulated healthcare environments.",
-      // innovative_aspects:
-      //   "This research introduces novel deep learning architectures specifically designed for healthcare diagnostics, incorporating attention mechanisms for interpretable AI decisions. The system will be the first to integrate real-time patient monitoring with predictive analytics.",
-      // research_subjects:
-      //   "The study will involve analysis of anonymized patient records, healthcare practitioners' workflow patterns, and hospital resource utilization data. Primary subjects include medical staff, hospital administrators, and healthcare IT systems.",
-      // research_scope:
-      //   "The research encompasses three major city hospitals in Vietnam, focusing on emergency departments and chronic disease management units. The scope includes data collection, algorithm development, system implementation, and performance evaluation over a 12-month period.",
-      // scientific_significance:
-      //   "This research advances the field of medical AI by developing new algorithms for healthcare-specific applications, contributing to the broader understanding of AI implementation in critical care settings. The findings will establish new methodologies for integrating AI systems in healthcare environments.",
-      // practical_significance:
-      //   "The outcomes will directly improve patient care through faster diagnosis, optimized resource allocation, and reduced medical errors. Healthcare institutions can expect improved operational efficiency and cost reduction, while patients benefit from more accurate and timely medical interventions.",
-      dataset: {
-        type: "Healthcare Records",
-        size: "50,000 patient records",
-        format: "Structured and unstructured medical data",
-        source: "Partner hospitals and medical institutions",
-      },
-      department: {
-        id: 1,
-        name: "Computer Science",
-      },
-      category: {
-        id: 1,
-        name: "AI & Machine Learning",
-      },
-      requestedBudget: 500000000,
-      approvedBudget: null,
-
-      // Team Members
-      supervisor: {
-        id: 1,
-        name: "Prof. John Smith",
-        email: "john.smith@university.edu",
-        role: "Research Supervisor",
-      },
-      researchGroup: {
-        id: 1,
-        name: "AI Research Group",
-        members: [
-          { name: "Dr. Emily Smith", role: "Leader" },
-          { name: "John Doe", role: "Member" },
-        ],
-      },
-
-      // Timeline and Milestones
-      projectDuration: {
-        startDate: "2024-03-01",
-        endDate: "2025-02-28",
-      },
-      projectMilestones: [
-        {
-          title: "Literature Review",
-          deadline: "2024-04-30",
-        },
-        {
-          title: "Data Collection",
-          deadline: "2024-07-31",
-        },
-        {
-          title: "Algorithm Development",
-          deadline: "2024-11-30",
-        },
-        {
-          title: "Testing and Validation",
-          deadline: "2025-01-31",
-        },
-        {
-          title: "Final Report",
-          deadline: "2025-02-28",
-        },
-      ],
-
-      status: "pending",
-      submittedBy: {
-        id: 1,
-        name: "Dr. Sarah Johnson",
-        email: "sarah.johnson@university.edu",
-        role: "Lead Researcher",
-      },
-      submissionDate: "2024-02-15",
-    },
-    // Simplified Conference request
-    {
-      id: 2,
-      type: "Conference",
-      title: "Machine Learning Applications in Education",
-      abstract:
-        "This paper explores innovative applications of machine learning in educational technology, focusing on personalized learning systems and student performance prediction.",
-      publisher: "IEEE Transactions on Education",
-
-      // Project Details
-      department: {
-        id: 1,
-        name: "Computer Science",
-      },
-      category: {
-        id: 1,
-        name: "AI & Machine Learning",
-      },
-      paperType: {
-        id: 1,
-        name: "Conference",
-      },
-      requestedBudget: 150000000,
-      approvedBudget: null,
-
-      // Author Information
-      authors: [
-        {
-          name: "Dr. Emily Smith",
-          role: "Main Author",
-          email: "emily.smith@university.edu",
-        },
-        {
-          name: "Dr. Michael Chen",
-          role: "Co-Author",
-          email: "michael.chen@university.edu",
-        },
-      ],
-
-      // Timeline and Milestones
-      projectDuration: {
-        startDate: "2024-03-01",
-        endDate: "2024-06-30",
-      },
-      projectMilestones: [
-        {
-          title: "Paper Draft Completion",
-          deadline: "2024-03-15",
-        },
-        {
-          title: "Internal Review",
-          deadline: "2024-04-01",
-        },
-        {
-          title: "Final Paper Submission",
-          deadline: "2024-05-30",
-        },
-      ],
-
-      status: "pending",
-      submittedBy: {
-        id: 1,
-        name: "Dr. Emily Smith",
-        email: "emily.smith@university.edu",
-        role: "Lecturer",
-      },
-      submissionDate: "2024-02-15",
-    },
-    // Simplified Journal request
-    {
-      id: 3,
-      type: "Journal",
-      title: "Digital Transformation in Manufacturing",
-      abstract:
-        "A comprehensive analysis of Industry 4.0 implementation challenges and solutions in Vietnamese manufacturing sector.",
-      publisher: "Journal of Manufacturing Technology Management",
-
-      // Project Details
-      department: {
-        id: 2,
-        name: "Information Technology",
-      },
-      category: {
-        id: 5,
-        name: "Digital Technology",
-      },
-      paperType: {
-        id: 2,
-        name: "Journal",
-      },
-      requestedBudget: 250000000,
-      approvedBudget: null,
-
-      // Author Information
-      authors: [
-        {
-          name: "Prof. Sarah Johnson",
-          role: "Main Author",
-          email: "sarah.johnson@university.edu",
-        },
-        {
-          name: "Dr. Lisa Nguyen",
-          role: "Co-Author",
-          email: "lisa.nguyen@university.edu",
-        },
-      ],
-
-      // Timeline and Milestones
-      projectDuration: {
-        startDate: "2024-06-01",
-        endDate: "2024-11-30",
-      },
-      projectMilestones: [
-        {
-          title: "Research Design and Planning",
-          deadline: "2024-06-15",
-        },
-        {
-          title: "Data Analysis",
-          deadline: "2024-09-30",
-        },
-        {
-          title: "Final Report",
-          deadline: "2024-11-15",
-        },
-      ],
-
-      status: "pending",
-      submittedBy: {
-        id: 2,
-        name: "Prof. Sarah Johnson",
-        email: "sarah.johnson@university.edu",
-        role: "Research Director",
-      },
-      submissionDate: "2024-02-25",
-    },
-  ];
-
-  // Add filter function
+  // Filter only pending projects (status 0)
   useEffect(() => {
-    const filtered = pendingRequests.filter((request) => {
-      const matchesStatus =
-        statusFilter === "all" ? true : request.status === statusFilter;
-      const matchesSearch =
-        searchText.toLowerCase() === ""
-          ? true
-          : request.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-            request.description
-              ?.toLowerCase()
-              .includes(searchText.toLowerCase()) ||
-            request.type?.toLowerCase().includes(searchText.toLowerCase()) ||
-            request.department?.name
-              ?.toLowerCase()
-              .includes(searchText.toLowerCase()) ||
-            request.category?.name
-              ?.toLowerCase()
-              .includes(searchText.toLowerCase());
-      return matchesStatus && matchesSearch;
-    });
-    setFilteredRequests(filtered);
-  }, [statusFilter, searchText]);
+    if (projectsData && projectsData.data) {
+      const pendingProjects = projectsData.data.filter(
+        (project) => project.status === 0
+      );
+
+      // Apply additional filters
+      const filtered = pendingProjects.filter((project) => {
+        const matchesSearch =
+          searchText.toLowerCase() === ""
+            ? true
+            : project.projectName
+                ?.toLowerCase()
+                .includes(searchText.toLowerCase()) ||
+              project.description
+                ?.toLowerCase()
+                .includes(searchText.toLowerCase());
+
+        const matchesType =
+          typeFilter === "all"
+            ? true
+            : project.projectType.toString() === typeFilter;
+
+        // Add more filters as needed
+        return matchesSearch && matchesType;
+      });
+
+      setFilteredRequests(filtered);
+    }
+  }, [projectsData, searchText, typeFilter, departmentFilter, categoryFilter]);
 
   const columns = [
     {
@@ -374,81 +179,40 @@ const PendingRequest = () => {
         <div className="space-y-4">
           <div>
             <h4 className="text-lg font-medium text-gray-900">
-              {record.title}
+              {record.projectName}
             </h4>
-            <p className="text-sm text-gray-500">{record.abstract}</p>
+            <p className="text-sm text-gray-500">{record.description}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Tag color="blue">{record.type}</Tag>
-            {record.department && (
-              <Tag color="green">{record.department.name}</Tag>
-            )}
-            {record.category && (
-              <Tag color="orange">{record.category.name}</Tag>
+            <Tag color="blue">{PROJECT_TYPE[record.projectType]}</Tag>
+            {record.departmentId && (
+              <Tag color="green">Department {record.departmentId}</Tag>
             )}
           </div>
-
-          {/* Show Supervisor only for Research type */}
-          {record.type === "Research" && (
-            <div className="text-sm">
-              <span className="text-gray-600">Supervisor: </span>
-              <span className="font-medium">
-                {record.supervisor?.name || "Not Assigned"}
-              </span>
-            </div>
-          )}
 
           <Divider className="my-3" />
 
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Submitted by: </span>
+              <span className="text-sm text-gray-600">Created by ID: </span>
               <span className="text-sm font-medium ml-1">
-                {record.submittedBy?.name || "Unknown"}
+                {record.createdBy || "Unknown"}
               </span>
             </div>
             <div className="text-sm text-gray-500 ml-6">
-              <div>{record.submittedBy?.email}</div>
-              <div>{record.submittedBy?.role}</div>
-              <div>Submitted on: {formatDate(record.submissionDate)}</div>
+              <div>Created at: {formatDate(record.createdAt)}</div>
             </div>
           </div>
 
-          {/* Show Publisher only for Conference and Journal types */}
-          {(record.type === "Conference" || record.type === "Journal") && (
-            <div className="flex items-center mt-2">
-              <GlobalOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Publisher: </span>
-              <span className="text-sm font-medium ml-1">
-                {record.publisher}
-              </span>
-            </div>
-          )}
-
-          {/* Show Authors only for Conference and Journal types */}
-          {(record.type === "Conference" || record.type === "Journal") &&
-            record.authors && (
-              <div className="mt-4">
-                <div className="text-sm text-gray-600 mb-2">Authors:</div>
-                <div className="space-y-2">
-                  {record.authors.map((author, index) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <TeamOutlined className="text-gray-400 mt-1" />
-                      <div>
-                        <div className="text-sm font-medium">{author.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {author.role}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {author.email}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Group Info */}
+          <div className="flex items-center mt-2">
+            <TeamOutlined className="text-gray-400 mr-2" />
+            <span className="text-sm text-gray-600">Group: </span>
+            <span className="text-sm font-medium ml-1">
+              {record.groupName || "Unknown Group"}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -462,27 +226,11 @@ const PendingRequest = () => {
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-600">
-                  {record.type === "Research"
-                    ? "Requested Budget"
-                    : "Requested Royalties"}
-                </span>
+                <span className="text-sm text-gray-600">Requested Budget</span>
                 <span className="text-sm font-medium">
-                  ₫{record.requestedBudget?.toLocaleString() || "0"}
+                  ₫{record.approvedBudget?.toLocaleString() || "0"}
                 </span>
               </div>
-              {record.approvedBudget && (
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm text-gray-600">
-                    {record.type === "Research"
-                      ? "Approved Budget"
-                      : "Approved Royalties"}
-                  </span>
-                  <span className="text-sm font-medium text-green-600">
-                    ₫{record.approvedBudget.toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -491,28 +239,71 @@ const PendingRequest = () => {
             <div className="text-sm">
               <span className="text-gray-600">Timeline: </span>
               <span className="font-medium">
-                {record.projectDuration
-                  ? `${formatDate(
-                      record.projectDuration.startDate
-                    )} to ${formatDate(record.projectDuration.endDate)}`
-                  : "Not specified"}
+                {formatDate(record.startDate)} to {formatDate(record.endDate)}
               </span>
             </div>
           </div>
 
-          {record.projectMilestones && record.projectMilestones.length > 0 && (
+          {/* Documents Section */}
+          {record.documents && record.documents.length > 0 && (
+            <div className="mt-2">
+              <div className="flex items-center mb-2">
+                <FileTextOutlined className="text-gray-400 mr-2" />
+                <span className="text-sm font-medium">Project Documents</span>
+              </div>
+              <div className="space-y-2 ml-6">
+                {record.documents.map((doc) => (
+                  <div
+                    key={doc.documentId}
+                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100"
+                  >
+                    <div className="flex items-center">
+                      <FileTextOutlined className="text-gray-400 mr-2" />
+                      <div>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <Tag color="blue" size="small">
+                            {DOCUMENT_TYPE[doc.documentType]}
+                          </Tag>
+                          <span className="ml-2">
+                            {formatDate(doc.uploadAt)}
+                          </span>
+                        </div>
+                        <div
+                          className="text-sm font-medium truncate max-w-[250px]"
+                          title={doc.fileName}
+                        >
+                          {doc.fileName}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<DownloadOutlined />}
+                      onClick={() => window.open(doc.documentUrl, "_blank")}
+                    >
+                      View
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {record.milestones && record.milestones.length > 0 && (
             <div className="mt-2">
               <div className="flex items-center mb-2">
                 <CheckCircleOutlined className="text-gray-400 mr-2" />
                 <span className="text-sm font-medium">Project Milestones</span>
               </div>
               <Timeline className="ml-6">
-                {record.projectMilestones.map((milestone, index) => (
-                  <Timeline.Item key={index}>
+                {record.milestones.map((milestone) => (
+                  <Timeline.Item key={milestone.milestoneId}>
                     <div className="text-sm">
                       <div className="font-medium">{milestone.title}</div>
                       <div className="text-gray-500">
-                        Deadline: {formatDate(milestone.deadline)}
+                        Timeline: {formatDate(milestone.startDate)} to{" "}
+                        {formatDate(milestone.endDate)}
                       </div>
                     </div>
                   </Timeline.Item>
@@ -527,11 +318,14 @@ const PendingRequest = () => {
       title: "Status",
       key: "status",
       width: "15%",
-      render: (_, record) => (
-        <Tag color={STATUS_COLORS[record.status.toLowerCase()]}>
-          {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-        </Tag>
-      ),
+      render: (_, record) => {
+        const statusText = PROJECT_STATUS[record.status].toLowerCase();
+        return (
+          <Tag color={STATUS_COLORS[statusText] || "default"}>
+            {PROJECT_STATUS[record.status]}
+          </Tag>
+        );
+      },
     },
     {
       title: "Actions",
@@ -540,44 +334,17 @@ const PendingRequest = () => {
       render: (_, record) => (
         <Space direction="vertical" className="w-full">
           <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            className="w-full bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+            type="default"
+            icon={<InfoCircleOutlined />}
+            onClick={() => handleViewDetails(record)}
+            className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] text-white border-none"
           >
-            Review & Adjust
-          </Button>
-          <Button
-            type="primary"
-            icon={<CheckOutlined />}
-            onClick={() => handleApprove(record)}
-            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
-          >
-            Approve As Is
-          </Button>
-          <Button
-            type="primary"
-            danger
-            icon={<CloseOutlined />}
-            onClick={() => handleDecline(record)}
-            className="w-full"
-          >
-            Decline
+            View Details
           </Button>
         </Space>
       ),
     },
   ];
-
-  const handleEdit = (request) => {
-    setSelectedRequest(request);
-    form.setFieldsValue({
-      budget: request.approvedBudget || request.requestedBudget,
-      timeline: request.timeline,
-      notes: "",
-    });
-    setIsModalVisible(true);
-  };
 
   const handleModalOk = async () => {
     try {
@@ -590,54 +357,34 @@ const PendingRequest = () => {
     }
   };
 
-  const handleApprove = (request) => {
-    Modal.confirm({
-      title: "Approve Request",
-      content: "Are you sure you want to approve this request as is?",
-      onOk: () => {
-        message.success(
-          `${request.type} request "${request.title}" has been approved`
-        );
-      },
-    });
+  const handleViewDetails = (request) => {
+    setSelectedRequest(request);
+    setIsModalVisible(true);
   };
 
-  const handleDecline = (request) => {
-    Modal.confirm({
-      title: "Decline Request",
-      content: "Are you sure you want to decline this request?",
-      okType: "danger",
-      onOk: () => {
-        message.error(
-          `${request.type} request "${request.title}" has been declined`
-        );
-      },
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8 flex justify-center items-center">
+        <Spin size="large" tip="Loading projects..." />
+      </div>
+    );
+  }
 
-  const renderTypeSpecificDetails = (record) => {
-    if (record.type === "Journal") {
-      return (
-        <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">Journal Details</h4>
-          {/* ... rest of the journal-specific details ... */}
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-red-600">
+            Error loading projects
+          </h2>
+          <p className="mt-2 text-gray-600">
+            {error?.data?.message ||
+              "Failed to load projects. Please try again later."}
+          </p>
         </div>
-      );
-    }
-
-    if (record.type === "Conference") {
-      return (
-        <div className="mt-4 bg-green-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-green-800 mb-2">
-            Conference Details
-          </h4>
-          {/* ... rest of the conference-specific details ... */}
-        </div>
-      );
-    }
-
-    return null;
-  };
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -667,69 +414,36 @@ const PendingRequest = () => {
                 allowClear
               />
               <span className="text-gray-700 font-medium">Filter:</span>
-              {/* filter status */}
-              <Select
-                defaultValue="all"
-                style={{ width: 200 }}
-                onChange={setStatusFilter}
-                options={STATUS_OPTIONS}
-                className="rounded-md"
-              />
               {/* filter request type */}
               <Select
                 defaultValue="all"
                 style={{ width: 200 }}
-                onChange={setStatusFilter}
+                onChange={setTypeFilter}
                 options={REQUEST_OPTIONS}
                 className="rounded-md"
               />
-              {/* filter department */}
-              <Select
-                defaultValue="all"
-                style={{ width: 200 }}
-                onChange={setStatusFilter}
-                options={DEPARTMENT_OPTIONS}
-                className="rounded-md"
-              />
-              {/* filter category */}
-              <Select
-                defaultValue="all"
-                style={{ width: 200 }}
-                onChange={setStatusFilter}
-                options={CATEGORY_OPTIONS}
-                className="rounded-md"
-              />
+              {/* Add other filters as needed */}
             </div>
-
-            {/* Status Legend */}
-            {/* <div className="flex items-center space-x-2">
-              {Object.entries(STATUS_COLORS).map(([status, color]) => (
-                <Tag key={status} color={color} className="capitalize">
-                  {status}
-                </Tag>
-              ))}
-            </div> */}
           </div>
         </div>
         <Card className="shadow-md">
           <Table
             columns={columns}
             dataSource={filteredRequests}
-            rowKey="id"
+            rowKey="projectId"
             pagination={{ pageSize: 5 }}
             className="custom-table"
             rowClassName="align-top"
+            locale={{ emptyText: "No pending requests found" }}
           />
         </Card>
-        {/* Modals for request details */}
+        {/* Modal for request details if needed */}
         <Modal
           title={
             <div className="text-lg">
-              <div className="font-semibold text-gray-800">
-                Review & Adjust Request
-              </div>
+              <div className="font-semibold text-gray-800">Review Request</div>
               <div className="text-sm font-normal text-gray-500 mt-1">
-                {selectedRequest?.title}
+                {selectedRequest?.projectName}
               </div>
             </div>
           }
@@ -740,481 +454,101 @@ const PendingRequest = () => {
             <Button key="cancel" onClick={() => setIsModalVisible(false)}>
               Cancel
             </Button>,
-            <Button
-              key="submit"
-              type="primary"
-              onClick={handleModalOk}
-              className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-            >
-              Update & Send Back
-            </Button>,
+            // <Button
+            //   key="submit"
+            //   type="primary"
+            //   onClick={handleModalOk}
+            //   className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+            // >
+            //   Update & Send Back
+            // </Button>,
           ]}
         >
-          <div className="max-h-[70vh] overflow-y-auto pr-2">
-            {selectedRequest?.type === "Research" ? (
-              // Original Research Request Modal Content
-              <>
-                {/* Basic Information Section */}
-                <Collapse defaultActiveKey={["1"]} className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <InfoCircleOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Basic Information</span>
-                      </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-4">
-                      {/* Project Title */}
-                      <div>
-                        <div className="text-sm text-gray-500">
-                          Project Title
-                        </div>
-                        <div className="mt-1 font-medium text-gray-800">
-                          {selectedRequest?.title}
-                        </div>
-                      </div>
-
-                      {/* Project Description */}
-                      <div>
-                        <div className="text-sm text-gray-500">
-                          Project Description
-                        </div>
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          {selectedRequest?.description}
-                        </div>
+          {selectedRequest && (
+            <div className="max-h-[70vh] overflow-y-auto pr-2">
+              {/* Project Details */}
+              <Collapse defaultActiveKey={["1"]} className="mb-4">
+                <Collapse.Panel
+                  header={
+                    <div className="flex items-center">
+                      <InfoCircleOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-medium">Project Details</span>
+                    </div>
+                  }
+                  key="1"
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500">Description</div>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                        {selectedRequest.description}
                       </div>
                     </div>
-                  </Collapse.Panel>
-                </Collapse>
-
-                {/* Project Details Section */}
-                <Collapse className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <ProjectOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Project Details</span>
+                    <div>
+                      <div className="text-sm text-gray-500">Methodology</div>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                        {selectedRequest.methodology}
                       </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-4">
-                      {/* Project Objectives */}
-                      <div>
-                        <div className="text-sm text-gray-500">
-                          Project Objectives
-                        </div>
-                        <div className="mt-2 space-y-2">
-                          {selectedRequest?.objectives?.map(
-                            (objective, index) => (
-                              <div
-                                key={index}
-                                className="flex items-start space-x-3 bg-gray-50 p-3 rounded-md hover:bg-gray-100 transition-colors"
-                              >
-                                <CheckOutlined className="text-[#F2722B] mt-1" />
-                                <span className="text-gray-700">
-                                  {objective}
+                    </div>
+                  </div>
+                </Collapse.Panel>
+              </Collapse>
+
+              {/* Documents Section */}
+              <Collapse defaultActiveKey={["1"]} className="mb-4">
+                <Collapse.Panel
+                  header={
+                    <div className="flex items-center">
+                      <FileTextOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-medium">Project Documents</span>
+                    </div>
+                  }
+                  key="1"
+                >
+                  {selectedRequest.documents &&
+                  selectedRequest.documents.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedRequest.documents.map((doc) => (
+                        <div
+                          key={doc.documentId}
+                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
+                            <div>
+                              <div className="font-medium text-gray-800 mb-1">
+                                {doc.fileName}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                <Tag color="blue">
+                                  {DOCUMENT_TYPE[doc.documentType]}
+                                </Tag>
+                                <span className="ml-2">
+                                  Uploaded: {formatDate(doc.uploadAt)}
                                 </span>
                               </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Dataset Information */}
-                      <div>
-                        <div className="text-sm text-gray-500">Dataset</div>
-                      </div>
-
-                      {/* Department and Category */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">
-                            Department
-                          </div>
-                          <Tag color="green" className="mt-1">
-                            {selectedRequest?.department?.name}
-                          </Tag>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">Category</div>
-                          <Tag color="orange" className="mt-1">
-                            {selectedRequest?.category?.name}
-                          </Tag>
-                        </div>
-                      </div>
-
-                      {/* Budget Information */}
-                      <div>
-                        <div className="text-sm text-gray-500">
-                          Budget Details
-                        </div>
-                        <div className="mt-2 bg-gray-50 p-3 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600">
-                              Requested Budget:
-                            </span>
-                            <span className="font-medium">
-                              ₫
-                              {selectedRequest?.requestedBudget?.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Collapse.Panel>
-                </Collapse>
-
-                {/* Team Members Section */}
-                <Collapse className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <TeamOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Team Members</span>
-                      </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-6">
-                      {/* Supervisor */}
-                      <div>
-                        <div className="text-sm text-gray-500 mb-3">
-                          Supervisor
-                        </div>
-                        <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-lg">
-                          <UserOutlined className="text-[#F2722B] mt-1" />
-                          <div>
-                            <div className="font-medium text-gray-800">
-                              {selectedRequest?.supervisor?.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {selectedRequest?.supervisor?.role}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {selectedRequest?.supervisor?.email}
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Research Group */}
-                      <div>
-                        <div className="text-sm text-gray-500 mb-3">
-                          Research Group
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <div className="flex items-center mb-4">
-                            <TeamOutlined className="text-[#F2722B] mr-2" />
-                            <span className="font-medium text-gray-800">
-                              {selectedRequest?.researchGroup?.name}
-                            </span>
-                          </div>
-
-                          <div className="space-y-3 ml-2">
-                            {selectedRequest?.researchGroup?.members.map(
-                              (member, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center justify-between bg-white p-3 rounded-md"
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    {member.role === "Leader" ? (
-                                      <CrownOutlined className="text-[#F2722B]" />
-                                    ) : (
-                                      <UserOutlined className="text-gray-400" />
-                                    )}
-                                    <span>{member.name}</span>
-                                    <Tag
-                                      color={
-                                        member.role === "Leader"
-                                          ? "orange"
-                                          : "default"
-                                      }
-                                      className="rounded-full"
-                                    >
-                                      {member.role}
-                                    </Tag>
-                                  </div>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Collapse.Panel>
-                </Collapse>
-                {/* Review Form - Type specific */}
-                <Form form={form} layout="vertical" className="mt-4">
-                  <Form.Item
-                    label="Adjusted Budget (VND)"
-                    name="budget"
-                    rules={[
-                      { required: true, message: "Please input the budget!" },
-                    ]}
-                  >
-                    <InputNumber
-                      className="w-full"
-                      formatter={(value) =>
-                        ` ${value} vn₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                      }
-                      parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="Timeline Adjustment"
-                    name="timeline"
-                    rules={[
-                      { required: true, message: "Please select timeline!" },
-                    ]}
-                  >
-                    <RangePicker className="w-full" />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="Feedback Notes"
-                    name="notes"
-                    rules={[
-                      { required: true, message: "Please provide feedback!" },
-                    ]}
-                  >
-                    <TextArea
-                      rows={4}
-                      placeholder="Provide feedback about the adjustments..."
-                    />
-                  </Form.Item>
-                </Form>
-              </>
-            ) : (
-              // Conference and Journal Modal Content
-              <>
-                {/* Basic Information Section */}
-                <Collapse defaultActiveKey={["1"]} className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <InfoCircleOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Basic Information</span>
-                      </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-4">
-                      {/* Paper Title */}
-                      <div>
-                        <div className="text-sm text-gray-500">Paper Title</div>
-                        <div className="mt-1 font-medium text-gray-800">
-                          {selectedRequest?.title}
-                        </div>
-                      </div>
-
-                      {/* Abstract */}
-                      <div>
-                        <div className="text-sm text-gray-500">Abstract</div>
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          {selectedRequest?.abstract}
-                        </div>
-                      </div>
-
-                      {/* Publisher */}
-                      <div>
-                        <div className="text-sm text-gray-500">Publisher</div>
-                        <div className="mt-1 font-medium text-gray-800">
-                          {selectedRequest?.publisher}
-                        </div>
-                      </div>
-                    </div>
-                  </Collapse.Panel>
-                </Collapse>
-
-                {/* Project Details Section */}
-                <Collapse className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <ProjectOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Project Details</span>
-                      </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-4">
-                      {/* Department and Category */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">
-                            Department
-                          </div>
-                          <Tag color="green" className="mt-1">
-                            {selectedRequest?.department?.name}
-                          </Tag>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">Category</div>
-                          <Tag color="orange" className="mt-1">
-                            {selectedRequest?.category?.name}
-                          </Tag>
-                        </div>
-                      </div>
-
-                      {/* Paper Type and Royalties */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-gray-500">
-                            Paper Type
-                          </div>
-                          <Tag color="blue" className="mt-1">
-                            {selectedRequest?.paperType?.name}
-                          </Tag>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">Royalties</div>
-                          <div className="mt-1 font-medium text-gray-800">
-                            ₫
-                            {selectedRequest?.requestedBudget?.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Collapse.Panel>
-                </Collapse>
-
-                {/* Authors Information Section */}
-                <Collapse className="mb-4">
-                  <Collapse.Panel
-                    header={
-                      <div className="flex items-center">
-                        <TeamOutlined className="text-[#F2722B] mr-2" />
-                        <span className="font-medium">Authors Information</span>
-                      </div>
-                    }
-                    key="1"
-                  >
-                    <div className="space-y-4">
-                      {selectedRequest?.authors?.map((author, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <UserOutlined className="text-gray-400 mt-1" />
-                          <div>
-                            <div className="font-medium text-gray-800">
-                              {author.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {author.role}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {author.email}
-                            </div>
-                          </div>
+                          <Button
+                            type="primary"
+                            icon={<DownloadOutlined />}
+                            onClick={() => handleViewDetails(selectedRequest)}
+                            className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                          >
+                            View
+                          </Button>
                         </div>
                       ))}
                     </div>
-                  </Collapse.Panel>
-                </Collapse>
-              </>
-            )}
+                  ) : (
+                    <Empty description="No documents available" />
+                  )}
+                </Collapse.Panel>
+              </Collapse>
 
-            {/* Timeline and Milestones - Common for all types */}
-            <Collapse className="mb-4">
-              <Collapse.Panel
-                header={
-                  <div className="flex items-center">
-                    <CalendarOutlined className="text-[#F2722B] mr-2" />
-                    <span className="font-medium">Timeline and Milestones</span>
-                  </div>
-                }
-                key="1"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500">
-                      Project Duration
-                    </div>
-                    <div className="mt-2">
-                      {formatDate(selectedRequest?.projectDuration?.startDate)}{" "}
-                      - {formatDate(selectedRequest?.projectDuration?.endDate)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Milestones</div>
-                    <Timeline className="mt-4">
-                      {selectedRequest?.projectMilestones?.map(
-                        (milestone, index) => (
-                          <Timeline.Item key={index}>
-                            <div className="font-medium">{milestone.title}</div>
-                            <div className="text-sm text-gray-500">
-                              Deadline: {formatDate(milestone.deadline)}
-                            </div>
-                          </Timeline.Item>
-                        )
-                      )}
-                    </Timeline>
-                  </div>
-                </div>
-              </Collapse.Panel>
-            </Collapse>
-
-            {/* Review Form */}
-            <Form form={form} layout="vertical" className="mt-4">
-              {selectedRequest?.type === "Research" ? (
-                <Form.Item
-                  label="Adjust Budget (VND)"
-                  name="budget"
-                  rules={[
-                    { required: true, message: "Please input the budget!" },
-                  ]}
-                >
-                  <InputNumber
-                    className="w-full"
-                    formatter={(value) =>
-                      ` ${value} vn₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
-                  />
-                </Form.Item>
-              ) : (
-                <Form.Item
-                  label="Adjust Royalties (VND)"
-                  name="royalties"
-                  rules={[
-                    { required: true, message: "Please input the royalties!" },
-                  ]}
-                >
-                  <InputNumber
-                    className="w-full"
-                    formatter={(value) =>
-                      ` ${value} ₫`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
-                  />
-                </Form.Item>
-              )}
-
-              <Form.Item
-                label="Timeline Adjustment"
-                name="timeline"
-                rules={[{ required: true, message: "Please select timeline!" }]}
-              >
-                <RangePicker className="w-full" />
-              </Form.Item>
-
-              <Form.Item
-                label="Feedback Notes"
-                name="notes"
-                rules={[
-                  { required: true, message: "Please provide feedback!" },
-                ]}
-              >
-                <TextArea
-                  rows={4}
-                  placeholder="Provide feedback about the adjustments..."
-                />
-              </Form.Item>
-            </Form>
-          </div>
+              {/* Other modal content */}
+            </div>
+          )}
         </Modal>
       </div>
     </div>

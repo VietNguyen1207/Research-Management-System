@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Form,
   Input,
@@ -8,7 +8,7 @@ import {
   Button,
   Upload,
   message,
-  Divider,
+  Spin,
   Card,
 } from "antd";
 import {
@@ -26,90 +26,172 @@ import {
   InboxOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../features/auth/authSlice";
+import { useGetStudentGroupsQuery } from "../features/group/groupApiSlice";
+import { useGetDepartmentsQuery } from "../features/department/departmentApiSlice";
+import {
+  useRegisterResearchProjectMutation,
+  useUploadProjectDocumentMutation,
+} from "../features/project/projectApiSlice";
+import moment from "moment";
 
 const { TextArea } = Input;
 
 const RegisterResearch = () => {
   const [form] = Form.useForm();
-  const { user } = useSelector((state) => state.auth);
+  const currentUser = useSelector(selectCurrentUser);
+  const userId = currentUser?.id;
   const [fileList, setFileList] = useState([]);
-  const [availableCategories, setAvailableCategories] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [projectId, setProjectId] = useState(null);
 
-  // Mock data - replace with API calls
-  const lecturers = [
-    { id: 1, name: "Dr. Emily Smith" },
-    { id: 2, name: "Prof. John Doe" },
-    { id: 3, name: "Dr. Sarah Johnson" },
-  ];
+  // Fetch departments data
+  const { data: departments, isLoading: isLoadingDepartments } =
+    useGetDepartmentsQuery();
 
-  const departments = [
-    { id: 1, name: "Computer Science" },
-    { id: 2, name: "Information Technology" },
-    { id: 3, name: "Software Engineering" },
-  ];
+  // Fetch student groups for the current user
+  const {
+    data: userGroups,
+    isLoading: isLoadingGroups,
+    error: groupsError,
+  } = useGetStudentGroupsQuery(userId, {
+    skip: !userId, // Skip the query if userId is not available
+  });
 
-  const categories = [
-    // Computer Science Department (id: 1)
-    { id: 1, name: "AI & Machine Learning", departmentId: 1 },
-    { id: 2, name: "Data Science", departmentId: 1 },
-    { id: 3, name: "Computer Vision", departmentId: 1 },
-    { id: 4, name: "Natural Language Processing", departmentId: 1 },
+  // Register research project mutation
+  const [registerProject, { isLoading: isSubmitting }] =
+    useRegisterResearchProjectMutation();
 
-    // Information Technology Department (id: 2)
-    { id: 5, name: "Cybersecurity", departmentId: 2 },
-    { id: 6, name: "Network Systems", departmentId: 2 },
-    { id: 7, name: "Cloud Computing", departmentId: 2 },
-    { id: 8, name: "IoT Systems", departmentId: 2 },
+  // Add upload document mutation
+  const [uploadDocument, { isLoading: isUploading }] =
+    useUploadProjectDocumentMutation();
 
-    // Software Engineering Department (id: 3)
-    { id: 9, name: "Software Architecture", departmentId: 3 },
-    { id: 10, name: "DevOps", departmentId: 3 },
-    { id: 11, name: "Mobile Development", departmentId: 3 },
-    { id: 12, name: "Web Technologies", departmentId: 3 },
-  ];
+  const onFinish = async (values) => {
+    try {
+      // Function to format dates with fixed time at noon (12:00 PM)
+      const formatDate = (date) => {
+        if (!date) return null;
 
-  // Add mock data for groups (replace with API call later)
-  const availableGroups = [
-    {
-      id: 1,
-      name: "AI Research Group",
-      members: [
-        { name: "Dr. Emily Smith", role: "Leader" },
-        { name: "John Doe", role: "Member" },
-      ],
-    },
-    {
-      id: 2,
-      name: "Machine Learning Lab",
-      members: [
-        { name: "Prof. Sarah Johnson", role: "Leader" },
-        { name: "Alice Wong", role: "Member" },
-      ],
-    },
-  ];
+        // We're already working with a moment object from DatePicker
+        // Just set the time to 12:00 PM
+        const dateWithTime = date.clone(); // Clone to avoid mutating the original
 
-  const onFinish = (values) => {
-    console.log("Form values:", values);
-    message.success("Research project submitted successfully!");
+        dateWithTime.set({
+          hour: 12,
+          minute: 0,
+          second: 0,
+          millisecond: 0,
+        });
+
+        // Return in ISO format
+        return dateWithTime.format("YYYY-MM-DDTHH:mm:ss");
+      };
+
+      // Transform milestones to match API requirements
+      const transformedMilestones = values.milestones.map((milestone) => ({
+        title: milestone.title,
+        startDate: formatDate(milestone.startDate || values.timeline.start),
+        endDate: formatDate(milestone.endDate || values.timeline.end),
+      }));
+
+      // Prepare request payload
+      const projectData = {
+        projectName: values.title,
+        description: values.description,
+        methodology: values.methodology,
+        startDate: formatDate(values.timeline.start),
+        endDate: formatDate(values.timeline.end),
+        approvedBudget: values.budget,
+        groupId: values.group_id,
+        departmentId: values.department_id,
+        milestones: transformedMilestones,
+      };
+
+      // Step 1: Register the project first
+      const response = await registerProject(projectData).unwrap();
+
+      // Extract project ID from response message using regex
+      const projectIdMatch = response.message?.match(/Project ID: (\d+)/);
+      const projectId = projectIdMatch ? projectIdMatch[1] : null;
+
+      console.log("Project created successfully with ID:", projectId);
+
+      // Step 2: If we have files and a valid project ID, upload the documents
+      if (fileList.length > 0 && projectId) {
+        try {
+          // Function to handle document uploads
+          const uploadProjectDocuments = async (projectId, files) => {
+            try {
+              // The API might only accept one file at a time
+              const file = files[0]; // Take only the first file
+
+              if (!file || !file.originFileObj) {
+                message.error("Invalid file selected");
+                return;
+              }
+
+              // Create a FormData object
+              const formData = new FormData();
+
+              // Use the correct field name 'documentFile'
+              formData.append("documentFile", file.originFileObj);
+
+              // Call the upload API
+              await uploadDocument({ projectId, formData }).unwrap();
+              message.success(
+                "Research project registered and document uploaded successfully!"
+              );
+            } catch (uploadError) {
+              console.error("Error uploading documents:", uploadError);
+              message.warning(
+                "Project was created successfully, but document upload failed. You can upload documents later."
+              );
+            }
+          };
+
+          await uploadProjectDocuments(projectId, fileList);
+        } catch (uploadError) {
+          console.error("Error uploading documents:", uploadError);
+          message.warning(
+            "Project was created successfully, but document upload failed. You can upload documents later."
+          );
+        }
+      } else {
+        message.success("Research project registered successfully!");
+      }
+
+      // Reset form after all operations are complete
+      form.resetFields();
+      setFileList([]);
+    } catch (error) {
+      console.error("Error registering project:", error);
+      message.error(
+        error.data?.message ||
+          "Failed to register research project. Please try again."
+      );
+    }
   };
 
-  const handleFileChange = (info) => {
-    let fileList = [...info.fileList];
-    fileList = fileList.slice(-1); // Keep only the latest file
-    setFileList(fileList);
+  const handleFileChange = ({ fileList: newFileList }) => {
+    // Keep the fileList state updated
+    setFileList(newFileList);
   };
 
   const handleDepartmentChange = (departmentId) => {
     setSelectedDepartment(departmentId);
-    form.setFieldsValue({ category_ids: [] }); // Clear selected categories
-
-    // Filter categories based on selected department
-    const departmentCategories = categories.filter(
-      (cat) => cat.departmentId === departmentId
-    );
-    setAvailableCategories(departmentCategories);
   };
+
+  // Find leader for a group
+  const getGroupLeader = (members) => {
+    return members.find((m) => m.role === 0 && m.status === 1);
+  };
+
+  // Handle potential errors in group data
+  useEffect(() => {
+    if (groupsError) {
+      message.error("Failed to load research groups. Please try again later.");
+    }
+  }, [groupsError]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -226,44 +308,6 @@ const RegisterResearch = () => {
             <Form.Item
               label={
                 <span className="text-gray-700 font-medium text-base">
-                  Project Objectives
-                </span>
-              }
-              name="title"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input project objectives!",
-                },
-              ]}
-            >
-              <Input
-                prefix={<FileTextOutlined className="text-gray-400" />}
-                placeholder="Enter the project objectives "
-                className="rounded-lg py-2.5"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium">
-                  Required Datasets
-                </span>
-              }
-              name="datasets"
-              extra="Optional: List any specific datasets needed for the research"
-            >
-              <Select
-                mode="tags"
-                placeholder="Enter required datasets"
-                className="w-full"
-                tokenSeparators={[","]}
-              />
-            </Form.Item>
-
-            {/* <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
                   Research Methodology
                 </span>
               }
@@ -282,102 +326,6 @@ const RegisterResearch = () => {
               />
             </Form.Item>
 
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Innovative Aspects of Research
-                </span>
-              }
-              name="innovative_aspects"
-              rules={[
-                { required: true, message: "Please input innovative aspects!" },
-              ]}
-            >
-              <TextArea
-                placeholder="Describe the innovative aspects of your research"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Research Subjects
-                </span>
-              }
-              name="research_subjects"
-              rules={[
-                { required: true, message: "Please input research subjects!" },
-              ]}
-            >
-              <TextArea
-                placeholder="Describe your research subjects"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Research Scope
-                </span>
-              }
-              name="research_scope"
-              rules={[
-                { required: true, message: "Please input research scope!" },
-              ]}
-            >
-              <TextArea
-                placeholder="Define the scope of your research"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Scientific Significance
-                </span>
-              }
-              name="scientific_significance"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input scientific significance!",
-                },
-              ]}
-            >
-              <TextArea
-                placeholder="Describe the scientific significance of your research"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <span className="text-gray-700 font-medium text-base">
-                  Practical Significance
-                </span>
-              }
-              name="practical_significance"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input practical significance!",
-                },
-              ]}
-            >
-              <TextArea
-                placeholder="Describe the practical significance of your research"
-                rows={4}
-                className="rounded-lg"
-              />
-            </Form.Item> */}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Form.Item
                 label={
@@ -391,43 +339,31 @@ const RegisterResearch = () => {
                 ]}
               >
                 <Select
-                  placeholder="Select a department"
+                  placeholder={
+                    isLoadingDepartments
+                      ? "Loading departments..."
+                      : "Select a department"
+                  }
                   className="rounded-lg"
                   suffixIcon={<BankOutlined className="text-gray-400" />}
                   onChange={handleDepartmentChange}
-                >
-                  {departments.map((dept) => (
-                    <Select.Option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Category
-                  </span>
-                }
-                name="category_ids"
-                rules={[
-                  { required: true, message: "Please select categories!" },
-                ]}
-              >
-                <Select
-                  mode="multiple"
-                  placeholder={
-                    selectedDepartment
-                      ? "Select categories"
-                      : "Please select a department first"
+                  loading={isLoadingDepartments}
+                  disabled={isLoadingDepartments}
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
                   }
-                  className="rounded-lg"
-                  disabled={!selectedDepartment}
                 >
-                  {availableCategories.map((category) => (
-                    <Select.Option key={category.id} value={category.id}>
-                      {category.name}
+                  {departments?.map((dept) => (
+                    <Select.Option
+                      key={dept.departmentId}
+                      value={dept.departmentId}
+                      label={dept.departmentName}
+                    >
+                      {dept.departmentName}
                     </Select.Option>
                   ))}
                 </Select>
@@ -440,7 +376,6 @@ const RegisterResearch = () => {
                   </span>
                 }
                 name="budget"
-                className="md:col-span-2"
                 rules={[{ required: true, message: "Please input budget!" }]}
               >
                 <InputNumber
@@ -469,70 +404,67 @@ const RegisterResearch = () => {
               <TeamOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
                 <h3 className="flex items-start text-xl font-semibold text-gray-900">
-                  Team Members
+                  Research Group
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Team members information
+                  Select your research group
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium">Supervisor</span>
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium">
+                  Research Group
+                </span>
+              }
+              name="group_id"
+              rules={[
+                {
+                  required: true,
+                  message: "Please select a research group!",
+                },
+              ]}
+            >
+              <Select
+                placeholder={
+                  isLoadingGroups
+                    ? "Loading research groups..."
+                    : "Select a research group"
                 }
-                name="lecturer_id"
-                rules={[
-                  { required: true, message: "Please select a supervisor!" },
-                ]}
-              >
-                <Select
-                  placeholder="Select a supervisor"
-                  className="rounded-lg"
-                  suffixIcon={<UserOutlined className="text-gray-400" />}
-                >
-                  {lecturers.map((lecturer) => (
-                    <Select.Option key={lecturer.id} value={lecturer.id}>
-                      {lecturer.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium">
-                    Research Group
-                  </span>
+                className="rounded-lg"
+                suffixIcon={<TeamOutlined className="text-gray-400" />}
+                loading={isLoadingGroups}
+                disabled={isLoadingGroups}
+                notFoundContent={
+                  isLoadingGroups ? (
+                    <Spin size="small" />
+                  ) : userGroups?.length === 0 ? (
+                    <div className="py-2 px-3 text-gray-500">
+                      No research groups available. Please create a group first.
+                    </div>
+                  ) : null
                 }
-                name="group_id"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please select a research group!",
-                  },
-                ]}
               >
-                <Select
-                  placeholder="Select a research group"
-                  className="rounded-lg"
-                  suffixIcon={<TeamOutlined className="text-gray-400" />}
-                >
-                  {availableGroups.map((group) => (
-                    <Select.Option key={group.id} value={group.id}>
+                {userGroups?.map((group) => {
+                  const leader = getGroupLeader(group.members);
+                  return (
+                    <Select.Option key={group.groupId} value={group.groupId}>
                       <div>
-                        <div className="font-medium">{group.name}</div>
+                        <div className="font-medium">{group.groupName}</div>
                         <div className="text-xs text-gray-500">
-                          Leader:{" "}
-                          {group.members.find((m) => m.role === "Leader")?.name}
+                          {leader
+                            ? `Leader: ${leader.memberName}`
+                            : "No active leader"}{" "}
+                          •
+                          {` ${group.currentMember}/${group.maxMember} members`}
                         </div>
                       </div>
                     </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </div>
+                  );
+                })}
+              </Select>
+            </Form.Item>
           </Card>
 
           {/* Timeline & Milestones Card */}
@@ -668,7 +600,7 @@ const RegisterResearch = () => {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4">
                             <Form.Item
                               {...field}
                               name={[field.name, "title"]}
@@ -685,21 +617,41 @@ const RegisterResearch = () => {
                               />
                             </Form.Item>
 
-                            <Form.Item
-                              {...field}
-                              name={[field.name, "deadline"]}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: "Please select deadline",
-                                },
-                              ]}
-                            >
-                              <DatePicker
-                                placeholder="Select deadline"
-                                className="w-full rounded-lg"
-                              />
-                            </Form.Item>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Form.Item
+                                {...field}
+                                name={[field.name, "startDate"]}
+                                label="Start Date"
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "Please select start date",
+                                  },
+                                ]}
+                              >
+                                <DatePicker
+                                  placeholder="Select start date"
+                                  className="w-full rounded-lg"
+                                />
+                              </Form.Item>
+
+                              <Form.Item
+                                {...field}
+                                name={[field.name, "endDate"]}
+                                label="End Date"
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "Please select end date",
+                                  },
+                                ]}
+                              >
+                                <DatePicker
+                                  placeholder="Select end date"
+                                  className="w-full rounded-lg"
+                                />
+                              </Form.Item>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -733,59 +685,31 @@ const RegisterResearch = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Supporting Files
-                  </span>
-                }
-                name="supporting_files"
+            <Form.Item
+              label={
+                <span className="text-gray-700 font-medium text-base">
+                  Supporting Documents
+                </span>
+              }
+              name="supporting_files"
+              extra="Upload any relevant documents to support your research proposal"
+            >
+              <Upload.Dragger
+                fileList={fileList}
+                onChange={handleFileChange}
+                multiple
+                className="rounded-lg"
+                beforeUpload={() => false} // Prevent auto-upload
               >
-                <Upload.Dragger
-                  fileList={fileList}
-                  onChange={handleFileChange}
-                  multiple
-                  className="rounded-lg"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined className="text-[#F2722B]" />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or drag files to upload
-                  </p>
-                  <p className="ant-upload-hint">
-                    Support for single or bulk upload
-                  </p>
-                </Upload.Dragger>
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="text-gray-700 font-medium text-base">
-                    Associated Documents
-                  </span>
-                }
-                name="associated_documents"
-              >
-                <Upload.Dragger
-                  fileList={fileList}
-                  onChange={handleFileChange}
-                  multiple
-                  className="rounded-lg"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined className="text-[#F2722B]" />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or drag files to upload
-                  </p>
-                  <p className="ant-upload-hint">
-                    Support for single or bulk upload
-                  </p>
-                </Upload.Dragger>
-              </Form.Item>
-            </div>
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined className="text-[#F2722B]" />
+                </p>
+                <p className="ant-upload-text">Click or drag files to upload</p>
+                <p className="ant-upload-hint">
+                  Support for single or multiple file uploads (PDF, DOCX, etc.)
+                </p>
+              </Upload.Dragger>
+            </Form.Item>
 
             <Form.Item name="submission_date" hidden>
               <Input type="hidden" value={new Date().toISOString()} />
@@ -809,6 +733,13 @@ const RegisterResearch = () => {
               htmlType="submit"
               icon={<SendOutlined />}
               className="rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none px-6 h-11 flex items-center"
+              loading={isSubmitting || isUploading}
+              disabled={
+                isLoadingGroups ||
+                isLoadingDepartments ||
+                isSubmitting ||
+                isUploading
+              }
             >
               Submit Proposal
             </Button>

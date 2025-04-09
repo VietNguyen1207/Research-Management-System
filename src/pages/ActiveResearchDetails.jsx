@@ -66,16 +66,6 @@ const approvedProjects = [
     ],
     methodology:
       "The research employs a mixed-methods approach combining quantitative analysis of healthcare data with qualitative assessment of system implementation...",
-    innovative_aspects:
-      "This research introduces novel deep learning architectures specifically designed for healthcare diagnostics...",
-    research_subjects:
-      "The study will involve analysis of anonymized patient records, healthcare practitioners' workflow patterns...",
-    research_scope:
-      "The research encompasses three major city hospitals in Vietnam...",
-    scientific_significance:
-      "This research advances the field of medical AI by developing new algorithms...",
-    practical_significance:
-      "The outcomes will directly improve patient care through faster diagnosis...",
 
     department: {
       id: 1,

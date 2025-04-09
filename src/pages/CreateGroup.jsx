@@ -37,6 +37,7 @@ import {
   UserAddOutlined,
   WarningOutlined,
   ClearOutlined,
+  CheckCircleFilled,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -46,6 +47,7 @@ import {
 } from "../features/user/userApiSlice";
 import { useCreateResearchGroupMutation } from "../features/group/groupApiSlice";
 import ErrorFeedback from "../components/ErrorFeedback";
+import { useNavigate } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -57,6 +59,8 @@ const CreateGroup = () => {
   const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
   const [error, setError] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [createdGroupName, setCreatedGroupName] = useState("");
 
   // Check if user is a lecturer
   const isLecturer = user?.role === "lecturer";
@@ -87,6 +91,9 @@ const CreateGroup = () => {
   // Add the create mutation
   const [createResearchGroup, { isLoading: isCreating }] =
     useCreateResearchGroupMutation();
+
+  // Get the navigate function
+  const navigate = useNavigate();
 
   // Update autocomplete options based on user role
   useEffect(() => {
@@ -179,7 +186,10 @@ const CreateGroup = () => {
   }, [emailInput, students, academicUsers, members, isLecturer, user]);
 
   const handleAddMember = () => {
-    if (emailInput && members.length < maxMembers) {
+    // Calculate the actual max members based on role
+    const actualMaxMembers = isLecturer ? maxMembers : maxMembers - 1;
+
+    if (emailInput && members.length < actualMaxMembers) {
       // Validate self select
       if (emailInput.toLowerCase() === user.email.toLowerCase()) {
         message.error("You cannot add yourself as a member!");
@@ -246,13 +256,18 @@ const CreateGroup = () => {
       } else {
         message.error("This member is already added!");
       }
-    } else if (members.length >= maxMembers) {
-      message.warning(`Maximum ${maxMembers} members allowed in a group!`);
+    } else if (members.length >= actualMaxMembers) {
+      message.warning(
+        `Maximum ${actualMaxMembers} additional members allowed in a group!`
+      );
     }
   };
 
   const handleSelectStudent = (email, option) => {
-    if (members.length < maxMembers) {
+    // Calculate the actual max members based on role
+    const actualMaxMembers = isLecturer ? maxMembers : maxMembers - 1;
+
+    if (members.length < actualMaxMembers) {
       if (!members.some((member) => member.email === email)) {
         if (isLecturer) {
           const user = option.user;
@@ -283,7 +298,9 @@ const CreateGroup = () => {
         message.error("This member is already added!");
       }
     } else {
-      message.warning(`Maximum ${maxMembers} members allowed in a group!`);
+      message.warning(
+        `Maximum ${actualMaxMembers} additional members allowed in a group!`
+      );
     }
   };
 
@@ -496,7 +513,7 @@ const CreateGroup = () => {
       // Check if any member is already assigned as Leader
       const hasLeader = members.some((member) => member.role === "Leader");
 
-      // Map our string roles to the backend's number roles
+      // Map string roles to the backend's number roles
       const getRoleNumber = (roleString) => {
         switch (roleString) {
           case "Leader":
@@ -570,13 +587,13 @@ const CreateGroup = () => {
       // Call the API
       const response = await createResearchGroup(requestPayload).unwrap();
 
-      message.success({
-        content: "Group created successfully!",
-        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
-        duration: 5,
-      });
+      // Save the group name for the success modal
+      setCreatedGroupName(values.group_name);
 
-      // Optionally, redirect to the groups page or clear the form
+      // Show the success modal instead of the message
+      setIsSuccessModalVisible(true);
+
+      // Reset form and state (but don't navigate yet)
       form.resetFields();
       setMembers([]);
     } catch (error) {
@@ -586,6 +603,12 @@ const CreateGroup = () => {
       // Scroll to the top where error will be displayed
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  // Add this function to handle navigation
+  const handleViewGroups = () => {
+    setIsSuccessModalVisible(false);
+    navigate("/view-group");
   };
 
   // Function to get label for lecturer in select
@@ -1029,14 +1052,20 @@ const CreateGroup = () => {
                 } text-sm`}
               >
                 <Progress
-                  percent={Math.min(100, (members.length / maxMembers) * 100)}
+                  percent={Math.min(
+                    100,
+                    (members.length /
+                      (isLecturer ? maxMembers : maxMembers - 1)) *
+                      100
+                  )}
                   size="small"
                   showInfo={false}
                   strokeColor={formErrors.members ? "#f5222d" : "#F2722B"}
                   className="w-24 mr-2"
                 />
                 <span>
-                  {members.length} of {maxMembers} members added
+                  {members.length} of {isLecturer ? maxMembers : maxMembers - 1}{" "}
+                  members added
                   {!isLecturer && members.length < 3 && (
                     <span className="ml-1">(minimum 3 required)</span>
                   )}
@@ -1069,30 +1098,33 @@ const CreateGroup = () => {
                     className="rounded-lg border border-orange-200 shadow-sm bg-gradient-to-r from-orange-50 to-orange-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
                   >
                     <div className="flex items-center w-full">
-                      <div className="py-3 px-4 flex items-center flex-grow">
-                        <Badge
-                          count={index + 1}
-                          overflowCount={99}
-                          className="mr-3"
-                          style={{ backgroundColor: "#F2722B" }}
-                        >
-                          <Avatar
-                            icon={<UserOutlined />}
-                            size="default"
-                            className={`flex-shrink-0 ${
-                              member.userType === "Lecturer"
-                                ? "bg-[#1890ff]"
-                                : "bg-[#D2691E]"
-                            }`}
-                          />
-                        </Badge>
+                      <div className="py-3 px-4 flex items-center w-full">
+                        {/* Avatar with badge - fixed width */}
+                        <div className="flex-shrink-0 mr-3">
+                          <Badge
+                            count={index + 1}
+                            overflowCount={99}
+                            style={{ backgroundColor: "#F2722B" }}
+                          >
+                            <Avatar
+                              icon={<UserOutlined />}
+                              size="default"
+                              className={
+                                member.userType === "Lecturer"
+                                  ? "bg-[#1890ff]"
+                                  : "bg-[#D2691E]"
+                              }
+                            />
+                          </Badge>
+                        </div>
 
-                        <div className="flex flex-col min-w-0 flex-grow mr-2">
+                        {/* Member info - with flex-grow and min-width */}
+                        <div className="flex-grow min-w-0 mr-3">
                           {member.fullName ? (
                             <>
                               <Tooltip title={member.fullName}>
                                 <div className="flex items-center">
-                                  <span className="font-medium text-gray-800 truncate">
+                                  <span className="font-medium text-gray-800 truncate block max-w-[140px]">
                                     {member.fullName}
                                   </span>
                                   {member.userType && (
@@ -1102,7 +1134,7 @@ const CreateGroup = () => {
                                           ? "blue"
                                           : "orange"
                                       }
-                                      className="ml-2 text-xs px-1.5 py-0"
+                                      className="ml-2 text-xs px-1.5 py-0 flex-shrink-0"
                                     >
                                       {member.userType}
                                     </Tag>
@@ -1124,17 +1156,17 @@ const CreateGroup = () => {
                           )}
                         </div>
 
-                        <div className="flex-shrink-0 border-l border-orange-200 pl-3 ml-1">
+                        {/* Role selector - fixed width */}
+                        <div className="flex-shrink-0 border-l border-orange-200 pl-3 w-[120px]">
                           <Select
                             value={member.role}
                             onChange={(value) =>
                               handleRoleChange(member.email, value)
                             }
                             bordered={false}
-                            style={{ width: 120 }}
+                            style={{ width: 100 }}
                             dropdownMatchSelectWidth={false}
                             popupClassName="rounded-lg shadow-lg"
-                            className="flex items-center"
                             suffixIcon={null}
                           >
                             <Option value="Leader">
@@ -1152,14 +1184,17 @@ const CreateGroup = () => {
                           </Select>
                         </div>
 
-                        <Tooltip title="Remove member">
-                          <Button
-                            type="text"
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleRemoveMember(member.email)}
-                            className="text-gray-400 hover:text-red-500 hover:bg-transparent flex-shrink-0"
-                          />
-                        </Tooltip>
+                        {/* Delete button - fixed width */}
+                        <div className="flex-shrink-0">
+                          <Tooltip title="Remove member">
+                            <Button
+                              type="text"
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleRemoveMember(member.email)}
+                              className="text-gray-400 hover:text-red-500 hover:bg-transparent"
+                            />
+                          </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1217,6 +1252,50 @@ const CreateGroup = () => {
           </div>
         </Form>
       </div>
+
+      {/* Success Modal */}
+      <Modal
+        open={isSuccessModalVisible}
+        footer={null}
+        closable={false}
+        centered
+        className="success-creation-modal"
+        width={400}
+      >
+        <div className="flex flex-col items-center py-4">
+          <div className="mb-6 w-20 h-20 rounded-full bg-green-50 flex items-center justify-center">
+            <CheckCircleFilled className="text-5xl text-green-500" />
+          </div>
+
+          <h3 className="text-xl font-bold text-center mb-2">
+            Group Created Successfully!
+          </h3>
+
+          <p className="text-gray-600 text-center mb-6">
+            Your group <span className="font-medium">"{createdGroupName}"</span>{" "}
+            has been created successfully.
+          </p>
+
+          <div className="flex flex-col w-full space-y-3">
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleViewGroups}
+              className="w-full bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+            >
+              View My Groups
+            </Button>
+
+            <Button
+              onClick={() => setIsSuccessModalVisible(false)}
+              size="large"
+              className="w-full"
+            >
+              Create Another Group
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
