@@ -38,6 +38,50 @@ export const projectApiSlice = apiSlice.injectEndpoints({
           : [{ type: "Projects", id: "LIST" }],
       transformResponse: (response) => response,
     }),
+    getProjectDetails: builder.query({
+      query: (projectId) => ({
+        url: `/project/details/${projectId}`,
+        method: "GET",
+      }),
+      providesTags: (result, error, projectId) => [
+        { type: "Projects", id: projectId },
+      ],
+      transformResponse: (response) => response,
+    }),
+    getMyApprovedProjects: builder.query({
+      query: () => ({
+        url: "/projects/me/approved",
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ projectId }) => ({
+                type: "Projects",
+                id: projectId,
+              })),
+              { type: "ApprovedProjects", id: "LIST" },
+            ]
+          : [{ type: "ApprovedProjects", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
+    getMyPendingProjects: builder.query({
+      query: () => ({
+        url: "/projects/me/pending",
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ projectId }) => ({
+                type: "Projects",
+                id: projectId,
+              })),
+              { type: "PendingProjects", id: "LIST" },
+            ]
+          : [{ type: "PendingProjects", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
     getProjectsByDepartment: builder.query({
       query: (departmentId) => ({
         url: `/project/get-project-by-departmentId/${departmentId}`,
@@ -64,6 +108,7 @@ export const projectApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { projectId }) => [
         { type: "Projects", id: projectId },
         { type: "DepartmentProjects", id: projectId },
+        { type: "ApprovedProjects", id: "LIST" },
       ],
     }),
     rejectProject: builder.mutation({
@@ -76,6 +121,7 @@ export const projectApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { projectId }) => [
         { type: "Projects", id: projectId },
         { type: "DepartmentProjects", id: projectId },
+        { type: "ApprovedProjects", id: "LIST" },
       ],
     }),
   }),
@@ -85,6 +131,9 @@ export const {
   useRegisterResearchProjectMutation,
   useUploadProjectDocumentMutation,
   useGetMyProjectsQuery,
+  useGetProjectDetailsQuery,
+  useGetMyApprovedProjectsQuery,
+  useGetMyPendingProjectsQuery,
   useGetProjectsByDepartmentQuery,
   useApproveProjectMutation,
   useRejectProjectMutation,

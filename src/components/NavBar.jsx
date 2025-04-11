@@ -115,9 +115,9 @@ const NavBar = () => {
   const { user } = useSelector((state) => state.auth);
   const studentNavItems = [
     "Group",
-    "Registration",
+    // "Registration",
     "Research Project",
-    "Paper Project",
+    // "Paper Project",
   ];
   const lecturerNavItems = [
     "Group",
