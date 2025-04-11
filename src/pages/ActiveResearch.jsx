@@ -21,6 +21,7 @@ import {
   Space,
   Avatar,
   Tooltip,
+  Skeleton,
 } from "antd";
 import {
   SearchOutlined,
@@ -39,11 +40,15 @@ import {
   InfoCircleOutlined,
   EnvironmentOutlined,
   BankOutlined,
-  CloseOutlined,
+  UserOutlined,
+  MailOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useGetMyProjectsQuery } from "../features/project/projectApiSlice";
+import {
+  useGetMyApprovedProjectsQuery,
+  useGetMyProjectsQuery,
+} from "../features/project/projectApiSlice";
 
 const { Search } = Input;
 const { Title, Text, Paragraph } = Typography;
@@ -90,24 +95,22 @@ const ActiveResearch = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // Fetch projects data from API
+  // Fetch projects data from API using the new endpoint
   const {
     data: projectsData,
     isLoading,
     isError,
     error,
-  } = useGetMyProjectsQuery();
+  } = useGetMyApprovedProjectsQuery();
+
+  // Also fetch full project details for when a project is selected
+  const { data: fullProjectsData } = useGetMyProjectsQuery();
 
   // Process the data when it's loaded
   useEffect(() => {
     if (projectsData && projectsData.data) {
-      // Filter active projects (status 1 - Approved)
-      const activeProjects = projectsData.data.filter(
-        (project) => project.status === 1
-      );
-
-      // Apply additional filters
-      const filtered = activeProjects.filter((project) => {
+      // Apply filters
+      const filtered = projectsData.data.filter((project) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
@@ -121,7 +124,7 @@ const ActiveResearch = () => {
         const matchesType =
           typeFilter === "all"
             ? true
-            : project.projectType.toString() === typeFilter;
+            : project.projectType?.toString() === typeFilter;
 
         return matchesSearch && matchesType;
       });
@@ -131,8 +134,7 @@ const ActiveResearch = () => {
   }, [projectsData, searchText, typeFilter]);
 
   const handleViewProject = (project) => {
-    setSelectedProject(project);
-    setIsModalVisible(true);
+    navigate(`/project-details/${project.projectId}`);
   };
 
   const handleDownloadDocument = (documentUrl) => {
@@ -145,31 +147,27 @@ const ActiveResearch = () => {
       return {
         totalProjects: 0,
         activeProjects: 0,
-        totalDocuments: 0,
-        completedMilestones: 0,
+        totalDepartments: 0,
+        totalGroups: 0,
       };
 
-    const activeProjects = projectsData.data.filter(
-      (project) => project.status === 1
+    const activeProjects = projectsData.data;
+
+    // Get unique departments
+    const uniqueDepartments = new Set(
+      activeProjects.map((project) => project.departmentId)
     );
 
-    // Calculate completed milestones
-    const completedMilestones = activeProjects.reduce((acc, project) => {
-      const completedCount =
-        project.milestones?.filter((m) => m.status === 1)?.length || 0;
-      return acc + completedCount;
-    }, 0);
-
-    // Calculate total documents
-    const totalDocuments = activeProjects.reduce((acc, project) => {
-      return acc + (project.documents?.length || 0);
-    }, 0);
+    // Get unique groups
+    const uniqueGroups = new Set(
+      activeProjects.map((project) => project.groupId)
+    );
 
     return {
-      totalProjects: projectsData.data.length,
+      totalProjects: activeProjects.length,
       activeProjects: activeProjects.length,
-      totalDocuments,
-      completedMilestones,
+      totalDepartments: uniqueDepartments.size,
+      totalGroups: uniqueGroups.size,
     };
   };
 
@@ -182,6 +180,9 @@ const ActiveResearch = () => {
     { label: "Conference", value: "1" },
     { label: "Journal", value: "2" },
   ];
+
+  // Create a skeleton array for loading state
+  const skeletonCards = Array(6).fill(null);
 
   if (isLoading) {
     return (
@@ -227,46 +228,64 @@ const ActiveResearch = () => {
           </p>
         </div>
 
-        {/* Statistics Cards */}
+        {/* Statistics Cards - Skeleton loading */}
         <Row gutter={[16, 16]} className="mb-12">
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={<Text className="text-gray-600">Total Projects</Text>}
-                value={stats.totalProjects}
-                prefix={<ProjectOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={<Text className="text-gray-600">Active Projects</Text>}
-                value={stats.activeProjects}
-                prefix={<ClockCircleOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={<Text className="text-gray-600">Documents</Text>}
-                value={stats.totalDocuments}
-                prefix={<FileTextOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={
-                  <Text className="text-gray-600">Completed Milestones</Text>
-                }
-                value={stats.completedMilestones}
-                prefix={<CheckCircleOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
+          {isLoading ? (
+            <>
+              {[1, 2, 3, 4].map((item) => (
+                <Col xs={24} sm={12} md={6} key={item}>
+                  <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                    <Skeleton active paragraph={false} />
+                  </Card>
+                </Col>
+              ))}
+            </>
+          ) : (
+            <>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Statistic
+                    title={
+                      <Text className="text-gray-600">Total Projects</Text>
+                    }
+                    value={stats.totalProjects}
+                    prefix={<ProjectOutlined className="text-[#F2722B]" />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Statistic
+                    title={
+                      <Text className="text-gray-600">Active Projects</Text>
+                    }
+                    value={stats.activeProjects}
+                    prefix={<ClockCircleOutlined className="text-[#F2722B]" />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Statistic
+                    title={<Text className="text-gray-600">Departments</Text>}
+                    value={stats.totalDepartments}
+                    prefix={<BankOutlined className="text-[#F2722B]" />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Statistic
+                    title={
+                      <Text className="text-gray-600">Research Groups</Text>
+                    }
+                    value={stats.totalGroups}
+                    prefix={<TeamOutlined className="text-[#F2722B]" />}
+                  />
+                </Card>
+              </Col>
+            </>
+          )}
         </Row>
 
         {/* Filters Section */}
@@ -282,6 +301,7 @@ const ActiveResearch = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 className="w-full"
                 prefix={<SearchOutlined className="text-gray-400" />}
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -295,14 +315,41 @@ const ActiveResearch = () => {
                 value={typeFilter}
                 className="w-full"
                 suffixIcon={<FilterOutlined className="text-gray-400" />}
+                disabled={isLoading}
               />
             </div>
           </div>
         </Card>
 
-        {/* Projects Grid */}
+        {/* Projects Grid with Skeleton Loading */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProjects.length > 0 ? (
+          {isLoading ? (
+            // Skeleton loading cards
+            skeletonCards.map((_, index) => (
+              <Card
+                key={index}
+                className="h-full hover:shadow-lg transition-all duration-300 rounded-xl border border-gray-100 overflow-hidden bg-white"
+                bodyStyle={{ padding: 0 }}
+              >
+                <div className="p-6">
+                  <Skeleton active paragraph={{ rows: 3 }} />
+                  <div className="mt-4">
+                    <Skeleton.Button
+                      active
+                      size="small"
+                      shape="round"
+                      className="mr-2"
+                    />
+                    <Skeleton.Button active size="small" shape="round" />
+                  </div>
+                  <Skeleton active paragraph={{ rows: 2 }} className="mt-4" />
+                </div>
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                  <Skeleton.Button active size="default" block={true} />
+                </div>
+              </Card>
+            ))
+          ) : filteredProjects.length > 0 ? (
             filteredProjects.map((project, index) => (
               <motion.div
                 key={project.projectId}
@@ -318,10 +365,10 @@ const ActiveResearch = () => {
                     {/* Project Type & Department */}
                     <div className="flex justify-between items-center mb-4">
                       <Tag color="cyan" className="text-sm">
-                        {PROJECT_TYPE[project.projectType]}
+                        {PROJECT_TYPE[project.projectType] || "Research"}
                       </Tag>
                       <Tag color="orange" className="text-sm">
-                        Department {project.departmentId}
+                        {project.departmentName}
                       </Tag>
                     </div>
 
@@ -335,29 +382,15 @@ const ActiveResearch = () => {
                       {project.description}
                     </Paragraph>
 
-                    {/* Project Progress - based on milestones */}
+                    {/* Project Timeline */}
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-2">
-                        <Text className="text-sm text-gray-500">
-                          Milestones
-                        </Text>
+                        <Text className="text-sm text-gray-500">Timeline</Text>
                         <Text className="text-sm font-medium">
-                          {project.milestones?.length || 0} Total
+                          {formatDate(project.startDate)} -{" "}
+                          {formatDate(project.endDate)}
                         </Text>
                       </div>
-                      <Progress
-                        percent={
-                          ((project.milestones?.filter((m) => m.status === 1)
-                            ?.length || 0) /
-                            (project.milestones?.length || 1)) *
-                          100
-                        }
-                        size="small"
-                        strokeColor={{
-                          "0%": "#F2722B",
-                          "100%": "#FFA500",
-                        }}
-                      />
                     </div>
 
                     {/* Budget */}
@@ -377,8 +410,12 @@ const ActiveResearch = () => {
                         <span>Group: {project.groupName}</span>
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
-                        <FileTextOutlined className="mr-2" />
-                        <span>{project.documents?.length || 0} Documents</span>
+                        <UserOutlined className="mr-2" />
+                        <span>Created by: {project.creatorName}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <CalendarOutlined className="mr-2" />
+                        <span>Created: {formatDate(project.createdAt)}</span>
                       </div>
                     </div>
                   </div>
@@ -422,7 +459,7 @@ const ActiveResearch = () => {
                 {PROJECT_STATUS[selectedProject?.status]}
               </Tag>
               <Tag color="blue" className="ml-2">
-                {PROJECT_TYPE[selectedProject?.projectType]}
+                {PROJECT_TYPE[selectedProject?.projectType] || "Research"}
               </Tag>
             </div>
           }
@@ -467,16 +504,23 @@ const ActiveResearch = () => {
                       {selectedProject.groupName}
                     </Descriptions.Item>
                     <Descriptions.Item label="Department">
-                      Department {selectedProject.departmentId}
+                      {selectedProject.departmentName}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Created By">
-                      User ID: {selectedProject.createdBy}
+                    <Descriptions.Item label="Creator">
+                      {selectedProject.creatorName}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Creator Email">
+                      {selectedProject.creatorEmail}
                     </Descriptions.Item>
                     <Descriptions.Item label="Created At">
                       {formatDate(selectedProject.createdAt)}
                     </Descriptions.Item>
                     <Descriptions.Item label="Budget">
                       ₫{selectedProject.approvedBudget.toLocaleString()}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Timeline">
+                      {formatDate(selectedProject.startDate)} -{" "}
+                      {formatDate(selectedProject.endDate)}
                     </Descriptions.Item>
                   </Descriptions>
 
@@ -487,90 +531,167 @@ const ActiveResearch = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <h4 className="text-base font-medium mb-2">Methodology</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      {selectedProject.methodology}
+                  {selectedProject.methodology && (
+                    <div className="mt-4">
+                      <h4 className="text-base font-medium mb-2">
+                        Methodology
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        {selectedProject.methodology}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </Panel>
               </Collapse>
 
               {/* Timeline Section */}
-              <Collapse
-                defaultActiveKey={["1"]}
-                expandIconPosition="end"
-                className="mb-4 border-0 bg-white"
-              >
-                <Panel
-                  header={
-                    <div className="flex items-center">
-                      <CalendarOutlined className="text-[#F2722B] mr-2" />
-                      <span className="text-base font-medium">
-                        Timeline & Milestones
-                      </span>
-                    </div>
-                  }
-                  key="1"
-                  className="rounded-lg shadow-sm"
-                >
-                  <div className="flex items-center mb-4 bg-gray-50 p-3 rounded-lg">
-                    <CalendarOutlined className="text-gray-500 mr-2" />
-                    <span className="text-gray-700">Project Duration: </span>
-                    <span className="ml-2 font-medium">
-                      {formatDate(selectedProject.startDate)} -{" "}
-                      {formatDate(selectedProject.endDate)}
-                    </span>
-                  </div>
+              {selectedProject.milestones &&
+                selectedProject.milestones.length > 0 && (
+                  <Collapse
+                    defaultActiveKey={["1"]}
+                    expandIconPosition="end"
+                    className="mb-4 border-0 bg-white"
+                  >
+                    <Panel
+                      header={
+                        <div className="flex items-center">
+                          <CalendarOutlined className="text-[#F2722B] mr-2" />
+                          <span className="text-base font-medium">
+                            Timeline & Milestones
+                          </span>
+                        </div>
+                      }
+                      key="1"
+                      className="rounded-lg shadow-sm"
+                    >
+                      <div className="flex items-center mb-4 bg-gray-50 p-3 rounded-lg">
+                        <CalendarOutlined className="text-gray-500 mr-2" />
+                        <span className="text-gray-700">
+                          Project Duration:{" "}
+                        </span>
+                        <span className="ml-2 font-medium">
+                          {formatDate(selectedProject.startDate)} -{" "}
+                          {formatDate(selectedProject.endDate)}
+                        </span>
+                      </div>
 
-                  <div className="mb-2">
-                    <h4 className="text-base font-medium mb-3">Milestones</h4>
-                    {selectedProject.milestones &&
-                    selectedProject.milestones.length > 0 ? (
-                      <Timeline>
-                        {selectedProject.milestones.map((milestone) => (
-                          <Timeline.Item
-                            key={milestone.milestoneId}
-                            color={milestone.status === 1 ? "green" : "blue"}
-                            dot={
-                              milestone.status === 1 ? (
-                                <CheckCircleOutlined />
-                              ) : (
-                                <ClockCircleOutlined />
-                              )
-                            }
-                          >
-                            <div className="mb-1 font-medium">
-                              {milestone.title}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {formatDate(milestone.startDate)} -{" "}
-                              {formatDate(milestone.endDate)}
-                            </div>
-                            <div className="text-sm">
-                              <Tag
+                      <div className="mb-2">
+                        <h4 className="text-base font-medium mb-3">
+                          Milestones
+                        </h4>
+                        {selectedProject.milestones &&
+                        selectedProject.milestones.length > 0 ? (
+                          <Timeline>
+                            {selectedProject.milestones.map((milestone) => (
+                              <Timeline.Item
+                                key={milestone.milestoneId}
                                 color={
-                                  milestone.status === 1
-                                    ? "success"
-                                    : "processing"
+                                  milestone.status === 1 ? "green" : "blue"
+                                }
+                                dot={
+                                  milestone.status === 1 ? (
+                                    <CheckCircleOutlined />
+                                  ) : (
+                                    <ClockCircleOutlined />
+                                  )
                                 }
                               >
-                                {milestone.status === 1
-                                  ? "Completed"
-                                  : "In Progress"}
-                              </Tag>
-                            </div>
-                          </Timeline.Item>
-                        ))}
-                      </Timeline>
-                    ) : (
-                      <Empty description="No milestones found" />
-                    )}
-                  </div>
-                </Panel>
-              </Collapse>
+                                <div className="mb-1 font-medium">
+                                  {milestone.title}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {formatDate(milestone.startDate)} -{" "}
+                                  {formatDate(milestone.endDate)}
+                                </div>
+                                <div className="text-sm">
+                                  <Tag
+                                    color={
+                                      milestone.status === 1
+                                        ? "success"
+                                        : "processing"
+                                    }
+                                  >
+                                    {milestone.status === 1
+                                      ? "Completed"
+                                      : "In Progress"}
+                                  </Tag>
+                                </div>
+                              </Timeline.Item>
+                            ))}
+                          </Timeline>
+                        ) : (
+                          <Empty description="No milestones found" />
+                        )}
+                      </div>
+                    </Panel>
+                  </Collapse>
+                )}
 
               {/* Documents Section */}
+              {selectedProject.documents &&
+                selectedProject.documents.length > 0 && (
+                  <Collapse
+                    defaultActiveKey={["1"]}
+                    expandIconPosition="end"
+                    className="mb-4 border-0 bg-white"
+                  >
+                    <Panel
+                      header={
+                        <div className="flex items-center">
+                          <FileOutlined className="text-[#F2722B] mr-2" />
+                          <span className="text-base font-medium">
+                            Project Documents
+                          </span>
+                        </div>
+                      }
+                      key="1"
+                      className="rounded-lg shadow-sm"
+                    >
+                      {selectedProject.documents &&
+                      selectedProject.documents.length > 0 ? (
+                        <div className="space-y-3">
+                          {selectedProject.documents.map((doc) => (
+                            <div
+                              key={doc.documentId}
+                              className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex items-center">
+                                <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
+                                <div>
+                                  <div className="font-medium text-gray-800 mb-1">
+                                    {doc.fileName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    <Tag color="blue">
+                                      {DOCUMENT_TYPE[doc.documentType]}
+                                    </Tag>
+                                    <span className="ml-2">
+                                      Uploaded: {formatDate(doc.uploadAt)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                type="primary"
+                                icon={<DownloadOutlined />}
+                                onClick={() =>
+                                  handleDownloadDocument(doc.documentUrl)
+                                }
+                                className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                              >
+                                View
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <Empty description="No documents found" />
+                      )}
+                    </Panel>
+                  </Collapse>
+                )}
+
+              {/* Creator Information */}
               <Collapse
                 defaultActiveKey={["1"]}
                 expandIconPosition="end"
@@ -579,61 +700,45 @@ const ActiveResearch = () => {
                 <Panel
                   header={
                     <div className="flex items-center">
-                      <FileOutlined className="text-[#F2722B] mr-2" />
+                      <UserOutlined className="text-[#F2722B] mr-2" />
                       <span className="text-base font-medium">
-                        Project Documents
+                        Creator Information
                       </span>
                     </div>
                   }
                   key="1"
                   className="rounded-lg shadow-sm"
                 >
-                  {selectedProject.documents &&
-                  selectedProject.documents.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedProject.documents.map((doc) => (
-                        <div
-                          key={doc.documentId}
-                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
-                            <div>
-                              <div className="font-medium text-gray-800 mb-1">
-                                {doc.fileName}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                <Tag color="blue">
-                                  {DOCUMENT_TYPE[doc.documentType]}
-                                </Tag>
-                                <span className="ml-2">
-                                  Uploaded: {formatDate(doc.uploadAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            type="primary"
-                            icon={<DownloadOutlined />}
-                            onClick={() =>
-                              handleDownloadDocument(doc.documentUrl)
-                            }
-                            className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      ))}
+                  <div className="flex items-center bg-gray-50 p-4 rounded-lg">
+                    <Avatar
+                      size={64}
+                      icon={<UserOutlined />}
+                      className="bg-[#F2722B]"
+                    />
+                    <div className="ml-4">
+                      <h4 className="text-lg font-medium">
+                        {selectedProject.creatorName}
+                      </h4>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <MailOutlined className="mr-2" />
+                        <a href={`mailto:${selectedProject.creatorEmail}`}>
+                          {selectedProject.creatorEmail}
+                        </a>
+                      </div>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <BankOutlined className="mr-2" />
+                        <span>{selectedProject.departmentName}</span>
+                      </div>
                     </div>
-                  ) : (
-                    <Empty description="No documents found" />
-                  )}
+                  </div>
                 </Panel>
               </Collapse>
             </div>
           ) : (
-            <div className="flex justify-center py-8">
-              <Spin size="large" />
+            <div className="flex flex-col space-y-6 py-8">
+              <Skeleton active paragraph={{ rows: 4 }} />
+              <Skeleton active paragraph={{ rows: 3 }} />
+              <Skeleton active paragraph={{ rows: 2 }} />
             </div>
           )}
         </Modal>

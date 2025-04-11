@@ -12,7 +12,7 @@ import RegisterResearch from "../pages/RegisterResearch";
 import RegisterPaper from "../pages/lecturer/RegisterPaper";
 // import RegisterCaseStudy from "../pages/lecturer/RegisterCaseStudy";
 import PendingRequest from "../pages/PendingRequest";
-import ActiveResearchDetails from "../pages/ActiveResearchDetails";
+import ProjectDetails from "../pages/ProjectDetails";
 import ActiveResearch from "../pages/ActiveResearch";
 import ActivePaper from "../pages/lecturer/ActivePaper";
 import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
@@ -56,14 +56,6 @@ export const routes = [
           { path: "create-group", element: <CreateGroup /> },
           { path: "view-group", element: <ViewGroup /> },
           { path: "manage-group", element: <ManageGroup /> },
-          // {
-          //   path: "active-research-details",
-          //   element: <ActiveResearchDetails />,
-          // },
-          // {
-          //   path: "active-research",
-          //   element: <ActiveResearch />,
-          // },
         ],
       },
       {
@@ -84,7 +76,6 @@ export const routes = [
             path: "active-paper",
             element: <ActivePaper />,
           },
-
           {
             path: "active-paper-details",
             element: <ActivePaperDetails />,
@@ -104,8 +95,12 @@ export const routes = [
           // Add department head routes here
           { path: "pending-request", element: <PendingRequest /> },
           {
-            path: "active-research-details",
-            element: <ActiveResearchDetails />,
+            path: "project-details/:projectId",
+            element: <ProjectDetails />,
+          },
+          {
+            path: "project-details",
+            element: <ProjectDetails />,
           },
           {
             path: "active-research",

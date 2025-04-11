@@ -19,6 +19,8 @@ import {
   Collapse,
   Spin,
   Empty,
+  Avatar,
+  Skeleton,
 } from "antd";
 import {
   EditOutlined,
@@ -36,9 +38,15 @@ import {
   GlobalOutlined,
   CrownOutlined,
   DownloadOutlined,
+  MailOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import { useGetMyProjectsQuery } from "../features/project/projectApiSlice";
+import {
+  useGetMyPendingProjectsQuery,
+  useGetMyProjectsQuery,
+} from "../features/project/projectApiSlice";
+import { useNavigate } from "react-router-dom";
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
@@ -123,30 +131,27 @@ const PendingRequest = () => {
   const { user } = useSelector((state) => state.auth);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const navigate = useNavigate();
 
-  // Fetch projects data from API
+  // Fetch pending projects data from the new API
   const {
-    data: projectsData,
-    isLoading,
-    isError,
-    error,
-  } = useGetMyProjectsQuery();
+    data: pendingProjectsData,
+    isLoading: isPendingLoading,
+    isError: isPendingError,
+    error: pendingError,
+  } = useGetMyPendingProjectsQuery();
 
-  // Filter only pending projects (status 0)
+  // Also fetch full project details for when a project is selected
+  const { data: fullProjectsData } = useGetMyProjectsQuery();
+
+  // Filter and process the data when it's loaded
   useEffect(() => {
-    if (projectsData && projectsData.data) {
-      const pendingProjects = projectsData.data.filter(
-        (project) => project.status === 0
-      );
-
-      // Apply additional filters
-      const filtered = pendingProjects.filter((project) => {
+    if (pendingProjectsData && pendingProjectsData.data) {
+      // Apply filters
+      const filtered = pendingProjectsData.data.filter((project) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
@@ -160,15 +165,14 @@ const PendingRequest = () => {
         const matchesType =
           typeFilter === "all"
             ? true
-            : project.projectType.toString() === typeFilter;
+            : project.projectType?.toString() === typeFilter;
 
-        // Add more filters as needed
         return matchesSearch && matchesType;
       });
 
       setFilteredRequests(filtered);
     }
-  }, [projectsData, searchText, typeFilter, departmentFilter, categoryFilter]);
+  }, [pendingProjectsData, searchText, typeFilter]);
 
   const columns = [
     {
@@ -184,10 +188,10 @@ const PendingRequest = () => {
             <p className="text-sm text-gray-500">{record.description}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Tag color="blue">{PROJECT_TYPE[record.projectType]}</Tag>
-            {record.departmentId && (
-              <Tag color="green">Department {record.departmentId}</Tag>
-            )}
+            <Tag color="blue">
+              {PROJECT_TYPE[record.projectType] || "Research"}
+            </Tag>
+            <Tag color="green">{record.departmentName}</Tag>
           </div>
 
           <Divider className="my-3" />
@@ -195,9 +199,9 @@ const PendingRequest = () => {
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Created by ID: </span>
+              <span className="text-sm text-gray-600">Created by: </span>
               <span className="text-sm font-medium ml-1">
-                {record.createdBy || "Unknown"}
+                {record.creatorName || "Unknown"}
               </span>
             </div>
             <div className="text-sm text-gray-500 ml-6">
@@ -244,73 +248,14 @@ const PendingRequest = () => {
             </div>
           </div>
 
-          {/* Documents Section */}
-          {record.documents && record.documents.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <FileTextOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Documents</span>
-              </div>
-              <div className="space-y-2 ml-6">
-                {record.documents.map((doc) => (
-                  <div
-                    key={doc.documentId}
-                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100"
-                  >
-                    <div className="flex items-center">
-                      <FileTextOutlined className="text-gray-400 mr-2" />
-                      <div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Tag color="blue" size="small">
-                            {DOCUMENT_TYPE[doc.documentType]}
-                          </Tag>
-                          <span className="ml-2">
-                            {formatDate(doc.uploadAt)}
-                          </span>
-                        </div>
-                        <div
-                          className="text-sm font-medium truncate max-w-[250px]"
-                          title={doc.fileName}
-                        >
-                          {doc.fileName}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<DownloadOutlined />}
-                      onClick={() => window.open(doc.documentUrl, "_blank")}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {record.milestones && record.milestones.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <CheckCircleOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Milestones</span>
-              </div>
-              <Timeline className="ml-6">
-                {record.milestones.map((milestone) => (
-                  <Timeline.Item key={milestone.milestoneId}>
-                    <div className="text-sm">
-                      <div className="font-medium">{milestone.title}</div>
-                      <div className="text-gray-500">
-                        Timeline: {formatDate(milestone.startDate)} to{" "}
-                        {formatDate(milestone.endDate)}
-                      </div>
-                    </div>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </div>
-          )}
+          {/* Email Info */}
+          <div className="flex items-center mt-2">
+            <MailOutlined className="text-gray-400 mr-2" />
+            <span className="text-sm text-gray-600">Contact: </span>
+            <span className="text-sm font-medium ml-1">
+              {record.creatorEmail || "No email provided"}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -346,31 +291,42 @@ const PendingRequest = () => {
     },
   ];
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      // Here you would typically make an API call to update the request
-      message.success("Request updated and sent back for review");
-      setIsModalVisible(false);
-    } catch (error) {
-      console.error("Validation failed:", error);
-    }
-  };
-
   const handleViewDetails = (request) => {
-    setSelectedRequest(request);
-    setIsModalVisible(true);
+    navigate(`/project-details/${request.projectId}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8 flex justify-center items-center">
-        <Spin size="large" tip="Loading projects..." />
-      </div>
-    );
-  }
+  // For table skeleton loading
+  const skeletonRows = Array(5).fill(null);
 
-  if (isError) {
+  // Table columns for skeleton loading
+  const skeletonColumns = [
+    {
+      title: "Basic Information",
+      key: "basic",
+      width: "40%",
+      render: () => <Skeleton active paragraph={{ rows: 3 }} title={true} />,
+    },
+    {
+      title: "Resource Requests",
+      key: "resources",
+      width: "40%",
+      render: () => <Skeleton active paragraph={{ rows: 2 }} title={false} />,
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: "15%",
+      render: () => <Skeleton.Button active size="small" shape="round" />,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: "20%",
+      render: () => <Skeleton.Button active size="default" block={true} />,
+    },
+  ];
+
+  if (isPendingError) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
@@ -378,7 +334,7 @@ const PendingRequest = () => {
             Error loading projects
           </h2>
           <p className="mt-2 text-gray-600">
-            {error?.data?.message ||
+            {pendingError?.data?.message ||
               "Failed to load projects. Please try again later."}
           </p>
         </div>
@@ -401,7 +357,8 @@ const PendingRequest = () => {
             requests
           </p>
         </div>
-        {/* Add Filter Section */}
+
+        {/* Add Filter Section - Disabled during loading */}
         <div className="mb-6">
           <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
             <div className="flex items-center space-x-4 flex-1">
@@ -412,38 +369,56 @@ const PendingRequest = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 className="max-w-md"
                 allowClear
+                value={searchText}
+                disabled={isPendingLoading}
               />
               <span className="text-gray-700 font-medium">Filter:</span>
               {/* filter request type */}
               <Select
-                defaultValue="all"
+                value={typeFilter}
                 style={{ width: 200 }}
                 onChange={setTypeFilter}
                 options={REQUEST_OPTIONS}
                 className="rounded-md"
+                disabled={isPendingLoading}
               />
-              {/* Add other filters as needed */}
             </div>
           </div>
         </div>
+
+        {/* Table with Skeleton Loading */}
         <Card className="shadow-md">
-          <Table
-            columns={columns}
-            dataSource={filteredRequests}
-            rowKey="projectId"
-            pagination={{ pageSize: 5 }}
-            className="custom-table"
-            rowClassName="align-top"
-            locale={{ emptyText: "No pending requests found" }}
-          />
+          {isPendingLoading ? (
+            <Table
+              columns={skeletonColumns}
+              dataSource={skeletonRows}
+              rowKey={(_, index) => index}
+              pagination={{ pageSize: 5 }}
+              className="custom-table"
+              rowClassName="align-top"
+            />
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={filteredRequests}
+              rowKey="projectId"
+              pagination={{ pageSize: 5 }}
+              className="custom-table"
+              rowClassName="align-top"
+              locale={{ emptyText: "No pending requests found" }}
+            />
+          )}
         </Card>
-        {/* Modal for request details if needed */}
+
+        {/* Modal for request details */}
         <Modal
           title={
             <div className="text-lg">
-              <div className="font-semibold text-gray-800">Review Request</div>
+              <div className="font-semibold text-gray-800">Project Details</div>
               <div className="text-sm font-normal text-gray-500 mt-1">
-                {selectedRequest?.projectName}
+                {selectedRequest?.projectName || (
+                  <Skeleton.Input active size="small" style={{ width: 200 }} />
+                )}
               </div>
             </div>
           }
@@ -452,20 +427,66 @@ const PendingRequest = () => {
           width={800}
           footer={[
             <Button key="cancel" onClick={() => setIsModalVisible(false)}>
-              Cancel
+              Close
             </Button>,
-            // <Button
-            //   key="submit"
-            //   type="primary"
-            //   onClick={handleModalOk}
-            //   className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-            // >
-            //   Update & Send Back
-            // </Button>,
           ]}
         >
-          {selectedRequest && (
+          {selectedRequest ? (
             <div className="max-h-[70vh] overflow-y-auto pr-2">
+              {/* Project Status */}
+              <div className="mb-4">
+                <Tag
+                  color={
+                    STATUS_COLORS[
+                      PROJECT_STATUS[selectedRequest.status].toLowerCase()
+                    ] || "default"
+                  }
+                  className="text-base px-3 py-1"
+                >
+                  {PROJECT_STATUS[selectedRequest.status]}
+                </Tag>
+              </div>
+
+              {/* Project Creator Information */}
+              <Collapse defaultActiveKey={["1"]} className="mb-4">
+                <Collapse.Panel
+                  header={
+                    <div className="flex items-center">
+                      <UserOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-medium">Creator Information</span>
+                    </div>
+                  }
+                  key="1"
+                >
+                  <div className="flex items-center bg-gray-50 p-4 rounded-lg">
+                    <Avatar
+                      size={64}
+                      icon={<UserOutlined />}
+                      className="bg-[#F2722B]"
+                    />
+                    <div className="ml-4">
+                      <h4 className="text-lg font-medium">
+                        {selectedRequest.creatorName}
+                      </h4>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <MailOutlined className="mr-2" />
+                        <a href={`mailto:${selectedRequest.creatorEmail}`}>
+                          {selectedRequest.creatorEmail}
+                        </a>
+                      </div>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <BankOutlined className="mr-2" />
+                        <span>{selectedRequest.departmentName}</span>
+                      </div>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <TeamOutlined className="mr-2" />
+                        <span>{selectedRequest.groupName}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Collapse.Panel>
+              </Collapse>
+
               {/* Project Details */}
               <Collapse defaultActiveKey={["1"]} className="mb-4">
                 <Collapse.Panel
@@ -484,69 +505,126 @@ const PendingRequest = () => {
                         {selectedRequest.description}
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-500">Methodology</div>
-                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                        {selectedRequest.methodology}
+
+                    {selectedRequest.methodology && (
+                      <div>
+                        <div className="text-sm text-gray-500">Methodology</div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {selectedRequest.methodology}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">Budget</div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md font-medium">
+                          ₫{selectedRequest.approvedBudget?.toLocaleString()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Timeline</div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {formatDate(selectedRequest.startDate)} to{" "}
+                          {formatDate(selectedRequest.endDate)}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </Collapse.Panel>
               </Collapse>
 
-              {/* Documents Section */}
-              <Collapse defaultActiveKey={["1"]} className="mb-4">
-                <Collapse.Panel
-                  header={
-                    <div className="flex items-center">
-                      <FileTextOutlined className="text-[#F2722B] mr-2" />
-                      <span className="font-medium">Project Documents</span>
-                    </div>
-                  }
-                  key="1"
-                >
-                  {selectedRequest.documents &&
-                  selectedRequest.documents.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedRequest.documents.map((doc) => (
-                        <div
-                          key={doc.documentId}
-                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
-                            <div>
-                              <div className="font-medium text-gray-800 mb-1">
-                                {doc.fileName}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                <Tag color="blue">
-                                  {DOCUMENT_TYPE[doc.documentType]}
-                                </Tag>
-                                <span className="ml-2">
-                                  Uploaded: {formatDate(doc.uploadAt)}
-                                </span>
+              {/* Documents Section - Only shown if available in detailed data */}
+              {selectedRequest.documents &&
+                selectedRequest.documents.length > 0 && (
+                  <Collapse defaultActiveKey={["1"]} className="mb-4">
+                    <Collapse.Panel
+                      header={
+                        <div className="flex items-center">
+                          <FileTextOutlined className="text-[#F2722B] mr-2" />
+                          <span className="font-medium">Project Documents</span>
+                        </div>
+                      }
+                      key="1"
+                    >
+                      <div className="space-y-3">
+                        {selectedRequest.documents.map((doc) => (
+                          <div
+                            key={doc.documentId}
+                            className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center">
+                              <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
+                              <div>
+                                <div className="font-medium text-gray-800 mb-1">
+                                  {doc.fileName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  <Tag color="blue">
+                                    {DOCUMENT_TYPE[doc.documentType]}
+                                  </Tag>
+                                  <span className="ml-2">
+                                    Uploaded: {formatDate(doc.uploadAt)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
+                            <Button
+                              type="primary"
+                              icon={<DownloadOutlined />}
+                              onClick={() =>
+                                window.open(doc.documentUrl, "_blank")
+                              }
+                              className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                            >
+                              View
+                            </Button>
                           </div>
-                          <Button
-                            type="primary"
-                            icon={<DownloadOutlined />}
-                            onClick={() => handleViewDetails(selectedRequest)}
-                            className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty description="No documents available" />
-                  )}
-                </Collapse.Panel>
-              </Collapse>
+                        ))}
+                      </div>
+                    </Collapse.Panel>
+                  </Collapse>
+                )}
 
-              {/* Other modal content */}
+              {/* Milestones Section - Only shown if available in detailed data */}
+              {selectedRequest.milestones &&
+                selectedRequest.milestones.length > 0 && (
+                  <Collapse defaultActiveKey={["1"]} className="mb-4">
+                    <Collapse.Panel
+                      header={
+                        <div className="flex items-center">
+                          <CheckCircleOutlined className="text-[#F2722B] mr-2" />
+                          <span className="font-medium">
+                            Project Milestones
+                          </span>
+                        </div>
+                      }
+                      key="1"
+                    >
+                      <Timeline>
+                        {selectedRequest.milestones.map((milestone) => (
+                          <Timeline.Item key={milestone.milestoneId}>
+                            <div className="text-base font-medium">
+                              {milestone.title}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {formatDate(milestone.startDate)} to{" "}
+                              {formatDate(milestone.endDate)}
+                            </div>
+                          </Timeline.Item>
+                        ))}
+                      </Timeline>
+                    </Collapse.Panel>
+                  </Collapse>
+                )}
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <Skeleton active avatar paragraph={{ rows: 3 }} />
+              <Divider />
+              <Skeleton active paragraph={{ rows: 4 }} />
+              <Divider />
+              <Skeleton active paragraph={{ rows: 2 }} />
             </div>
           )}
         </Modal>
