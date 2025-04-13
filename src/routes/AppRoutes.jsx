@@ -92,16 +92,15 @@ export const routes = [
           </ProtectedRoutes>
         ),
         children: [
-          // Add department head routes here
           { path: "pending-request", element: <PendingRequest /> },
           {
             path: "project-details/:projectId",
             element: <ProjectDetails />,
           },
-          {
-            path: "project-details",
-            element: <ProjectDetails />,
-          },
+          // {
+          //   path: "project-details",
+          //   element: <ProjectDetails />,
+          // },
           {
             path: "active-research",
             element: <ActiveResearch />,

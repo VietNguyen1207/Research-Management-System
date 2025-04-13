@@ -11,6 +11,9 @@ import {
   Col,
   Empty,
   Tooltip,
+  Table,
+  Spin,
+  Alert,
 } from "antd";
 import {
   CalendarOutlined,
@@ -21,177 +24,50 @@ import {
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
+import { useGetAllTimelinesQuery } from "../../features/timeline/timelineApiSlice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+// Timeline type enum mapping
+const timelineTypeMap = {
+  1: "PROJECT REGISTRATION",
+  2: "REVIEW PERIOD",
+  3: "FUND REQUEST",
+  4: "FUND APPROVAL",
+  5: "CONFERENCE SUBMISSION",
+  6: "PAPER REVIEW",
+};
 
 const AllTimelines = () => {
   const navigate = useNavigate();
   const [selectedGroup, setSelectedGroup] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [timelineData, setTimelineData] = useState([]);
-  const [timelineGroups, setTimelineGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // Load data from the same source as TimelineManagement
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setTimelineGroups([
-        {
-          id: 1,
-          name: "Research Project Cycle 2024",
-          description: "Main timeline for research project management",
-          color: "#F2722B",
-        },
-        {
-          id: 2,
-          name: "Fund Disbursement Cycle",
-          description: "Timeline for fund management and disbursement",
-          color: "#4CAF50",
-        },
-      ]);
+  const {
+    data: timelines,
+    isLoading,
+    isError,
+    error,
+  } = useGetAllTimelinesQuery();
 
-      setTimelineData([
-        {
-          id: 1,
-          groupId: 1,
-          name: "Project Registration Period",
-          description: "Open registration for new research projects",
-          startDate: "2025-06-01",
-          endDate: "2025-06-15",
-          type: "registration",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 2,
-          groupId: 1,
-          name: "Project Review Period",
-          description: "Review and approval of submitted research projects",
-          startDate: "2025-06-16",
-          endDate: "2025-06-30",
-          type: "review",
-          status: "delayed",
-          department: "All",
-        },
-        {
-          id: 3,
-          groupId: 1,
-          name: "Conference Paper Submissions",
-          description: "Deadline for conference paper submissions",
-          startDate: "2025-08-01",
-          endDate: "2025-08-15",
-          type: "submission",
-          status: "in_review",
-          department: "Computer Science",
-        },
-        {
-          id: 4,
-          groupId: 1,
-          name: "Budget Allocation Review",
-          description: "Review and approve department budget allocations",
-          startDate: "2025-09-01",
-          endDate: "2025-09-10",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 5,
-          groupId: 1,
-          name: "Journal Publication Deadline",
-          description: "Deadline for journal publication submissions",
-          startDate: "2025-10-01",
-          endDate: "2025-10-31",
-          type: "submission",
-          status: "on_hold",
-          department: "Electrical Engineering",
-        },
-        {
-          id: 6,
-          groupId: 2,
-          name: "Initial Budget Assessment",
-          description:
-            "Review and assess initial budget requirements for all departments",
-          startDate: "2025-03-01",
-          endDate: "2025-03-15",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 7,
-          groupId: 2,
-          name: "Q1 Fund Release",
-          description: "First quarter fund disbursement for approved projects",
-          startDate: "2025-04-01",
-          endDate: "2025-04-07",
-          type: "budget",
-          status: "active",
-          department: "All",
-        },
-        {
-          id: 8,
-          groupId: 2,
-          name: "Mid-Year Budget Review",
-          description:
-            "Comprehensive review of budget utilization and adjustments",
-          startDate: "2025-06-15",
-          endDate: "2025-06-30",
-          type: "review",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 9,
-          groupId: 2,
-          name: "Emergency Fund Allocation",
-          description: "Special allocation for urgent research requirements",
-          startDate: "2025-05-01",
-          endDate: "2025-05-05",
-          type: "budget",
-          status: "on_hold",
-          department: "Computer Science",
-        },
-        {
-          id: 10,
-          groupId: 2,
-          name: "Q2 Fund Release",
-          description: "Second quarter fund disbursement for ongoing projects",
-          startDate: "2026-01-01",
-          endDate: "2026-01-07",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 11,
-          groupId: 2,
-          name: "Budget Utilization Report",
-          description: "Detailed reporting of fund utilization by departments",
-          startDate: "2026-02-15",
-          endDate: "2026-02-28",
-          type: "review",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 12,
-          groupId: 2,
-          name: "Special Grant Disbursement",
-          description: "Distribution of additional research grants",
-          startDate: "2026-03-01",
-          endDate: "2026-03-15",
-          type: "budget",
-          status: "upcoming",
-          department: "Electrical Engineering",
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // Get unique sequences from timeline data
+  const uniqueSequences = timelines
+    ? [...new Map(timelines.map((item) => [item.sequenceId, item])).values()]
+    : [];
+
+  // Calculate timeline status based on dates
+  const getTimelineStatus = (startDate, endDate) => {
+    const now = moment();
+    const start = moment(startDate);
+    const end = moment(endDate);
+
+    if (now.isBefore(start)) return "upcoming";
+    if (now.isAfter(end)) return "completed";
+    if (now.isBetween(start, end)) return "active";
+    return "upcoming";
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -214,20 +90,51 @@ const AllTimelines = () => {
     }
   };
 
-  const filteredTimelines = timelineData.filter((timeline) => {
+  // Process timelines to add status
+  const processedTimelines = timelines
+    ? timelines.map((timeline) => ({
+        ...timeline,
+        status: getTimelineStatus(timeline.startDate, timeline.endDate),
+      }))
+    : [];
+
+  const filteredTimelines = processedTimelines.filter((timeline) => {
     const matchesGroup =
-      selectedGroup === "all" || timeline.groupId.toString() === selectedGroup;
+      selectedGroup === "all" ||
+      timeline.sequenceId.toString() === selectedGroup;
     const matchesDepartment =
       selectedDepartment === "all" ||
-      timeline.department === selectedDepartment;
+      (timeline.department
+        ? timeline.department === selectedDepartment
+        : false);
     const matchesStatus =
       selectedStatus === "all" || timeline.status === selectedStatus;
     return matchesGroup && matchesDepartment && matchesStatus;
   });
 
-  const sortedTimelines = [...filteredTimelines].sort(
+  const sortedTimelines = [...(filteredTimelines || [])].sort(
     (a, b) => moment(a.startDate) - moment(b.startDate)
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8">
+        <Alert
+          message="Error Loading Timelines"
+          description={error?.data?.message || "Failed to load timelines"}
+          type="error"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -271,9 +178,14 @@ const AllTimelines = () => {
                     onChange={setSelectedGroup}
                   >
                     <Option value="all">All Sequences</Option>
-                    {timelineGroups.map((group) => (
-                      <Option key={group.id} value={group.id.toString()}>
-                        <Tag color={group.color}>{group.name}</Tag>
+                    {uniqueSequences.map((sequence) => (
+                      <Option
+                        key={sequence.sequenceId}
+                        value={sequence.sequenceId.toString()}
+                      >
+                        <Tag color={sequence.sequenceColor}>
+                          {sequence.sequenceName}
+                        </Tag>
                       </Option>
                     ))}
                   </Select>
@@ -333,53 +245,57 @@ const AllTimelines = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Card className="shadow-md rounded-xl border-0" loading={loading}>
+          <Card className="shadow-md rounded-xl border-0">
             {sortedTimelines.length > 0 ? (
               <Timeline mode="left" className="mt-4">
-                {sortedTimelines.map((timeline) => {
-                  const group = timelineGroups.find(
-                    (g) => g.id === timeline.groupId
-                  );
-                  return (
-                    <Timeline.Item
-                      key={timeline.id}
-                      color={getStatusColor(timeline.status)}
-                      dot={
-                        <div
-                          style={{ backgroundColor: group?.color }}
-                          className="w-3 h-3 rounded-full"
-                        />
-                      }
-                    >
-                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <Text strong className="text-lg">
-                              {timeline.name}
-                            </Text>
-                            <div className="text-sm text-gray-500 mt-1">
-                              <CalendarOutlined className="mr-2" />
-                              {`${timeline.startDate} — ${timeline.endDate}`}
-                            </div>
+                {sortedTimelines.map((timeline) => (
+                  <Timeline.Item
+                    key={timeline.id}
+                    color={getStatusColor(timeline.status)}
+                    dot={
+                      <div
+                        style={{ backgroundColor: timeline.sequenceColor }}
+                        className="w-3 h-3 rounded-full"
+                      />
+                    }
+                  >
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <Text strong className="text-lg">
+                            {timeline.event}
+                          </Text>
+                          <div className="text-sm text-gray-500 mt-1">
+                            <CalendarOutlined className="mr-2" />
+                            {`${moment(timeline.startDate).format(
+                              "YYYY-MM-DD"
+                            )} — ${moment(timeline.endDate).format(
+                              "YYYY-MM-DD"
+                            )}`}
                           </div>
-                          <Tag color={getStatusColor(timeline.status)}>
-                            {timeline.status.toUpperCase().replace("_", " ")}
-                          </Tag>
                         </div>
-                        <div className="mt-2">
-                          <Tag color={group?.color}>{group?.name}</Tag>
-                          <Tag color="purple">{timeline.department}</Tag>
-                          <Tag color="orange">
-                            {timeline.type.toUpperCase()}
-                          </Tag>
-                        </div>
-                        <Text type="secondary" className="mt-2 block">
-                          {timeline.description}
-                        </Text>
+                        <Tag color={getStatusColor(timeline.status)}>
+                          {timeline.status.toUpperCase()}
+                        </Tag>
                       </div>
-                    </Timeline.Item>
-                  );
-                })}
+                      <div className="mt-2">
+                        <Tag color={timeline.sequenceColor}>
+                          {timeline.sequenceName}
+                        </Tag>
+                        {timeline.department && (
+                          <Tag color="purple">{timeline.department}</Tag>
+                        )}
+                        <Tag color="orange">
+                          {timelineTypeMap[timeline.timelineType] ||
+                            `TYPE ${timeline.timelineType}`}
+                        </Tag>
+                      </div>
+                      <Text type="secondary" className="mt-2 block">
+                        {timeline.description || "No description available"}
+                      </Text>
+                    </div>
+                  </Timeline.Item>
+                ))}
               </Timeline>
             ) : (
               <Empty
@@ -387,6 +303,84 @@ const AllTimelines = () => {
                 className="my-8"
               />
             )}
+          </Card>
+        </motion.div>
+
+        {/* Timeline Table View */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card
+            title={<Text strong>Timeline Details</Text>}
+            className="shadow-md rounded-xl border-0 mt-6"
+          >
+            <Table
+              dataSource={sortedTimelines}
+              columns={[
+                {
+                  title: "Event",
+                  dataIndex: "event",
+                  key: "event",
+                },
+                {
+                  title: "Sequence",
+                  dataIndex: "sequenceName",
+                  key: "sequenceName",
+                  render: (text, record) => (
+                    <Tag color={record.sequenceColor}>{text}</Tag>
+                  ),
+                },
+                {
+                  title: "Type",
+                  dataIndex: "timelineType",
+                  key: "timelineType",
+                  render: (type) => (
+                    <Tag color="orange">
+                      {timelineTypeMap[type] || `TYPE ${type}`}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Start Date",
+                  dataIndex: "startDate",
+                  key: "startDate",
+                  render: (date) => moment(date).format("YYYY-MM-DD"),
+                  sorter: (a, b) => moment(a.startDate) - moment(b.startDate),
+                },
+                {
+                  title: "End Date",
+                  dataIndex: "endDate",
+                  key: "endDate",
+                  render: (date) => moment(date).format("YYYY-MM-DD"),
+                },
+                {
+                  title: "Status",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (status) => (
+                    <Tag color={getStatusColor(status)}>
+                      {status.toUpperCase()}
+                    </Tag>
+                  ),
+                  filters: [
+                    { text: "Upcoming", value: "upcoming" },
+                    { text: "Active", value: "active" },
+                    { text: "Completed", value: "completed" },
+                  ],
+                  onFilter: (value, record) => record.status === value,
+                },
+                {
+                  title: "Created By",
+                  dataIndex: "createdByName",
+                  key: "createdByName",
+                },
+              ]}
+              rowKey="id"
+              pagination={{ pageSize: 10 }}
+              scroll={{ x: "max-content" }}
+            />
           </Card>
         </motion.div>
       </div>
