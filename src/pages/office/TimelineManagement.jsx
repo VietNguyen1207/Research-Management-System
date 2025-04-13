@@ -37,7 +37,10 @@ import {
   ArrowRightOutlined,
   PieChartOutlined,
 } from "@ant-design/icons";
-import moment from "moment";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -47,12 +50,16 @@ import {
   useCreateTimelineMutation,
   useUpdateTimelineMutation,
 } from "../../features/timeline/timelineApiSlice";
-import enUS from "antd/lib/locale/en_US";
 import viVN from "antd/lib/locale/vi_VN";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
+
+// Register the plugins
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 const TimelineManagement = () => {
   const [form] = Form.useForm();
@@ -63,6 +70,10 @@ const TimelineManagement = () => {
   const [groupForm] = Form.useForm();
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [editStartDate, setEditStartDate] = useState(null);
+  const [editEndDate, setEditEndDate] = useState(null);
+  const [createStartDate, setCreateStartDate] = useState(null);
+  const [createEndDate, setCreateEndDate] = useState(null);
 
   const navigate = useNavigate();
 
@@ -110,13 +121,19 @@ const TimelineManagement = () => {
   };
 
   const handleAddTimeline = async (values) => {
-    // Add limit check (example: 20 timelines)
-    if (timelineData && timelineData.length >= 20) {
-      message.error("Maximum number of timelines (20) reached");
+    console.log("Form values submitted:", values);
+
+    // Get the values from state if the form values are missing
+    const startDate = values.startDate || createStartDate;
+    const endDate = values.endDate || createEndDate;
+
+    // Check if dates are available either in values or state
+    if (!startDate || !endDate) {
+      message.error("Start date and end date are required");
       return;
     }
 
-    const { name, startDate, endDate, type, timelineGroup } = values;
+    const { name, type, timelineGroup } = values;
 
     try {
       // Map the timeline type to its enum value
@@ -151,7 +168,11 @@ const TimelineManagement = () => {
       // Call the API
       await createTimeline(timelineData).unwrap();
       message.success("Timeline added successfully");
+
+      // Reset form and state
       form.resetFields();
+      setCreateStartDate(null);
+      setCreateEndDate(null);
 
       // Refetch the timelines to get the updated data
       if (selectedGroup) {
@@ -166,34 +187,19 @@ const TimelineManagement = () => {
   };
 
   const handleEditTimeline = async (values) => {
-    // Get the CURRENT form values directly to verify
-    const rawFormValues = editForm.getFieldsValue();
-    console.log("Raw form values at submission:", rawFormValues);
+    console.log("Edit form values:", values); // Add debugging
 
-    const { name, startDate, endDate, type, timelineSequence, status } = values;
+    const { name, startDate, endDate, type, timelineSequence } = values;
 
-    // Debug what dates we're actually submitting
-    console.log("Form values being submitted:", {
-      name,
-      startDate: startDate?.format("YYYY-MM-DD"),
-      endDate: endDate?.format("YYYY-MM-DD"),
-      type,
-      timelineSequence,
-    });
+    if (!startDate || !endDate) {
+      message.error("Start date and end date are required");
+      return;
+    }
 
     try {
-      // Format dates: startDate at 00:00:00, endDate at 23:59:59
-      const formattedStartDate = startDate
-        ? moment(startDate).startOf("day").format()
-        : moment(editingTimeline.startDate).startOf("day").format();
-      const formattedEndDate = endDate
-        ? moment(endDate).endOf("day").format()
-        : moment(editingTimeline.endDate).endOf("day").format();
-
-      console.log("Formatted dates for API:", {
-        formattedStartDate,
-        formattedEndDate,
-      });
+      // Format dates consistently using dayjs's format method
+      const formattedStartDate = startDate.format("YYYY-MM-DD");
+      const formattedEndDate = endDate.format("YYYY-MM-DD");
 
       // Map the timeline type to its enum value
       let timelineTypeEnum;
@@ -214,16 +220,18 @@ const TimelineManagement = () => {
           timelineTypeEnum = 1;
       }
 
-      // Prepare the request body according to the backend requirements
+      // Updated request body
       const updateData = {
         id: editingTimeline.id,
-        sequenceId: timelineSequence || editingTimeline.sequenceId,
+        sequenceId: timelineSequence,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         event: name,
         timelineType: timelineTypeEnum,
         status: 1, // Default to Active
       };
+
+      console.log("Sending to API:", updateData); // Add this to debug
 
       // Call the API
       await updateTimeline(updateData).unwrap();
@@ -255,20 +263,28 @@ const TimelineManagement = () => {
   };
 
   const showEditModal = (record) => {
+    console.log("Opening edit modal for record:", record);
+
+    // Parse dates
+    const startDate = dayjs(record.startDate);
+    const endDate = dayjs(record.endDate);
+
+    // Set the state variables
+    setEditStartDate(startDate);
+    setEditEndDate(endDate);
+
+    // Set the record data
     setEditingTimeline(record);
+
+    // Reset form before setting values
+    editForm.resetFields();
+
+    // Open the modal and set form values after a short delay
+    setIsModalVisible(true);
 
     setTimeout(() => {
       try {
-        // Convert dates using specific formats to avoid issues
-        const startDate = moment(record.startDate, "YYYY-MM-DD");
-        const endDate = moment(record.endDate, "YYYY-MM-DD");
-
-        console.log("Setting dates:", startDate.format(), endDate.format());
-
-        // Reset form before setting values to clear any previous state
-        editForm.resetFields();
-
-        // Set values after reset
+        // Set form values
         editForm.setFieldsValue({
           name: record.event,
           timelineSequence: record.sequenceId,
@@ -276,13 +292,13 @@ const TimelineManagement = () => {
           endDate: endDate,
           type: getTimelineTypeLabel(record.timelineType),
         });
+
+        console.log("Form values set:", editForm.getFieldsValue());
       } catch (error) {
         console.error("Error setting form values:", error);
         message.error("Error preparing the edit form");
       }
-    }, 100); // Slightly longer timeout
-
-    setIsModalVisible(true);
+    }, 100);
   };
 
   const getStatusColor = (status) => {
@@ -326,19 +342,17 @@ const TimelineManagement = () => {
     if (!timelineData) return [];
 
     const sortedTimelines = [...timelineData].sort(
-      (a, b) => moment(a.startDate) - moment(b.startDate)
+      (a, b) => dayjs(a.startDate).unix() - dayjs(b.startDate).unix()
     );
 
     return sortedTimelines.map((item) => {
-      const isActive = moment().isBetween(
-        moment(item.startDate),
-        moment(item.endDate)
-      );
-      const isCompleted = moment().isAfter(moment(item.endDate));
-      const isExpired = moment().isAfter(moment(item.endDate));
+      const now = dayjs();
+      const startDate = dayjs(item.startDate);
+      const endDate = dayjs(item.endDate);
 
-      // Remove the completion check to allow editing of all timelines
-      const canEdit = true;
+      const isActive = now.isBetween(startDate, endDate, "day", "[]");
+      const isCompleted = now.isAfter(endDate, "day");
+      const isExpired = now.isAfter(endDate, "day");
 
       const status = isActive
         ? "active"
@@ -346,22 +360,19 @@ const TimelineManagement = () => {
         ? "completed"
         : "upcoming";
 
-      return (
-        <Timeline.Item
-          key={item.id}
-          color={getStatusColor(status)}
-          dot={
-            isActive ? (
-              <ClockCircleOutlined className="timeline-clock-icon" />
-            ) : undefined
-          }
-        >
+      return {
+        key: item.id,
+        color: getStatusColor(status),
+        dot: isActive ? (
+          <ClockCircleOutlined className="timeline-clock-icon" />
+        ) : undefined,
+        children: (
           <div className={`p-4 ${isCompleted ? "opacity-60" : ""}`}>
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <Text strong>{item.event}</Text>
                 <div className="text-sm text-gray-500">
-                  {`${moment(item.startDate).format("YYYY-MM-DD")} — ${moment(
+                  {`${dayjs(item.startDate).format("YYYY-MM-DD")} — ${dayjs(
                     item.endDate
                   ).format("YYYY-MM-DD")}`}
                 </div>
@@ -375,7 +386,6 @@ const TimelineManagement = () => {
                   {item.description || `Event in ${item.sequenceName}`}
                 </div>
               </div>
-              {/* Always show edit buttons by removing the canEdit condition */}
               <Space className="ml-4">
                 <Tooltip title="Edit Timeline">
                   <Button
@@ -410,8 +420,8 @@ const TimelineManagement = () => {
               </Tag>
             )}
           </div>
-        </Timeline.Item>
-      );
+        ),
+      };
     });
   };
 
@@ -478,11 +488,12 @@ const TimelineManagement = () => {
       title: "Period",
       key: "period",
       render: (_, record) => {
-        const isActive = moment().isBetween(
-          moment(record.startDate),
-          moment(record.endDate)
-        );
-        const isCompleted = moment().isAfter(moment(record.endDate));
+        const now = dayjs();
+        const startDate = dayjs(record.startDate);
+        const endDate = dayjs(record.endDate);
+
+        const isActive = now.isBetween(startDate, endDate, "day", "[]");
+        const isCompleted = now.isAfter(endDate, "day");
         const status = isActive
           ? "active"
           : isCompleted
@@ -493,9 +504,9 @@ const TimelineManagement = () => {
           <div className="space-y-1">
             <div className="flex items-center">
               <CalendarOutlined className="text-[#F2722B] mr-2" />
-              <Text>{`${moment(record.startDate).format(
-                "YYYY-MM-DD"
-              )} — ${moment(record.endDate).format("YYYY-MM-DD")}`}</Text>
+              <Text>{`${dayjs(record.startDate).format("YYYY-MM-DD")} — ${dayjs(
+                record.endDate
+              ).format("YYYY-MM-DD")}`}</Text>
             </div>
             <Tag color={getStatusColor(status)} className="ml-0">
               {status.toUpperCase()}
@@ -545,6 +556,32 @@ const TimelineManagement = () => {
     console.log("Current edit form values:", values);
   }, [editingTimeline, isModalVisible]); // Track when modal or editing timeline changes
 
+  // Add this useEffect hook after your existing ones
+  useEffect(() => {
+    if (editingTimeline && isModalVisible) {
+      const startDate = dayjs(editingTimeline.startDate);
+      const endDate = dayjs(editingTimeline.endDate);
+
+      // Force another update of date fields after modal is fully visible
+      setTimeout(() => {
+        editForm.setFieldsValue({
+          startDate: startDate,
+          endDate: endDate,
+        });
+
+        // Update state vars as well
+        setEditStartDate(startDate);
+        setEditEndDate(endDate);
+
+        console.log(
+          "Re-setting date values:",
+          startDate.format("YYYY-MM-DD"),
+          endDate.format("YYYY-MM-DD")
+        );
+      }, 200);
+    }
+  }, [editingTimeline, isModalVisible]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -588,7 +625,7 @@ const TimelineManagement = () => {
                   </div>
                 }
                 className="shadow-md rounded-xl overflow-hidden border-0"
-                bodyStyle={{ height: "500px", overflowY: "auto" }}
+                styles={{ body: { height: "500px", overflowY: "auto" } }}
               >
                 {isLoadingSequences ? (
                   <div className="h-full flex justify-center items-center">
@@ -636,32 +673,43 @@ const TimelineManagement = () => {
                       </Button>
                     </div>
                   ) : timelineData && timelineData.length > 0 ? (
-                    <Timeline mode="left" className="mt-4 ml-4">
-                      {timelineSequences
-                        ?.filter((group) => group.id === selectedGroup)
-                        .map((group) => (
-                          <React.Fragment key={group.id}>
-                            <Timeline.Item
-                              dot={
-                                <div
-                                  style={{
-                                    backgroundColor: group.sequenceColor,
-                                  }}
-                                  className="w-4 h-4 rounded-full"
-                                />
-                              }
-                            >
+                    <Timeline
+                      mode="left"
+                      className="mt-4 ml-4"
+                      items={[
+                        // First item is the group header
+                        {
+                          key: "header",
+                          dot: (
+                            <div
+                              style={{
+                                backgroundColor:
+                                  timelineSequences?.find(
+                                    (seq) => seq.id === selectedGroup
+                                  )?.sequenceColor || "#F2722B",
+                              }}
+                              className="w-4 h-4 rounded-full"
+                            />
+                          ),
+                          children: (
+                            <>
                               <Text strong className="text-lg">
-                                {group.sequenceName}
+                                {timelineSequences?.find(
+                                  (seq) => seq.id === selectedGroup
+                                )?.sequenceName || "Timeline Sequence"}
                               </Text>
                               <Text type="secondary" className="block text-sm">
-                                {group.sequenceDescription}
+                                {timelineSequences?.find(
+                                  (seq) => seq.id === selectedGroup
+                                )?.sequenceDescription || ""}
                               </Text>
-                            </Timeline.Item>
-                            {generateTimelineItems()}
-                          </React.Fragment>
-                        ))}
-                    </Timeline>
+                            </>
+                          ),
+                        },
+                        // Then spread the timeline items
+                        ...generateTimelineItems(),
+                      ]}
+                    />
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8">
                       <InfoCircleOutlined className="text-4xl text-gray-300 mb-4" />
@@ -807,10 +855,7 @@ const TimelineManagement = () => {
                         name="startDate"
                         label="Start Date"
                         rules={[
-                          {
-                            required: true,
-                            message: "Start date is required",
-                          },
+                          { required: true, message: "Start date is required" },
                         ]}
                       >
                         <ConfigProvider locale={viVN}>
@@ -819,9 +864,14 @@ const TimelineManagement = () => {
                             format="YYYY-MM-DD"
                             placeholder="Start Date"
                             inputReadOnly={true}
-                            getPopupContainer={(trigger) => trigger.parentNode}
                             picker="date"
                             showToday={true}
+                            onChange={(date) => {
+                              if (date) {
+                                setCreateStartDate(date);
+                                form.setFieldsValue({ startDate: date });
+                              }
+                            }}
                           />
                         </ConfigProvider>
                       </Form.Item>
@@ -831,10 +881,7 @@ const TimelineManagement = () => {
                         name="endDate"
                         label="End Date"
                         rules={[
-                          {
-                            required: true,
-                            message: "End date is required",
-                          },
+                          { required: true, message: "End date is required" },
                         ]}
                       >
                         <ConfigProvider locale={viVN}>
@@ -843,9 +890,14 @@ const TimelineManagement = () => {
                             format="YYYY-MM-DD"
                             placeholder="End Date"
                             inputReadOnly={true}
-                            getPopupContainer={(trigger) => trigger.parentNode}
                             picker="date"
                             showToday={true}
+                            onChange={(date) => {
+                              if (date) {
+                                setCreateEndDate(date);
+                                form.setFieldsValue({ endDate: date });
+                              }
+                            }}
                           />
                         </ConfigProvider>
                       </Form.Item>
@@ -922,6 +974,23 @@ const TimelineManagement = () => {
           onCancel={() => {
             setIsModalVisible(false);
             setEditingTimeline(null);
+            setEditStartDate(null);
+            setEditEndDate(null);
+          }}
+          afterOpenChange={(visible) => {
+            if (visible && editingTimeline) {
+              // Re-set form values when modal becomes visible
+              const startDate = dayjs(editingTimeline.startDate);
+              const endDate = dayjs(editingTimeline.endDate);
+
+              editForm.setFieldsValue({
+                name: editingTimeline.event,
+                timelineSequence: editingTimeline.sequenceId,
+                startDate: startDate,
+                endDate: endDate,
+                type: getTimelineTypeLabel(editingTimeline.timelineType),
+              });
+            }
           }}
           footer={null}
         >
@@ -964,51 +1033,72 @@ const TimelineManagement = () => {
             </Form.Item>
 
             <Form.Item label="Date Range" required style={{ marginBottom: 8 }}>
-              <div className="flex items-center space-x-2">
-                <Form.Item
-                  name="startDate"
-                  noStyle
-                  rules={[
-                    { required: true, message: "Start date is required" },
-                  ]}
-                >
-                  <ConfigProvider locale={viVN}>
-                    <DatePicker
-                      className="w-full"
-                      format="YYYY-MM-DD"
-                      placeholder="Start Date"
-                      inputReadOnly={true}
-                      getPopupContainer={(trigger) => trigger.parentNode}
-                      picker="date"
-                      mode="date"
-                      showToday={true}
-                      allowClear={false}
-                    />
-                  </ConfigProvider>
-                </Form.Item>
-
-                <span>to</span>
-
-                <Form.Item
-                  name="endDate"
-                  noStyle
-                  rules={[{ required: true, message: "End date is required" }]}
-                >
-                  <ConfigProvider locale={viVN}>
-                    <DatePicker
-                      className="w-full"
-                      format="YYYY-MM-DD"
-                      placeholder="End Date"
-                      inputReadOnly={true}
-                      getPopupContainer={(trigger) => trigger.parentNode}
-                      picker="date"
-                      mode="date"
-                      showToday={true}
-                      allowClear={false}
-                    />
-                  </ConfigProvider>
-                </Form.Item>
-              </div>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="startDate"
+                    rules={[
+                      { required: true, message: "Start date is required" },
+                    ]}
+                  >
+                    <ConfigProvider locale={viVN}>
+                      <DatePicker
+                        className="w-full"
+                        format="YYYY-MM-DD"
+                        placeholder="Start Date"
+                        inputReadOnly={true}
+                        picker="date"
+                        showToday={true}
+                        allowClear={false}
+                        key={
+                          editingTimeline
+                            ? editingTimeline.startDate
+                            : "default-start"
+                        }
+                        value={editForm.getFieldValue("startDate")}
+                        onChange={(date) => {
+                          if (date) {
+                            setEditStartDate(date);
+                            editForm.setFieldsValue({ startDate: date });
+                          }
+                        }}
+                      />
+                    </ConfigProvider>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="endDate"
+                    rules={[
+                      { required: true, message: "End date is required" },
+                    ]}
+                  >
+                    <ConfigProvider locale={viVN}>
+                      <DatePicker
+                        className="w-full"
+                        format="YYYY-MM-DD"
+                        placeholder="End Date"
+                        inputReadOnly={true}
+                        picker="date"
+                        showToday={true}
+                        allowClear={false}
+                        key={
+                          editingTimeline
+                            ? editingTimeline.endDate
+                            : "default-end"
+                        }
+                        value={editForm.getFieldValue("endDate")}
+                        onChange={(date) => {
+                          if (date) {
+                            setEditEndDate(date);
+                            editForm.setFieldsValue({ endDate: date });
+                          }
+                        }}
+                      />
+                    </ConfigProvider>
+                  </Form.Item>
+                </Col>
+              </Row>
             </Form.Item>
 
             <Form.Item
