@@ -856,6 +856,30 @@ const TimelineManagement = () => {
                         label="Start Date"
                         rules={[
                           { required: true, message: "Start date is required" },
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              if (!value) return Promise.resolve();
+
+                              // Start date should not be in the past
+                              if (value.isBefore(dayjs().startOf("day"))) {
+                                return Promise.reject(
+                                  new Error("Start date cannot be in the past")
+                                );
+                              }
+
+                              // Start date should be before end date (if end date is selected)
+                              const endDate = getFieldValue("endDate");
+                              if (endDate && value.isAfter(endDate)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Start date must be before end date"
+                                  )
+                                );
+                              }
+
+                              return Promise.resolve();
+                            },
+                          }),
                         ]}
                       >
                         <ConfigProvider locale={viVN}>
@@ -866,10 +890,20 @@ const TimelineManagement = () => {
                             inputReadOnly={true}
                             picker="date"
                             showToday={true}
+                            disabledDate={(current) =>
+                              current && current < dayjs().startOf("day")
+                            }
                             onChange={(date) => {
                               if (date) {
                                 setCreateStartDate(date);
                                 form.setFieldsValue({ startDate: date });
+
+                                // If end date exists but is before start date, clear it
+                                const endDate = form.getFieldValue("endDate");
+                                if (endDate && date.isAfter(endDate)) {
+                                  form.setFieldsValue({ endDate: null });
+                                  setCreateEndDate(null);
+                                }
                               }
                             }}
                           />
@@ -882,6 +916,30 @@ const TimelineManagement = () => {
                         label="End Date"
                         rules={[
                           { required: true, message: "End date is required" },
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              if (!value) return Promise.resolve();
+
+                              // End date should be after start date
+                              const startDate = getFieldValue("startDate");
+                              if (startDate && value.isBefore(startDate)) {
+                                return Promise.reject(
+                                  new Error("End date must be after start date")
+                                );
+                              }
+
+                              // Minimum duration validation (at least 1 day after start date)
+                              if (startDate && !value.isAfter(startDate)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Timeline must be at least 1 day long"
+                                  )
+                                );
+                              }
+
+                              return Promise.resolve();
+                            },
+                          }),
                         ]}
                       >
                         <ConfigProvider locale={viVN}>
@@ -892,6 +950,15 @@ const TimelineManagement = () => {
                             inputReadOnly={true}
                             picker="date"
                             showToday={true}
+                            disabledDate={(current) => {
+                              const startDate = form.getFieldValue("startDate");
+                              // Disable dates before start date or before today
+                              return (
+                                current &&
+                                (current < dayjs().startOf("day") ||
+                                  (startDate && current < startDate))
+                              );
+                            }}
                             onChange={(date) => {
                               if (date) {
                                 setCreateEndDate(date);
@@ -1039,6 +1106,21 @@ const TimelineManagement = () => {
                     name="startDate"
                     rules={[
                       { required: true, message: "Start date is required" },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+
+                          // Start date should be before end date (if end date is selected)
+                          const endDate = getFieldValue("endDate");
+                          if (endDate && value.isAfter(endDate)) {
+                            return Promise.reject(
+                              new Error("Start date must be before end date")
+                            );
+                          }
+
+                          return Promise.resolve();
+                        },
+                      }),
                     ]}
                   >
                     <ConfigProvider locale={viVN}>
@@ -1060,6 +1142,13 @@ const TimelineManagement = () => {
                           if (date) {
                             setEditStartDate(date);
                             editForm.setFieldsValue({ startDate: date });
+
+                            // If end date exists but is before start date, clear it
+                            const endDate = editForm.getFieldValue("endDate");
+                            if (endDate && date.isAfter(endDate)) {
+                              editForm.setFieldsValue({ endDate: null });
+                              setEditEndDate(null);
+                            }
                           }
                         }}
                       />
@@ -1071,6 +1160,28 @@ const TimelineManagement = () => {
                     name="endDate"
                     rules={[
                       { required: true, message: "End date is required" },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+
+                          // End date should be after start date
+                          const startDate = getFieldValue("startDate");
+                          if (startDate && value.isBefore(startDate)) {
+                            return Promise.reject(
+                              new Error("End date must be after start date")
+                            );
+                          }
+
+                          // Minimum duration validation (at least 1 day after start date)
+                          if (startDate && !value.isAfter(startDate)) {
+                            return Promise.reject(
+                              new Error("Timeline must be at least 1 day long")
+                            );
+                          }
+
+                          return Promise.resolve();
+                        },
+                      }),
                     ]}
                   >
                     <ConfigProvider locale={viVN}>
@@ -1088,6 +1199,11 @@ const TimelineManagement = () => {
                             : "default-end"
                         }
                         value={editForm.getFieldValue("endDate")}
+                        disabledDate={(current) => {
+                          const startDate = editForm.getFieldValue("startDate");
+                          // Disable dates before start date
+                          return startDate && current && current < startDate;
+                        }}
                         onChange={(date) => {
                           if (date) {
                             setEditEndDate(date);

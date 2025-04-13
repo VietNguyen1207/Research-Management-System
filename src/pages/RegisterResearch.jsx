@@ -503,21 +503,106 @@ const RegisterResearch = () => {
                   noStyle
                   rules={[
                     { required: true, message: "Start date is required" },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value) return Promise.resolve();
+
+                        // Start date should not be in the past
+                        if (value.isBefore(moment().startOf("day"))) {
+                          return Promise.reject(
+                            new Error("Start date cannot be in the past")
+                          );
+                        }
+
+                        // Start date should be before end date (if end date is selected)
+                        const endDate = getFieldValue(["timeline", "end"]);
+                        if (endDate && value.isAfter(endDate)) {
+                          return Promise.reject(
+                            new Error("Start date must be before end date")
+                          );
+                        }
+
+                        return Promise.resolve();
+                      },
+                    }),
                   ]}
                 >
                   <DatePicker
                     placeholder="Start Date"
                     className="w-[calc(50%-8px)] mr-4 rounded-lg"
+                    disabledDate={(current) =>
+                      current && current < moment().startOf("day")
+                    }
+                    onChange={(date) => {
+                      // If end date exists but is before new start date, clear it
+                      const endDate = form.getFieldValue(["timeline", "end"]);
+                      if (endDate && date && date.isAfter(endDate)) {
+                        form.setFieldsValue({
+                          timeline: {
+                            ...form.getFieldValue("timeline"),
+                            end: null,
+                          },
+                        });
+                      }
+                    }}
                   />
                 </Form.Item>
                 <Form.Item
                   name={["timeline", "end"]}
                   noStyle
-                  rules={[{ required: true, message: "End date is required" }]}
+                  rules={[
+                    { required: true, message: "End date is required" },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value) return Promise.resolve();
+
+                        // End date should be after start date
+                        const startDate = getFieldValue(["timeline", "start"]);
+                        if (startDate && value.isBefore(startDate)) {
+                          return Promise.reject(
+                            new Error("End date must be after start date")
+                          );
+                        }
+
+                        // Project should have reasonable duration - at least 30 days
+                        if (startDate && value.diff(startDate, "days") < 30) {
+                          return Promise.reject(
+                            new Error(
+                              "Project duration should be at least 30 days"
+                            )
+                          );
+                        }
+
+                        // Project should not be unreasonably long - no more than 3 years
+                        if (
+                          startDate &&
+                          value.diff(startDate, "years", true) > 3
+                        ) {
+                          return Promise.reject(
+                            new Error(
+                              "Project duration should not exceed 3 years"
+                            )
+                          );
+                        }
+
+                        return Promise.resolve();
+                      },
+                    }),
+                  ]}
                 >
                   <DatePicker
                     placeholder="End Date"
                     className="w-[calc(50%-8px)] rounded-lg"
+                    disabledDate={(current) => {
+                      const startDate = form.getFieldValue([
+                        "timeline",
+                        "start",
+                      ]);
+                      return (
+                        (current && current < moment().startOf("day")) ||
+                        (startDate && current && current < startDate)
+                      );
+                    }}
                   />
                 </Form.Item>
               </Input.Group>
