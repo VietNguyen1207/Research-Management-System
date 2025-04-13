@@ -19,6 +19,9 @@ import {
   message,
   Tooltip,
   Badge,
+  Statistic,
+  Spin,
+  ConfigProvider,
 } from "antd";
 import {
   CalendarOutlined,
@@ -32,262 +35,270 @@ import {
   TeamOutlined,
   FieldTimeOutlined,
   ArrowRightOutlined,
+  PieChartOutlined,
 } from "@ant-design/icons";
-import moment from "moment";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import {
+  useGetTimelineSequencesQuery,
+  useGetTimelinesBySequenceQuery,
+  useCreateTimelineSequenceMutation,
+  useCreateTimelineMutation,
+  useUpdateTimelineMutation,
+} from "../../features/timeline/timelineApiSlice";
+import viVN from "antd/lib/locale/vi_VN";
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
+
+// Register the plugins
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 const TimelineManagement = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTimeline, setEditingTimeline] = useState(null);
-  const [timelineData, setTimelineData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [timelineGroups, setTimelineGroups] = useState([
-    {
-      id: 1,
-      name: "Research Project Cycle 2024",
-      description: "Main timeline for research project management",
-      color: "#F2722B",
-    },
-    {
-      id: 2,
-      name: "Fund Disbursement Cycle",
-      description: "Timeline for fund management and disbursement",
-      color: "#4CAF50",
-    },
-  ]);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupForm] = Form.useForm();
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [editStartDate, setEditStartDate] = useState(null);
+  const [editEndDate, setEditEndDate] = useState(null);
+  const [createStartDate, setCreateStartDate] = useState(null);
+  const [createEndDate, setCreateEndDate] = useState(null);
 
   const navigate = useNavigate();
 
-  // Mock data for demonstration - replace with API calls in production
-  useEffect(() => {
-    // Simulate loading data from an API
-    setLoading(true);
-    setTimeout(() => {
-      setTimelineData([
-        {
-          id: 1,
-          groupId: 1,
-          name: "Project Registration Period",
-          description: "Open registration for new research projects",
-          startDate: "2025-06-01",
-          endDate: "2025-06-15",
-          type: "registration",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 2,
-          groupId: 1,
-          name: "Project Review Period",
-          description: "Review and approval of submitted research projects",
-          startDate: "2025-06-16",
-          endDate: "2025-06-30",
-          type: "review",
-          status: "delayed",
-          department: "All",
-        },
-        {
-          id: 3,
-          groupId: 1,
-          name: "Conference Paper Submissions",
-          description: "Deadline for conference paper submissions",
-          startDate: "2025-08-01",
-          endDate: "2025-08-15",
-          type: "submission",
-          status: "in_review",
-          department: "Computer Science",
-        },
-        {
-          id: 4,
-          groupId: 1,
-          name: "Budget Allocation Review",
-          description: "Review and approve department budget allocations",
-          startDate: "2025-09-01",
-          endDate: "2025-09-10",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 5,
-          groupId: 1,
-          name: "Journal Publication Deadline",
-          description: "Deadline for journal publication submissions",
-          startDate: "2025-10-01",
-          endDate: "2025-10-31",
-          type: "submission",
-          status: "on_hold",
-          department: "Electrical Engineering",
-        },
-        {
-          id: 6,
-          groupId: 2,
-          name: "Initial Budget Assessment",
-          description:
-            "Review and assess initial budget requirements for all departments",
-          startDate: "2025-03-01",
-          endDate: "2025-03-15",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 7,
-          groupId: 2,
-          name: "Q1 Fund Release",
-          description: "First quarter fund disbursement for approved projects",
-          startDate: "2025-04-01",
-          endDate: "2025-04-07",
-          type: "budget",
-          status: "active",
-          department: "All",
-        },
-        {
-          id: 8,
-          groupId: 2,
-          name: "Mid-Year Budget Review",
-          description:
-            "Comprehensive review of budget utilization and adjustments",
-          startDate: "2025-06-15",
-          endDate: "2025-06-30",
-          type: "review",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 9,
-          groupId: 2,
-          name: "Emergency Fund Allocation",
-          description: "Special allocation for urgent research requirements",
-          startDate: "2025-05-01",
-          endDate: "2025-05-05",
-          type: "budget",
-          status: "on_hold",
-          department: "Computer Science",
-        },
-        {
-          id: 10,
-          groupId: 2,
-          name: "Q2 Fund Release",
-          description: "Second quarter fund disbursement for ongoing projects",
-          startDate: "2026-01-01",
-          endDate: "2026-01-07",
-          type: "budget",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 11,
-          groupId: 2,
-          name: "Budget Utilization Report",
-          description: "Detailed reporting of fund utilization by departments",
-          startDate: "2026-02-15",
-          endDate: "2026-02-28",
-          type: "review",
-          status: "upcoming",
-          department: "All",
-        },
-        {
-          id: 12,
-          groupId: 2,
-          name: "Special Grant Disbursement",
-          description: "Distribution of additional research grants",
-          startDate: "2026-03-01",
-          endDate: "2026-03-15",
-          type: "budget",
-          status: "upcoming",
-          department: "Electrical Engineering",
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // Fetch timeline sequences from API
+  const {
+    data: timelineSequences,
+    isLoading: isLoadingSequences,
+    isError: isErrorSequences,
+    error: sequencesError,
+    refetch: refetchSequences,
+  } = useGetTimelineSequencesQuery();
 
-  const handleAddTimeline = (values) => {
-    // Add limit check (example: 20 timelines)
-    if (timelineData.length >= 20) {
-      message.error("Maximum number of timelines (20) reached");
+  // Fetch timelines for selected sequence
+  const {
+    data: timelineData,
+    isLoading: isLoadingTimelines,
+    isError: isErrorTimelines,
+    error: timelinesError,
+    refetch: refetchTimelines,
+  } = useGetTimelinesBySequenceQuery(selectedGroup, {
+    skip: !selectedGroup,
+  });
+
+  const [createTimelineSequence] = useCreateTimelineSequenceMutation();
+  const [createTimeline] = useCreateTimelineMutation();
+  const [updateTimeline, { isLoading: isUpdating }] =
+    useUpdateTimelineMutation();
+
+  // Map timelineType to display values
+  const getTimelineTypeLabel = (type) => {
+    switch (type) {
+      case 0:
+        return "registration";
+      case 1:
+        return "registration";
+      case 2:
+        return "review";
+      case 3:
+        return "submission";
+      case 4:
+        return "budget";
+      default:
+        return "other";
+    }
+  };
+
+  const handleAddTimeline = async (values) => {
+    console.log("Form values submitted:", values);
+
+    // Get the values from state if the form values are missing
+    const startDate = values.startDate || createStartDate;
+    const endDate = values.endDate || createEndDate;
+
+    // Check if dates are available either in values or state
+    if (!startDate || !endDate) {
+      message.error("Start date and end date are required");
       return;
     }
 
-    const { name, dateRange, description, type, department, timelineGroup } =
-      values;
-    const newTimeline = {
-      id: timelineData.length + 1,
-      groupId: timelineGroup,
-      name,
-      description,
-      startDate: dateRange[0].format("YYYY-MM-DD"),
-      endDate: dateRange[1].format("YYYY-MM-DD"),
-      type,
-      status: moment().isBefore(dateRange[0])
-        ? "upcoming"
-        : moment().isAfter(dateRange[1])
-        ? "completed"
-        : "active",
-      department,
-    };
+    const { name, type, timelineGroup } = values;
 
-    setTimelineData([...timelineData, newTimeline]);
-    form.resetFields();
-    message.success("Timeline added successfully");
+    try {
+      // Map the timeline type to its enum value
+      let timelineTypeEnum;
+      switch (type) {
+        case "registration":
+          timelineTypeEnum = 1; // ProjectRegistration
+          break;
+        case "review":
+          timelineTypeEnum = 2; // ReviewPeriod
+          break;
+        case "submission":
+          timelineTypeEnum = 5; // ConferenceSubmission
+          break;
+        case "budget":
+          timelineTypeEnum = 3; // FundRequest
+          break;
+        default:
+          timelineTypeEnum = 1;
+      }
+
+      // Prepare the request body according to the API requirements
+      const timelineData = {
+        sequenceId: timelineGroup,
+        startDate: startDate.format("YYYY-MM-DD"),
+        endDate: endDate.format("YYYY-MM-DD"),
+        event: name,
+        timelineType: timelineTypeEnum,
+        status: 1, // Active
+      };
+
+      // Call the API
+      await createTimeline(timelineData).unwrap();
+      message.success("Timeline added successfully");
+
+      // Reset form and state
+      form.resetFields();
+      setCreateStartDate(null);
+      setCreateEndDate(null);
+
+      // Refetch the timelines to get the updated data
+      if (selectedGroup) {
+        refetchTimelines();
+      }
+    } catch (error) {
+      console.error("Failed to create timeline:", error);
+      message.error(
+        "Failed to create timeline: " + (error.data?.message || error.message)
+      );
+    }
   };
 
-  const handleEditTimeline = (values) => {
-    const { name, dateRange, description, type, department } = values;
-    const updatedTimelineData = timelineData.map((item) => {
-      if (item.id === editingTimeline.id) {
-        return {
-          ...item,
-          name,
-          description,
-          startDate: dateRange[0].format("YYYY-MM-DD"),
-          endDate: dateRange[1].format("YYYY-MM-DD"),
-          type,
-          status: moment().isBefore(dateRange[0])
-            ? "upcoming"
-            : moment().isAfter(dateRange[1])
-            ? "completed"
-            : "active",
-          department,
-        };
-      }
-      return item;
-    });
+  const handleEditTimeline = async (values) => {
+    console.log("Edit form values:", values); // Add debugging
 
-    setTimelineData(updatedTimelineData);
-    setIsModalVisible(false);
-    setEditingTimeline(null);
-    message.success("Timeline updated successfully");
+    const { name, startDate, endDate, type, timelineSequence } = values;
+
+    if (!startDate || !endDate) {
+      message.error("Start date and end date are required");
+      return;
+    }
+
+    try {
+      // Format dates consistently using dayjs's format method
+      const formattedStartDate = startDate.format("YYYY-MM-DD");
+      const formattedEndDate = endDate.format("YYYY-MM-DD");
+
+      // Map the timeline type to its enum value
+      let timelineTypeEnum;
+      switch (type) {
+        case "registration":
+          timelineTypeEnum = 1; // ProjectRegistration
+          break;
+        case "review":
+          timelineTypeEnum = 2; // ReviewPeriod
+          break;
+        case "submission":
+          timelineTypeEnum = 5; // ConferenceSubmission
+          break;
+        case "budget":
+          timelineTypeEnum = 3; // FundRequest
+          break;
+        default:
+          timelineTypeEnum = 1;
+      }
+
+      // Updated request body
+      const updateData = {
+        id: editingTimeline.id,
+        sequenceId: timelineSequence,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        event: name,
+        timelineType: timelineTypeEnum,
+        status: 1, // Default to Active
+      };
+
+      console.log("Sending to API:", updateData); // Add this to debug
+
+      // Call the API
+      await updateTimeline(updateData).unwrap();
+      message.success("Timeline updated successfully");
+      setIsModalVisible(false);
+      setEditingTimeline(null);
+
+      // Refetch the timelines to get the updated data
+      if (selectedGroup) {
+        refetchTimelines();
+      }
+    } catch (error) {
+      console.error("Failed to update timeline:", error);
+      message.error(
+        "Failed to update timeline: " + (error.data?.message || error.message)
+      );
+    }
   };
 
   const handleDeleteTimeline = (id) => {
-    const updatedTimelineData = timelineData.filter((item) => item.id !== id);
-    setTimelineData(updatedTimelineData);
+    // Here you would typically make an API call to delete the timeline
+    // For now, just display a success message
     message.success("Timeline deleted successfully");
+
+    // Refetch the timelines to get the updated data
+    if (selectedGroup) {
+      refetchTimelines();
+    }
   };
 
   const showEditModal = (record) => {
+    console.log("Opening edit modal for record:", record);
+
+    // Parse dates
+    const startDate = dayjs(record.startDate);
+    const endDate = dayjs(record.endDate);
+
+    // Set the state variables
+    setEditStartDate(startDate);
+    setEditEndDate(endDate);
+
+    // Set the record data
     setEditingTimeline(record);
-    editForm.setFieldsValue({
-      name: record.name,
-      description: record.description,
-      dateRange: [moment(record.startDate), moment(record.endDate)],
-      type: record.type,
-      department: record.department,
-    });
+
+    // Reset form before setting values
+    editForm.resetFields();
+
+    // Open the modal and set form values after a short delay
     setIsModalVisible(true);
+
+    setTimeout(() => {
+      try {
+        // Set form values
+        editForm.setFieldsValue({
+          name: record.event,
+          timelineSequence: record.sequenceId,
+          startDate: startDate,
+          endDate: endDate,
+          type: getTimelineTypeLabel(record.timelineType),
+        });
+
+        console.log("Form values set:", editForm.getFieldsValue());
+      } catch (error) {
+        console.error("Error setting form values:", error);
+        message.error("Error preparing the edit form");
+      }
+    }, 100);
   };
 
   const getStatusColor = (status) => {
@@ -326,19 +337,148 @@ const TimelineManagement = () => {
     }
   };
 
+  // Generate timeline visualization based on data
+  const generateTimelineItems = () => {
+    if (!timelineData) return [];
+
+    const sortedTimelines = [...timelineData].sort(
+      (a, b) => dayjs(a.startDate).unix() - dayjs(b.startDate).unix()
+    );
+
+    return sortedTimelines.map((item) => {
+      const now = dayjs();
+      const startDate = dayjs(item.startDate);
+      const endDate = dayjs(item.endDate);
+
+      const isActive = now.isBetween(startDate, endDate, "day", "[]");
+      const isCompleted = now.isAfter(endDate, "day");
+      const isExpired = now.isAfter(endDate, "day");
+
+      const status = isActive
+        ? "active"
+        : isCompleted
+        ? "completed"
+        : "upcoming";
+
+      return {
+        key: item.id,
+        color: getStatusColor(status),
+        dot: isActive ? (
+          <ClockCircleOutlined className="timeline-clock-icon" />
+        ) : undefined,
+        children: (
+          <div className={`p-4 ${isCompleted ? "opacity-60" : ""}`}>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <Text strong>{item.event}</Text>
+                <div className="text-sm text-gray-500">
+                  {`${dayjs(item.startDate).format("YYYY-MM-DD")} — ${dayjs(
+                    item.endDate
+                  ).format("YYYY-MM-DD")}`}
+                </div>
+                <div className="mt-1">
+                  <Tag color="purple">All</Tag>
+                  <Tag color="orange">
+                    {getTimelineTypeLabel(item.timelineType).toUpperCase()}
+                  </Tag>
+                </div>
+                <div className="mt-2 text-sm">
+                  {item.description || `Event in ${item.sequenceName}`}
+                </div>
+              </div>
+              <Space className="ml-4">
+                <Tooltip title="Edit Timeline">
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={() => showEditModal(item)}
+                    className="text-blue-500 hover:text-blue-700"
+                    size="small"
+                  />
+                </Tooltip>
+                <Tooltip title="Delete Timeline">
+                  <Popconfirm
+                    title="Are you sure you want to delete this timeline?"
+                    onConfirm={() => handleDeleteTimeline(item.id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      className="hover:text-red-700"
+                      size="small"
+                    />
+                  </Popconfirm>
+                </Tooltip>
+              </Space>
+            </div>
+            {(isCompleted || isExpired) && (
+              <Tag color="red" className="mt-2">
+                {isCompleted ? "COMPLETED" : "EXPIRED"}
+              </Tag>
+            )}
+          </div>
+        ),
+      };
+    });
+  };
+
+  const showCreateGroupModal = () => {
+    setIsSelectOpen(false);
+    setTimeout(() => {
+      setIsGroupModalVisible(true);
+    }, 100);
+  };
+
+  const handleCreateGroup = async (values) => {
+    try {
+      await createTimelineSequence({
+        sequenceName: values.name,
+        sequenceDescription: values.description,
+        sequenceColor:
+          values.color ||
+          "#" + Math.floor(Math.random() * 16777215).toString(16),
+      }).unwrap();
+
+      message.success("Timeline sequence created successfully");
+      refetchSequences();
+      setIsGroupModalVisible(false);
+      groupForm.resetFields();
+    } catch (error) {
+      message.error("Failed to create timeline sequence");
+    }
+  };
+
+  useEffect(() => {
+    if (form.getFieldValue("timelineGroup")) {
+      setSelectedGroup(form.getFieldValue("timelineGroup"));
+    }
+  }, [form.getFieldValue("timelineGroup")]);
+
+  // Select the first timeline sequence by default when data is loaded
+  useEffect(() => {
+    if (timelineSequences && timelineSequences.length > 0 && !selectedGroup) {
+      setSelectedGroup(timelineSequences[0].id);
+      form.setFieldsValue({ timelineGroup: timelineSequences[0].id });
+    }
+  }, [timelineSequences, form, selectedGroup]);
+
+  // Updated columns definition for the timeline table
   const columns = [
     {
       title: "Name",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "event",
+      key: "event",
       render: (text, record) => (
         <div className="flex items-center space-x-2">
           <Tag
             color="orange"
-            icon={getTypeIcon(record.type)}
+            icon={getTypeIcon(getTimelineTypeLabel(record.timelineType))}
             className="mr-2 py-1 px-2"
           >
-            {record.type.toUpperCase()}
+            {getTimelineTypeLabel(record.timelineType).toUpperCase()}
           </Tag>
           <Text strong>{text}</Text>
         </div>
@@ -347,37 +487,39 @@ const TimelineManagement = () => {
     {
       title: "Period",
       key: "period",
-      render: (_, record) => (
-        <div className="space-y-1">
-          <div className="flex items-center">
-            <CalendarOutlined className="text-[#F2722B] mr-2" />
-            <Text>{`${record.startDate} — ${record.endDate}`}</Text>
+      render: (_, record) => {
+        const now = dayjs();
+        const startDate = dayjs(record.startDate);
+        const endDate = dayjs(record.endDate);
+
+        const isActive = now.isBetween(startDate, endDate, "day", "[]");
+        const isCompleted = now.isAfter(endDate, "day");
+        const status = isActive
+          ? "active"
+          : isCompleted
+          ? "completed"
+          : "upcoming";
+
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center">
+              <CalendarOutlined className="text-[#F2722B] mr-2" />
+              <Text>{`${dayjs(record.startDate).format("YYYY-MM-DD")} — ${dayjs(
+                record.endDate
+              ).format("YYYY-MM-DD")}`}</Text>
+            </div>
+            <Tag color={getStatusColor(status)} className="ml-0">
+              {status.toUpperCase()}
+            </Tag>
           </div>
-          <Tag color={getStatusColor(record.status)} className="ml-0">
-            {record.status.toUpperCase()}
-          </Tag>
-        </div>
-      ),
+        );
+      },
     },
     {
-      title: "Department",
-      dataIndex: "department",
-      key: "department",
-      render: (text) => <Tag color="purple">{text}</Tag>,
-    },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      render: (text) => (
-        <Text
-          ellipsis={{ tooltip: text }}
-          className="max-w-xs block"
-          type="secondary"
-        >
-          {text}
-        </Text>
-      ),
+      title: "Created By",
+      dataIndex: "createdByName",
+      key: "createdByName",
+      render: (text) => <span className="text-gray-600">{text}</span>,
     },
     {
       title: "Actions",
@@ -408,109 +550,37 @@ const TimelineManagement = () => {
     },
   ];
 
-  // Generate timeline visualization based on data
-  const generateTimelineItems = (groupId) => {
-    const groupTimelines = timelineData
-      .filter((item) => item.groupId === groupId)
-      .sort((a, b) => moment(a.startDate) - moment(b.startDate));
-
-    return groupTimelines.map((item) => {
-      const isActive = item.status === "active";
-      const isCompleted = item.status === "completed";
-      const isExpired = moment().isAfter(moment(item.endDate));
-      const canEdit = !isCompleted && !isExpired;
-
-      return (
-        <Timeline.Item
-          key={item.id}
-          color={getStatusColor(item.status)}
-          dot={
-            isActive ? (
-              <ClockCircleOutlined className="timeline-clock-icon" />
-            ) : undefined
-          }
-        >
-          <div className={`p-4 ${isCompleted ? "opacity-60" : ""}`}>
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <Text strong>{item.name}</Text>
-                <div className="text-sm text-gray-500">
-                  {`${item.startDate} — ${item.endDate}`}
-                </div>
-                <div className="mt-1">
-                  <Tag color="purple">{item.department}</Tag>
-                  <Tag color="orange">{item.type.toUpperCase()}</Tag>
-                </div>
-                <div className="mt-2 text-sm">{item.description}</div>
-              </div>
-              {canEdit && (
-                <Space className="ml-4">
-                  <Tooltip title="Edit Timeline">
-                    <Button
-                      type="text"
-                      icon={<EditOutlined />}
-                      onClick={() => showEditModal(item)}
-                      className="text-blue-500 hover:text-blue-700"
-                      size="small"
-                    />
-                  </Tooltip>
-                  <Tooltip title="Delete Timeline">
-                    <Popconfirm
-                      title="Are you sure you want to delete this timeline?"
-                      onConfirm={() => handleDeleteTimeline(item.id)}
-                      okText="Yes"
-                      cancelText="No"
-                    >
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        className="hover:text-red-700"
-                        size="small"
-                      />
-                    </Popconfirm>
-                  </Tooltip>
-                </Space>
-              )}
-            </div>
-            {(isCompleted || isExpired) && (
-              <Tag color="red" className="mt-2">
-                {isCompleted ? "COMPLETED" : "EXPIRED"}
-              </Tag>
-            )}
-          </div>
-        </Timeline.Item>
-      );
-    });
-  };
-
-  const showCreateGroupModal = () => {
-    setIsSelectOpen(false);
-    setTimeout(() => {
-      setIsGroupModalVisible(true);
-    }, 100);
-  };
-
-  const handleCreateGroup = (values) => {
-    const newGroup = {
-      id: timelineGroups.length + 1,
-      name: values.name,
-      description: values.description,
-      color:
-        values.color || "#" + Math.floor(Math.random() * 16777215).toString(16), // Random color if none selected
-    };
-
-    setTimelineGroups([...timelineGroups, newGroup]);
-    setIsGroupModalVisible(false);
-    groupForm.resetFields();
-    message.success("Timeline sequence created successfully");
-  };
-
+  // Add this useEffect in your component to track form values
   useEffect(() => {
-    if (form.getFieldValue("timelineGroup")) {
-      setSelectedGroup(form.getFieldValue("timelineGroup"));
+    const values = editForm.getFieldsValue();
+    console.log("Current edit form values:", values);
+  }, [editingTimeline, isModalVisible]); // Track when modal or editing timeline changes
+
+  // Add this useEffect hook after your existing ones
+  useEffect(() => {
+    if (editingTimeline && isModalVisible) {
+      const startDate = dayjs(editingTimeline.startDate);
+      const endDate = dayjs(editingTimeline.endDate);
+
+      // Force another update of date fields after modal is fully visible
+      setTimeout(() => {
+        editForm.setFieldsValue({
+          startDate: startDate,
+          endDate: endDate,
+        });
+
+        // Update state vars as well
+        setEditStartDate(startDate);
+        setEditEndDate(endDate);
+
+        console.log(
+          "Re-setting date values:",
+          startDate.format("YYYY-MM-DD"),
+          endDate.format("YYYY-MM-DD")
+        );
+      }, 200);
     }
-  }, [form.getFieldValue("timelineGroup")]);
+  }, [editingTimeline, isModalVisible]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -555,33 +625,103 @@ const TimelineManagement = () => {
                   </div>
                 }
                 className="shadow-md rounded-xl overflow-hidden border-0"
-                bodyStyle={{ height: "500px", overflowY: "auto" }}
+                styles={{ body: { height: "500px", overflowY: "auto" } }}
               >
-                {selectedGroup ? (
-                  <Timeline mode="left" className="mt-4 ml-4">
-                    {timelineGroups
-                      .filter((group) => group.id === selectedGroup)
-                      .map((group) => (
-                        <React.Fragment key={group.id}>
-                          <Timeline.Item
-                            dot={
-                              <div
-                                style={{ backgroundColor: group.color }}
-                                className="w-4 h-4 rounded-full"
-                              />
-                            }
-                          >
-                            <Text strong className="text-lg">
-                              {group.name}
-                            </Text>
-                            <Text type="secondary" className="block text-sm">
-                              {group.description}
-                            </Text>
-                          </Timeline.Item>
-                          {generateTimelineItems(group.id)}
-                        </React.Fragment>
-                      ))}
-                  </Timeline>
+                {isLoadingSequences ? (
+                  <div className="h-full flex justify-center items-center">
+                    <Spin size="large" />
+                  </div>
+                ) : isErrorSequences ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <ExclamationCircleOutlined className="text-4xl text-red-500 mb-4" />
+                    <Text className="text-lg text-red-500 mb-2">
+                      Error Loading Timeline Sequences
+                    </Text>
+                    <Text type="secondary" className="mb-4">
+                      {sequencesError?.data?.message ||
+                        "Failed to load timeline sequences"}
+                    </Text>
+                    <Button
+                      type="primary"
+                      onClick={() => refetchSequences()}
+                      className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : selectedGroup ? (
+                  isLoadingTimelines ? (
+                    <div className="h-full flex justify-center items-center">
+                      <Spin size="large" />
+                    </div>
+                  ) : isErrorTimelines ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                      <ExclamationCircleOutlined className="text-4xl text-red-500 mb-4" />
+                      <Text className="text-lg text-red-500 mb-2">
+                        Error Loading Timelines
+                      </Text>
+                      <Text type="secondary" className="mb-4">
+                        {timelinesError?.data?.message ||
+                          "Failed to load timelines for the selected sequence"}
+                      </Text>
+                      <Button
+                        type="primary"
+                        onClick={() => refetchTimelines()}
+                        className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  ) : timelineData && timelineData.length > 0 ? (
+                    <Timeline
+                      mode="left"
+                      className="mt-4 ml-4"
+                      items={[
+                        // First item is the group header
+                        {
+                          key: "header",
+                          dot: (
+                            <div
+                              style={{
+                                backgroundColor:
+                                  timelineSequences?.find(
+                                    (seq) => seq.id === selectedGroup
+                                  )?.sequenceColor || "#F2722B",
+                              }}
+                              className="w-4 h-4 rounded-full"
+                            />
+                          ),
+                          children: (
+                            <>
+                              <Text strong className="text-lg">
+                                {timelineSequences?.find(
+                                  (seq) => seq.id === selectedGroup
+                                )?.sequenceName || "Timeline Sequence"}
+                              </Text>
+                              <Text type="secondary" className="block text-sm">
+                                {timelineSequences?.find(
+                                  (seq) => seq.id === selectedGroup
+                                )?.sequenceDescription || ""}
+                              </Text>
+                            </>
+                          ),
+                        },
+                        // Then spread the timeline items
+                        ...generateTimelineItems(),
+                      ]}
+                    />
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                      <InfoCircleOutlined className="text-4xl text-gray-300 mb-4" />
+                      <Text className="text-lg text-gray-500 mb-2">
+                        No Timelines Found
+                      </Text>
+                      <Text type="secondary">
+                        This sequence doesn't have any timelines yet. Create one
+                        using the form.
+                      </Text>
+                    </div>
+                  )
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8">
                     <FieldTimeOutlined className="text-4xl text-gray-300 mb-4" />
@@ -595,7 +735,8 @@ const TimelineManagement = () => {
                     <div className="mt-4 flex items-center space-x-2 text-[#F2722B]">
                       <ArrowRightOutlined />
                       <Text className="text-[#F2722B]">
-                        Select from {timelineGroups.length} available sequences
+                        Select from {timelineSequences?.length || 0} available
+                        sequences
                       </Text>
                     </div>
                   </div>
@@ -647,6 +788,7 @@ const TimelineManagement = () => {
                           onChange={(value) => {
                             setSelectedGroup(value); // Sync the visualization when form selection changes
                           }}
+                          loading={isLoadingSequences}
                           dropdownRender={(menu) => (
                             <>
                               {menu}
@@ -662,9 +804,11 @@ const TimelineManagement = () => {
                             </>
                           )}
                         >
-                          {timelineGroups.map((group) => (
-                            <Option key={group.id} value={group.id}>
-                              <Tag color={group.color}>{group.name}</Tag>
+                          {timelineSequences?.map((sequence) => (
+                            <Option key={sequence.id} value={sequence.id}>
+                              <Tag color={sequence.sequenceColor}>
+                                {sequence.sequenceName}
+                              </Tag>
                             </Option>
                           ))}
                         </Select>
@@ -708,66 +852,124 @@ const TimelineManagement = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item
-                        name="dateRange"
-                        label="Date Range"
+                        name="startDate"
+                        label="Start Date"
                         rules={[
-                          {
-                            required: true,
-                            message: "Please select date range",
-                          },
+                          { required: true, message: "Start date is required" },
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              if (!value) return Promise.resolve();
+
+                              // Start date should not be in the past
+                              if (value.isBefore(dayjs().startOf("day"))) {
+                                return Promise.reject(
+                                  new Error("Start date cannot be in the past")
+                                );
+                              }
+
+                              // Start date should be before end date (if end date is selected)
+                              const endDate = getFieldValue("endDate");
+                              if (endDate && value.isAfter(endDate)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Start date must be before end date"
+                                  )
+                                );
+                              }
+
+                              return Promise.resolve();
+                            },
+                          }),
                         ]}
                       >
-                        <RangePicker className="w-full" format="YYYY-MM-DD" />
+                        <ConfigProvider locale={viVN}>
+                          <DatePicker
+                            className="w-full"
+                            format="YYYY-MM-DD"
+                            placeholder="Start Date"
+                            inputReadOnly={true}
+                            picker="date"
+                            showToday={true}
+                            disabledDate={(current) =>
+                              current && current < dayjs().startOf("day")
+                            }
+                            onChange={(date) => {
+                              if (date) {
+                                setCreateStartDate(date);
+                                form.setFieldsValue({ startDate: date });
+
+                                // If end date exists but is before start date, clear it
+                                const endDate = form.getFieldValue("endDate");
+                                if (endDate && date.isAfter(endDate)) {
+                                  form.setFieldsValue({ endDate: null });
+                                  setCreateEndDate(null);
+                                }
+                              }
+                            }}
+                          />
+                        </ConfigProvider>
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item
-                        name="department"
-                        label="Department"
+                        name="endDate"
+                        label="End Date"
                         rules={[
-                          {
-                            required: true,
-                            message: "Please select department",
-                          },
+                          { required: true, message: "End date is required" },
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              if (!value) return Promise.resolve();
+
+                              // End date should be after start date
+                              const startDate = getFieldValue("startDate");
+                              if (startDate && value.isBefore(startDate)) {
+                                return Promise.reject(
+                                  new Error("End date must be after start date")
+                                );
+                              }
+
+                              // Minimum duration validation (at least 1 day after start date)
+                              if (startDate && !value.isAfter(startDate)) {
+                                return Promise.reject(
+                                  new Error(
+                                    "Timeline must be at least 1 day long"
+                                  )
+                                );
+                              }
+
+                              return Promise.resolve();
+                            },
+                          }),
                         ]}
                       >
-                        <Select placeholder="Select department">
-                          <Option value="All">All Departments</Option>
-                          <Option value="Computer Science">
-                            Computer Science
-                          </Option>
-                          <Option value="Information Technology">
-                            Information Technology
-                          </Option>
-                          <Option value="Electrical Engineering">
-                            Electrical Engineering
-                          </Option>
-                          <Option value="Mechanical Engineering">
-                            Mechanical Engineering
-                          </Option>
-                          <Option value="Business Administration">
-                            Business Administration
-                          </Option>
-                        </Select>
+                        <ConfigProvider locale={viVN}>
+                          <DatePicker
+                            className="w-full"
+                            format="YYYY-MM-DD"
+                            placeholder="End Date"
+                            inputReadOnly={true}
+                            picker="date"
+                            showToday={true}
+                            disabledDate={(current) => {
+                              const startDate = form.getFieldValue("startDate");
+                              // Disable dates before start date or before today
+                              return (
+                                current &&
+                                (current < dayjs().startOf("day") ||
+                                  (startDate && current < startDate))
+                              );
+                            }}
+                            onChange={(date) => {
+                              if (date) {
+                                setCreateEndDate(date);
+                                form.setFieldsValue({ endDate: date });
+                              }
+                            }}
+                          />
+                        </ConfigProvider>
                       </Form.Item>
                     </Col>
                   </Row>
-
-                  <Form.Item
-                    name="description"
-                    label="Description"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Please enter a description",
-                      },
-                    ]}
-                  >
-                    <Input.TextArea
-                      rows={4}
-                      placeholder="Provide details about this timeline"
-                    />
-                  </Form.Item>
 
                   <Form.Item>
                     <Button
@@ -790,9 +992,24 @@ const TimelineManagement = () => {
             >
               <Card
                 title={
-                  <div className="flex items-center space-x-2">
-                    <CalendarOutlined className="text-[#F2722B]" />
-                    <span>All Timelines</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CalendarOutlined className="text-[#F2722B]" />
+                      <span>All Timelines</span>
+                    </div>
+                    {selectedGroup && (
+                      <Tag
+                        color={
+                          timelineSequences?.find(
+                            (seq) => seq.id === selectedGroup
+                          )?.sequenceColor || "#F2722B"
+                        }
+                      >
+                        {timelineSequences?.find(
+                          (seq) => seq.id === selectedGroup
+                        )?.sequenceName || "Selected Sequence"}
+                      </Tag>
+                    )}
                   </div>
                 }
                 className="shadow-md rounded-xl border-0"
@@ -800,12 +1017,17 @@ const TimelineManagement = () => {
                 <Table
                   columns={columns}
                   dataSource={timelineData}
-                  loading={loading}
+                  loading={isLoadingTimelines}
                   rowKey="id"
                   pagination={{ pageSize: 5 }}
                   scroll={{ x: "max-content" }}
                   className="timeline-table"
                   rowClassName="timeline-table-row"
+                  locale={{
+                    emptyText: selectedGroup
+                      ? "No timelines found for this sequence"
+                      : "Please select a timeline sequence",
+                  }}
                 />
               </Card>
             </motion.div>
@@ -819,6 +1041,23 @@ const TimelineManagement = () => {
           onCancel={() => {
             setIsModalVisible(false);
             setEditingTimeline(null);
+            setEditStartDate(null);
+            setEditEndDate(null);
+          }}
+          afterOpenChange={(visible) => {
+            if (visible && editingTimeline) {
+              // Re-set form values when modal becomes visible
+              const startDate = dayjs(editingTimeline.startDate);
+              const endDate = dayjs(editingTimeline.endDate);
+
+              editForm.setFieldsValue({
+                name: editingTimeline.event,
+                timelineSequence: editingTimeline.sequenceId,
+                startDate: startDate,
+                endDate: endDate,
+                type: getTimelineTypeLabel(editingTimeline.timelineType),
+              });
+            }
           }}
           footer={null}
         >
@@ -837,16 +1076,145 @@ const TimelineManagement = () => {
             </Form.Item>
 
             <Form.Item
-              name="dateRange"
-              label="Date Range"
+              name="timelineSequence"
+              label="Timeline Sequence"
               rules={[
                 {
                   required: true,
-                  message: "Please select date range",
+                  message: "Please select a timeline sequence",
                 },
               ]}
             >
-              <RangePicker className="w-full" format="YYYY-MM-DD" />
+              <Select
+                placeholder="Select a timeline sequence"
+                loading={isLoadingSequences}
+              >
+                {timelineSequences?.map((sequence) => (
+                  <Option key={sequence.id} value={sequence.id}>
+                    <Tag color={sequence.sequenceColor}>
+                      {sequence.sequenceName}
+                    </Tag>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item label="Date Range" required style={{ marginBottom: 8 }}>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="startDate"
+                    rules={[
+                      { required: true, message: "Start date is required" },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+
+                          // Start date should be before end date (if end date is selected)
+                          const endDate = getFieldValue("endDate");
+                          if (endDate && value.isAfter(endDate)) {
+                            return Promise.reject(
+                              new Error("Start date must be before end date")
+                            );
+                          }
+
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
+                  >
+                    <ConfigProvider locale={viVN}>
+                      <DatePicker
+                        className="w-full"
+                        format="YYYY-MM-DD"
+                        placeholder="Start Date"
+                        inputReadOnly={true}
+                        picker="date"
+                        showToday={true}
+                        allowClear={false}
+                        key={
+                          editingTimeline
+                            ? editingTimeline.startDate
+                            : "default-start"
+                        }
+                        value={editForm.getFieldValue("startDate")}
+                        onChange={(date) => {
+                          if (date) {
+                            setEditStartDate(date);
+                            editForm.setFieldsValue({ startDate: date });
+
+                            // If end date exists but is before start date, clear it
+                            const endDate = editForm.getFieldValue("endDate");
+                            if (endDate && date.isAfter(endDate)) {
+                              editForm.setFieldsValue({ endDate: null });
+                              setEditEndDate(null);
+                            }
+                          }
+                        }}
+                      />
+                    </ConfigProvider>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="endDate"
+                    rules={[
+                      { required: true, message: "End date is required" },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+
+                          // End date should be after start date
+                          const startDate = getFieldValue("startDate");
+                          if (startDate && value.isBefore(startDate)) {
+                            return Promise.reject(
+                              new Error("End date must be after start date")
+                            );
+                          }
+
+                          // Minimum duration validation (at least 1 day after start date)
+                          if (startDate && !value.isAfter(startDate)) {
+                            return Promise.reject(
+                              new Error("Timeline must be at least 1 day long")
+                            );
+                          }
+
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
+                  >
+                    <ConfigProvider locale={viVN}>
+                      <DatePicker
+                        className="w-full"
+                        format="YYYY-MM-DD"
+                        placeholder="End Date"
+                        inputReadOnly={true}
+                        picker="date"
+                        showToday={true}
+                        allowClear={false}
+                        key={
+                          editingTimeline
+                            ? editingTimeline.endDate
+                            : "default-end"
+                        }
+                        value={editForm.getFieldValue("endDate")}
+                        disabledDate={(current) => {
+                          const startDate = editForm.getFieldValue("startDate");
+                          // Disable dates before start date
+                          return startDate && current && current < startDate;
+                        }}
+                        onChange={(date) => {
+                          if (date) {
+                            setEditEndDate(date);
+                            editForm.setFieldsValue({ endDate: date });
+                          }
+                        }}
+                      />
+                    </ConfigProvider>
+                  </Form.Item>
+                </Col>
+              </Row>
             </Form.Item>
 
             <Form.Item
@@ -860,53 +1228,11 @@ const TimelineManagement = () => {
               ]}
             >
               <Select>
-                <Option value="registration">Registration</Option>
-                <Option value="review">Review</Option>
-                <Option value="submission">Submission</Option>
-                <Option value="budget">Budget</Option>
-                <Option value="other">Other</Option>
+                <Option value="registration">Project Registration</Option>
+                <Option value="review">Review Period</Option>
+                <Option value="submission">Conference Submission</Option>
+                <Option value="budget">Fund Request</Option>
               </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="department"
-              label="Department"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select department",
-                },
-              ]}
-            >
-              <Select>
-                <Option value="All">All Departments</Option>
-                <Option value="Computer Science">Computer Science</Option>
-                <Option value="Information Technology">
-                  Information Technology
-                </Option>
-                <Option value="Electrical Engineering">
-                  Electrical Engineering
-                </Option>
-                <Option value="Mechanical Engineering">
-                  Mechanical Engineering
-                </Option>
-                <Option value="Business Administration">
-                  Business Administration
-                </Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="description"
-              label="Description"
-              rules={[
-                {
-                  required: true,
-                  message: "Please enter a description",
-                },
-              ]}
-            >
-              <Input.TextArea rows={4} />
             </Form.Item>
 
             <Form.Item>
@@ -922,6 +1248,7 @@ const TimelineManagement = () => {
                 <Button
                   type="primary"
                   htmlType="submit"
+                  loading={isUpdating}
                   className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
                 >
                   Update
@@ -1007,6 +1334,200 @@ const TimelineManagement = () => {
             </Form.Item>
           </Form>
         </Modal>
+
+        {/* Timeline Sequence Management Panel */}
+        {timelineSequences && timelineSequences.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-8"
+          >
+            <Card
+              title={
+                <div className="flex items-center space-x-2">
+                  <FieldTimeOutlined className="text-[#F2722B]" />
+                  <span>Timeline Sequences Overview</span>
+                </div>
+              }
+              className="shadow-md rounded-xl border-0"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {timelineSequences.map((sequence) => (
+                  <Card
+                    key={sequence.id}
+                    hoverable
+                    className={`border border-gray-200 hover:shadow-md transition-all duration-300 ${
+                      selectedGroup === sequence.id
+                        ? "border-[#F2722B] shadow-md"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedGroup(sequence.id);
+                      form.setFieldsValue({ timelineGroup: sequence.id });
+                    }}
+                  >
+                    <div className="flex items-start">
+                      <div
+                        className="w-4 h-4 rounded-full mt-1 mr-3 flex-shrink-0"
+                        style={{ backgroundColor: sequence.sequenceColor }}
+                      ></div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-800 mb-1">
+                          {sequence.sequenceName}
+                        </div>
+                        <Text
+                          type="secondary"
+                          ellipsis={{ tooltip: sequence.sequenceDescription }}
+                          className="text-sm mb-2 block"
+                        >
+                          {sequence.sequenceDescription}
+                        </Text>
+                        <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+                          <div>Created by: {sequence.createdByName}</div>
+                          <div>
+                            {new Date(sequence.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Timeline Statistics Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-8"
+        >
+          <Card
+            title={
+              <div className="flex items-center space-x-2">
+                <PieChartOutlined className="text-[#F2722B]" />
+                <span>Timeline Statistics</span>
+              </div>
+            }
+            className="shadow-md rounded-xl border-0"
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="text-center border-0 bg-gray-50">
+                  <Statistic
+                    title={<span className="text-gray-600">Sequences</span>}
+                    value={timelineSequences?.length || 0}
+                    valueStyle={{ color: "#F2722B" }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="text-center border-0 bg-gray-50">
+                  <Statistic
+                    title={
+                      <span className="text-gray-600">Total Timelines</span>
+                    }
+                    value={timelineData?.length || 0}
+                    valueStyle={{ color: "#F2722B" }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="text-center border-0 bg-gray-50">
+                  <Statistic
+                    title={<span className="text-gray-600">Active</span>}
+                    value={
+                      timelineData?.filter((item) => item.status === "active")
+                        .length
+                    }
+                    valueStyle={{ color: "#4CAF50" }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card className="text-center border-0 bg-gray-50">
+                  <Statistic
+                    title={<span className="text-gray-600">Upcoming</span>}
+                    value={
+                      timelineData?.filter((item) => item.status === "upcoming")
+                        .length
+                    }
+                    valueStyle={{ color: "#2196F3" }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+
+            <div className="mt-6">
+              <Title level={5} className="mb-4">
+                Timeline Distribution by Type
+              </Title>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  {
+                    type: "registration",
+                    color: "#F2722B",
+                    label: "Registration",
+                  },
+                  { type: "review", color: "#4CAF50", label: "Review" },
+                  { type: "submission", color: "#2196F3", label: "Submission" },
+                  { type: "budget", color: "#9C27B0", label: "Budget" },
+                ].map((item) => {
+                  const count = timelineData?.filter(
+                    (timeline) => timeline.type === item.type
+                  ).length;
+                  return (
+                    <Badge
+                      key={item.type}
+                      count={count}
+                      showZero
+                      style={{
+                        backgroundColor: item.color,
+                      }}
+                    >
+                      <Tag
+                        color={item.color}
+                        style={{ padding: "5px 12px" }}
+                        className="mr-0"
+                      >
+                        {item.label}
+                      </Tag>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Information Alert Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="mt-8"
+        >
+          <Card className="shadow-md rounded-xl border-0 bg-blue-50">
+            <div className="flex items-start">
+              <InfoCircleOutlined className="text-blue-500 text-xl mt-1 mr-3" />
+              <div>
+                <Text strong className="text-blue-700 block mb-1">
+                  Timeline Management Information
+                </Text>
+                <Text className="text-blue-600">
+                  Timelines help organize research activities and funding cycles
+                  within the system. Each timeline belongs to a sequence, and
+                  users across the platform will see relevant timelines based on
+                  their department and role. Create sequences for different
+                  research cycles, funding periods, or academic years.
+                </Text>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
