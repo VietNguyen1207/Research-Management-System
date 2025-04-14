@@ -126,8 +126,8 @@ const ProjectDetails = () => {
 
   const [activeSection, setActiveSection] = useState("overview");
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedMilestone, setSelectedMilestone] = useState(null);
-  const [milestonesForm] = Form.useForm();
+  const [selectedPhase, setSelectedPhase] = useState(null);
+  const [phasesForm] = Form.useForm();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
@@ -152,22 +152,22 @@ const ProjectDetails = () => {
     window.open(documentUrl, "_blank");
   };
 
-  const handleUpdateMilestone = (milestone) => {
-    setSelectedMilestone(milestone);
+  const handleUpdatePhase = (phase) => {
+    setSelectedPhase(phase);
     setIsModalVisible(true);
-    milestonesForm.setFieldsValue({
-      title: milestone.title,
-      startDate: milestone.startDate ? new Date(milestone.startDate) : null,
-      endDate: milestone.endDate ? new Date(milestone.endDate) : null,
-      status: milestone.status.toString(),
+    phasesForm.setFieldsValue({
+      title: phase.title,
+      startDate: phase.startDate ? new Date(phase.startDate) : null,
+      endDate: phase.endDate ? new Date(phase.endDate) : null,
+      status: phase.status.toString(),
     });
   };
 
   const handleModalOk = async () => {
     try {
-      const values = await milestonesForm.validateFields();
-      // Here you would typically make an API call to update the milestone
-      message.success("Milestone updated successfully");
+      const values = await phasesForm.validateFields();
+      // Here you would typically make an API call to update the phase
+      message.success("Project phase updated successfully");
       setIsModalVisible(false);
     } catch (error) {
       console.error("Validation failed:", error);
@@ -312,14 +312,12 @@ const ProjectDetails = () => {
     {}
   );
 
-  // Calculate milestone progress
-  const completedMilestones =
-    projectDetails.milestones?.filter((m) => m.status === 1)?.length || 0;
-  const totalMilestones = projectDetails.milestones?.length || 0;
+  // Calculate phase progress
+  const completedPhases =
+    projectDetails.projectPhases?.filter((p) => p.status === 1)?.length || 0;
+  const totalPhases = projectDetails.projectPhases?.length || 0;
   const progressPercentage =
-    totalMilestones > 0
-      ? Math.round((completedMilestones / totalMilestones) * 100)
-      : 0;
+    totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
@@ -524,10 +522,10 @@ const ProjectDetails = () => {
             tab={
               <Space>
                 <CalendarOutlined />
-                Milestones
+                Project Phases
               </Space>
             }
-            key="milestones"
+            key="phases"
           />
           <TabPane
             tab={
@@ -669,7 +667,7 @@ const ProjectDetails = () => {
                     </div>
                     <div>
                       <Badge
-                        count={`${completedMilestones}/${totalMilestones}`}
+                        count={`${completedPhases}/${totalPhases}`}
                         className="site-badge-count-4"
                         style={{ backgroundColor: "#10b981" }}
                       />
@@ -677,7 +675,7 @@ const ProjectDetails = () => {
                   </div>
                 }
               >
-                {totalMilestones > 0 ? (
+                {totalPhases > 0 ? (
                   <div>
                     <div className="mb-8">
                       <div className="flex items-center justify-between mb-2">
@@ -698,23 +696,21 @@ const ProjectDetails = () => {
                     </div>
                     <Steps
                       direction="vertical"
-                      current={completedMilestones}
+                      current={completedPhases}
                       percent={progressPercentage}
                     >
-                      {projectDetails.milestones.map((milestone) => (
+                      {projectDetails.projectPhases.map((phase) => (
                         <Step
-                          key={milestone.milestoneId}
+                          key={phase.projectPhaseId}
                           title={
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">
-                                {milestone.title}
-                              </span>
+                              <span className="font-medium">{phase.title}</span>
                               <Button
                                 type="link"
                                 icon={<EditOutlined />}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleUpdateMilestone(milestone);
+                                  handleUpdatePhase(phase);
                                 }}
                               >
                                 Update
@@ -724,29 +720,27 @@ const ProjectDetails = () => {
                           description={
                             <div className="mt-2">
                               <div className="text-gray-500 mb-2">
-                                {formatDate(milestone.startDate)} -{" "}
-                                {formatDate(milestone.endDate)}
+                                {formatDate(phase.startDate)} -{" "}
+                                {formatDate(phase.endDate)}
                               </div>
                               <Tag
                                 color={
-                                  milestone.status === 1
-                                    ? "success"
-                                    : "processing"
+                                  phase.status === 1 ? "success" : "processing"
                                 }
                               >
-                                {milestone.status === 1
+                                {phase.status === 1
                                   ? "Completed"
                                   : "In Progress"}
                               </Tag>
                             </div>
                           }
-                          status={milestone.status === 1 ? "finish" : "process"}
+                          status={phase.status === 1 ? "finish" : "process"}
                         />
                       ))}
                     </Steps>
                   </div>
                 ) : (
-                  <Empty description="No milestones found" />
+                  <Empty description="No project phases found" />
                 )}
               </Card>
             </motion.div>
@@ -896,7 +890,7 @@ const ProjectDetails = () => {
           </motion.div>
         )}
 
-        {activeSection === "milestones" && (
+        {activeSection === "phases" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -914,13 +908,13 @@ const ProjectDetails = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge
-                      count={completedMilestones}
+                      count={completedPhases}
                       className="site-badge-count-4"
                       style={{ backgroundColor: "#10b981" }}
                     />
                     <Text>of</Text>
                     <Badge
-                      count={totalMilestones}
+                      count={totalPhases}
                       className="site-badge-count-4"
                       style={{ backgroundColor: "#F2722B" }}
                     />
@@ -961,12 +955,12 @@ const ProjectDetails = () => {
                 </Row>
               </div>
 
-              {projectDetails.milestones &&
-              projectDetails.milestones.length > 0 ? (
+              {projectDetails.projectPhases &&
+              projectDetails.projectPhases.length > 0 ? (
                 <div className="space-y-6">
-                  {projectDetails.milestones.map((milestone, index) => (
+                  {projectDetails.projectPhases.map((phase, index) => (
                     <motion.div
-                      key={milestone.milestoneId}
+                      key={phase.projectPhaseId}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -981,13 +975,13 @@ const ProjectDetails = () => {
                               className={`
                               flex items-center justify-center w-12 h-12 rounded-full
                               ${
-                                milestone.status === 1
+                                phase.status === 1
                                   ? "bg-green-100 text-green-600"
                                   : "bg-orange-100 text-[#F2722B]"
                               }
                             `}
                             >
-                              {milestone.status === 1 ? (
+                              {phase.status === 1 ? (
                                 <CheckOutlined />
                               ) : (
                                 <ClockCircleOutlined />
@@ -998,24 +992,22 @@ const ProjectDetails = () => {
                             <div className="flex flex-wrap md:flex-nowrap justify-between items-start gap-4 mb-3">
                               <div>
                                 <h3 className="text-lg font-medium text-gray-800">
-                                  {milestone.title}
+                                  {phase.title}
                                 </h3>
                                 <div className="text-sm text-gray-500 mt-1">
                                   <CalendarOutlined className="mr-1" />
-                                  {formatDate(milestone.startDate)} -{" "}
-                                  {formatDate(milestone.endDate)}
+                                  {formatDate(phase.startDate)} -{" "}
+                                  {formatDate(phase.endDate)}
                                 </div>
                               </div>
                               <div className="flex gap-2">
                                 <Tag
                                   color={
-                                    milestone.status === 1
-                                      ? "success"
-                                      : "warning"
+                                    phase.status === 1 ? "success" : "warning"
                                   }
                                   className="rounded-full px-3"
                                 >
-                                  {milestone.status === 1
+                                  {phase.status === 1
                                     ? "Completed"
                                     : "In Progress"}
                                 </Tag>
@@ -1023,9 +1015,7 @@ const ProjectDetails = () => {
                                   type="primary"
                                   size="small"
                                   icon={<EditOutlined />}
-                                  onClick={() =>
-                                    handleUpdateMilestone(milestone)
-                                  }
+                                  onClick={() => handleUpdatePhase(phase)}
                                   className="rounded-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none hover:from-[#E65D1B] hover:to-[#FF9500]"
                                 >
                                   Update
@@ -1034,10 +1024,10 @@ const ProjectDetails = () => {
                             </div>
                             <div className="mt-2">
                               <Progress
-                                percent={milestone.status === 1 ? 100 : 50}
+                                percent={phase.status === 1 ? 100 : 50}
                                 showInfo={false}
                                 strokeColor={
-                                  milestone.status === 1 ? "#10b981" : "#F2722B"
+                                  phase.status === 1 ? "#10b981" : "#F2722B"
                                 }
                                 strokeWidth={8}
                               />
@@ -1051,7 +1041,9 @@ const ProjectDetails = () => {
               ) : (
                 <Empty
                   description={
-                    <span className="text-gray-500">No milestones found</span>
+                    <span className="text-gray-500">
+                      No project phases found
+                    </span>
                   }
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
@@ -1176,12 +1168,12 @@ const ProjectDetails = () => {
         )}
       </div>
 
-      {/* Update Milestone Modal */}
+      {/* Update Phase Modal */}
       <Modal
         title={
           <div className="flex items-center">
             <CalendarOutlined className="text-[#F2722B] mr-2" />
-            <span>Update Milestone</span>
+            <span>Update Project Phase</span>
           </div>
         }
         open={isModalVisible}
@@ -1193,13 +1185,11 @@ const ProjectDetails = () => {
             "bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none",
         }}
       >
-        <Form form={milestonesForm} layout="vertical" className="mt-4">
+        <Form form={phasesForm} layout="vertical" className="mt-4">
           <Form.Item
             name="title"
-            label="Milestone Title"
-            rules={[
-              { required: true, message: "Please enter milestone title" },
-            ]}
+            label="Phase Title"
+            rules={[{ required: true, message: "Please enter phase title" }]}
           >
             <Input size="large" className="rounded-lg" />
           </Form.Item>

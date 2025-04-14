@@ -87,11 +87,11 @@ const RegisterResearch = () => {
         return dateWithTime.format("YYYY-MM-DDTHH:mm:ss");
       };
 
-      // Transform milestones to match API requirements
-      const transformedMilestones = values.milestones.map((milestone) => ({
-        title: milestone.title,
-        startDate: formatDate(milestone.startDate || values.timeline.start),
-        endDate: formatDate(milestone.endDate || values.timeline.end),
+      // Transform project phases to match API requirements
+      const projectPhases = values.projectPhases.map((phase) => ({
+        title: phase.title,
+        startDate: formatDate(phase.startDate || values.timeline.start),
+        endDate: formatDate(phase.endDate || values.timeline.end),
       }));
 
       // Prepare request payload
@@ -104,8 +104,10 @@ const RegisterResearch = () => {
         approvedBudget: values.budget,
         groupId: values.group_id,
         departmentId: values.department_id,
-        milestones: transformedMilestones,
+        projectPhases: projectPhases,
       };
+
+      console.log("Sending project data:", projectData);
 
       // Step 1: Register the project first
       const response = await registerProject(projectData).unwrap();
@@ -467,7 +469,7 @@ const RegisterResearch = () => {
             </Form.Item>
           </Card>
 
-          {/* Timeline & Milestones Card */}
+          {/* Timeline & Project Phases Card */}
           <Card
             className="shadow-md rounded-xl border-0 overflow-hidden"
             headStyle={{
@@ -480,10 +482,10 @@ const RegisterResearch = () => {
               <CalendarOutlined className="text-2xl text-[#F2722B] mr-3" />
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">
-                  Timeline & Milestones
+                  Timeline & Project Phases
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Define project milestones and deadlines
+                  Define project phases and deadlines
                 </p>
               </div>
             </div>
@@ -609,13 +611,13 @@ const RegisterResearch = () => {
             </Form.Item>
 
             <Form.List
-              name="milestones"
+              name="projectPhases"
               rules={[
                 {
-                  validator: async (_, milestones) => {
-                    if (!milestones || milestones.length < 1) {
+                  validator: async (_, phases) => {
+                    if (!phases || phases.length < 1) {
                       return Promise.reject(
-                        new Error("At least one milestone is required")
+                        new Error("At least one project phase is required")
                       );
                     }
                   },
@@ -627,10 +629,10 @@ const RegisterResearch = () => {
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <span className="text-gray-700 font-medium">
-                        Project Milestones
+                        Project Phases
                       </span>
                       <div className="text-sm text-gray-500 mt-1">
-                        Define key milestones and their deadlines
+                        Define key project phases and their deadlines
                       </div>
                     </div>
                     <Button
@@ -640,7 +642,7 @@ const RegisterResearch = () => {
                     >
                       <div className="flex items-center">
                         <PlusOutlined className="mr-1" />
-                        Add Milestone
+                        Add Phase
                       </div>
                     </Button>
                   </div>
@@ -652,10 +654,10 @@ const RegisterResearch = () => {
                           <CalendarOutlined className="text-xl text-[#F2722B]" />
                         </div>
                         <h3 className="text-sm font-medium text-gray-900">
-                          No milestones added
+                          No project phases added
                         </h3>
                         <p className="mt-1 text-sm text-gray-500">
-                          Get started by adding your first project milestone
+                          Get started by adding your first project phase
                         </p>
                       </div>
                     </div>
@@ -674,7 +676,7 @@ const RegisterResearch = () => {
                                 </span>
                               </div>
                               <span className="text-base font-medium text-gray-900">
-                                Milestone {index + 1}
+                                Phase {index + 1}
                               </span>
                             </div>
                             <Button
@@ -692,12 +694,12 @@ const RegisterResearch = () => {
                               rules={[
                                 {
                                   required: true,
-                                  message: "Please enter milestone title",
+                                  message: "Please enter project phase title",
                                 },
                               ]}
                             >
                               <Input
-                                placeholder="Enter milestone title"
+                                placeholder="Enter project phase title"
                                 className="rounded-lg"
                               />
                             </Form.Item>
@@ -712,11 +714,86 @@ const RegisterResearch = () => {
                                     required: true,
                                     message: "Please select start date",
                                   },
+                                  ({ getFieldValue }) => ({
+                                    validator(_, value) {
+                                      if (!value) return Promise.resolve();
+
+                                      // Check phase start date is within project duration
+                                      const projectStart = getFieldValue([
+                                        "timeline",
+                                        "start",
+                                      ]);
+                                      const projectEnd = getFieldValue([
+                                        "timeline",
+                                        "end",
+                                      ]);
+
+                                      if (
+                                        projectStart &&
+                                        value.isBefore(projectStart)
+                                      ) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "Phase cannot start before project start date"
+                                          )
+                                        );
+                                      }
+
+                                      if (
+                                        projectEnd &&
+                                        value.isAfter(projectEnd)
+                                      ) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "Phase cannot start after project end date"
+                                          )
+                                        );
+                                      }
+
+                                      // Validate against phase end date
+                                      const phaseEnd = getFieldValue([
+                                        "projectPhases",
+                                        field.name,
+                                        "endDate",
+                                      ]);
+                                      if (phaseEnd && value.isAfter(phaseEnd)) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "Start date must be before end date"
+                                          )
+                                        );
+                                      }
+
+                                      return Promise.resolve();
+                                    },
+                                  }),
                                 ]}
                               >
                                 <DatePicker
                                   placeholder="Select start date"
                                   className="w-full rounded-lg"
+                                  disabledDate={(current) => {
+                                    const projectStart = form.getFieldValue([
+                                      "timeline",
+                                      "start",
+                                    ]);
+                                    const projectEnd = form.getFieldValue([
+                                      "timeline",
+                                      "end",
+                                    ]);
+
+                                    // Disable dates outside project timeline
+                                    return (
+                                      (current &&
+                                        current < moment().startOf("day")) ||
+                                      (projectStart &&
+                                        current &&
+                                        current < projectStart) ||
+                                      (projectEnd &&
+                                        current &&
+                                        current > projectEnd)
+                                    );
+                                  }}
                                 />
                               </Form.Item>
 
@@ -729,11 +806,97 @@ const RegisterResearch = () => {
                                     required: true,
                                     message: "Please select end date",
                                   },
+                                  ({ getFieldValue }) => ({
+                                    validator(_, value) {
+                                      if (!value) return Promise.resolve();
+
+                                      // Check phase end date is within project duration
+                                      const projectStart = getFieldValue([
+                                        "timeline",
+                                        "start",
+                                      ]);
+                                      const projectEnd = getFieldValue([
+                                        "timeline",
+                                        "end",
+                                      ]);
+
+                                      if (
+                                        projectStart &&
+                                        value.isBefore(projectStart)
+                                      ) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "Phase cannot end before project start date"
+                                          )
+                                        );
+                                      }
+
+                                      if (
+                                        projectEnd &&
+                                        value.isAfter(projectEnd)
+                                      ) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "Phase cannot end after project end date"
+                                          )
+                                        );
+                                      }
+
+                                      // Validate against phase start date
+                                      const phaseStart = getFieldValue([
+                                        "projectPhases",
+                                        field.name,
+                                        "startDate",
+                                      ]);
+                                      if (
+                                        phaseStart &&
+                                        value.isBefore(phaseStart)
+                                      ) {
+                                        return Promise.reject(
+                                          new Error(
+                                            "End date must be after start date"
+                                          )
+                                        );
+                                      }
+
+                                      return Promise.resolve();
+                                    },
+                                  }),
                                 ]}
                               >
                                 <DatePicker
                                   placeholder="Select end date"
                                   className="w-full rounded-lg"
+                                  disabledDate={(current) => {
+                                    const projectStart = form.getFieldValue([
+                                      "timeline",
+                                      "start",
+                                    ]);
+                                    const projectEnd = form.getFieldValue([
+                                      "timeline",
+                                      "end",
+                                    ]);
+                                    const phaseStart = form.getFieldValue([
+                                      "projectPhases",
+                                      field.name,
+                                      "startDate",
+                                    ]);
+
+                                    // Disable dates outside project timeline and before phase start
+                                    return (
+                                      (current &&
+                                        current < moment().startOf("day")) ||
+                                      (projectStart &&
+                                        current &&
+                                        current < projectStart) ||
+                                      (projectEnd &&
+                                        current &&
+                                        current > projectEnd) ||
+                                      (phaseStart &&
+                                        current &&
+                                        current < phaseStart)
+                                    );
+                                  }}
                                 />
                               </Form.Item>
                             </div>
