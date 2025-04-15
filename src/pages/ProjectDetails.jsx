@@ -103,6 +103,14 @@ const DOCUMENT_TYPE = {
   2: "Council Document",
 };
 
+// Project Phase Status enum mapping
+const PHASE_STATUS = {
+  0: "In Progress",
+  1: "Pending",
+  2: "Completed",
+  3: "Overdue",
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -130,6 +138,9 @@ const ProjectDetails = () => {
   const [phasesForm] = Form.useForm();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [fundRequestModalVisible, setFundRequestModalVisible] = useState(false);
+  const [selectedPhaseForFunding, setSelectedPhaseForFunding] = useState(null);
+  const [fundRequestForm] = Form.useForm();
 
   const {
     data: projectDetailsData,
@@ -177,6 +188,33 @@ const ProjectDetails = () => {
   const showMemberDetails = (member) => {
     setSelectedMember(member);
     setDrawerVisible(true);
+  };
+
+  const showFundRequestModal = (phase) => {
+    setSelectedPhaseForFunding(phase);
+    setFundRequestModalVisible(true);
+    fundRequestForm.resetFields();
+
+    // Set default values
+    fundRequestForm.setFieldsValue({
+      phaseId: phase.projectPhaseId,
+      phaseTitle: phase.title,
+      requestedAmount: Math.round(projectDetails.approvedBudget * 0.2), // Default to 20% of project budget
+      purpose: `Funding for completed phase: ${phase.title}`,
+    });
+  };
+
+  const handleFundRequestSubmit = async () => {
+    try {
+      const values = await fundRequestForm.validateFields();
+      console.log("Fund request values:", values);
+
+      // Here you would make an API call to submit the fund request
+      message.success("Fund disbursement request submitted successfully!");
+      setFundRequestModalVisible(false);
+    } catch (error) {
+      console.error("Validation failed:", error);
+    }
   };
 
   if (!currentProjectId) {
@@ -314,7 +352,7 @@ const ProjectDetails = () => {
 
   // Calculate phase progress
   const completedPhases =
-    projectDetails.projectPhases?.filter((p) => p.status === 1)?.length || 0;
+    projectDetails.projectPhases?.filter((p) => p.status === 2)?.length || 0;
   const totalPhases = projectDetails.projectPhases?.length || 0;
   const progressPercentage =
     totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
@@ -705,16 +743,29 @@ const ProjectDetails = () => {
                           title={
                             <div className="flex items-center justify-between">
                               <span className="font-medium">{phase.title}</span>
-                              <Button
-                                type="link"
-                                icon={<EditOutlined />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUpdatePhase(phase);
-                                }}
-                              >
-                                Update
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="link"
+                                  icon={<EditOutlined />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdatePhase(phase);
+                                  }}
+                                >
+                                  Update
+                                </Button>
+                                {phase.status === 2 && (
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<DollarOutlined />}
+                                    onClick={() => showFundRequestModal(phase)}
+                                    className="rounded-full bg-gradient-to-r from-[#22c55e] to-[#16a34a] border-none hover:from-[#16a34a] hover:to-[#15803d]"
+                                  >
+                                    Request Funds
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           }
                           description={
@@ -725,16 +776,26 @@ const ProjectDetails = () => {
                               </div>
                               <Tag
                                 color={
-                                  phase.status === 1 ? "success" : "processing"
+                                  phase.status === 2
+                                    ? "success"
+                                    : phase.status === 3
+                                    ? "error"
+                                    : phase.status === 1
+                                    ? "warning"
+                                    : "blue"
                                 }
                               >
-                                {phase.status === 1
-                                  ? "Completed"
-                                  : "In Progress"}
+                                {PHASE_STATUS[phase.status]}
                               </Tag>
                             </div>
                           }
-                          status={phase.status === 1 ? "finish" : "process"}
+                          status={
+                            phase.status === 2
+                              ? "finish"
+                              : phase.status === 3
+                              ? "error"
+                              : "process"
+                          }
                         />
                       ))}
                     </Steps>
@@ -975,14 +1036,20 @@ const ProjectDetails = () => {
                               className={`
                               flex items-center justify-center w-12 h-12 rounded-full
                               ${
-                                phase.status === 1
+                                phase.status === 2
                                   ? "bg-green-100 text-green-600"
+                                  : phase.status === 3
+                                  ? "bg-red-100 text-red-600"
+                                  : phase.status === 1
+                                  ? "bg-yellow-100 text-yellow-600"
                                   : "bg-orange-100 text-[#F2722B]"
                               }
                             `}
                             >
-                              {phase.status === 1 ? (
+                              {phase.status === 2 ? (
                                 <CheckOutlined />
+                              ) : phase.status === 3 ? (
+                                <ClockCircleOutlined className="text-red-600" />
                               ) : (
                                 <ClockCircleOutlined />
                               )}
@@ -1003,13 +1070,17 @@ const ProjectDetails = () => {
                               <div className="flex gap-2">
                                 <Tag
                                   color={
-                                    phase.status === 1 ? "success" : "warning"
+                                    phase.status === 2
+                                      ? "success"
+                                      : phase.status === 3
+                                      ? "error"
+                                      : phase.status === 1
+                                      ? "warning"
+                                      : "blue"
                                   }
                                   className="rounded-full px-3"
                                 >
-                                  {phase.status === 1
-                                    ? "Completed"
-                                    : "In Progress"}
+                                  {PHASE_STATUS[phase.status]}
                                 </Tag>
                                 <Button
                                   type="primary"
@@ -1024,10 +1095,25 @@ const ProjectDetails = () => {
                             </div>
                             <div className="mt-2">
                               <Progress
-                                percent={phase.status === 1 ? 100 : 50}
+                                percent={
+                                  phase.status === 2
+                                    ? 100
+                                    : phase.status === 1
+                                    ? 25
+                                    : phase.status === 3
+                                    ? 100
+                                    : 50
+                                }
                                 showInfo={false}
                                 strokeColor={
-                                  phase.status === 1 ? "#10b981" : "#F2722B"
+                                  phase.status === 2
+                                    ? "#10b981"
+                                    : phase.status === 3
+                                    ? "#ef4444"
+                                    : "#F2722B"
+                                }
+                                status={
+                                  phase.status === 3 ? "exception" : "normal"
                                 }
                                 strokeWidth={8}
                               />
@@ -1217,16 +1303,62 @@ const ProjectDetails = () => {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="status"
-            label="Status"
-            rules={[{ required: true, message: "Please select status" }]}
-          >
-            <Select size="large" className="rounded-lg">
-              <Select.Option value="0">In Progress</Select.Option>
-              <Select.Option value="1">Completed</Select.Option>
-            </Select>
-          </Form.Item>
+
+          {/* Enhanced status section with explanations */}
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <Text strong className="block mb-2">
+              Phase Status
+            </Text>
+            <Text className="text-gray-600 text-sm block mb-3">
+              Updating a phase to "Completed" status will allow you to request
+              fund disbursement for this phase.
+            </Text>
+
+            <Form.Item
+              name="status"
+              rules={[{ required: true, message: "Please select status" }]}
+              className="mb-0"
+            >
+              <Select size="large" className="rounded-lg">
+                <Select.Option value="0">
+                  <div className="flex items-center">
+                    <ClockCircleOutlined className="text-blue-500 mr-2" />
+                    <span>In Progress</span>
+                  </div>
+                </Select.Option>
+                <Select.Option value="1">
+                  <div className="flex items-center">
+                    <ClockCircleOutlined className="text-yellow-500 mr-2" />
+                    <span>Pending</span>
+                  </div>
+                </Select.Option>
+                <Select.Option value="2">
+                  <div className="flex items-center">
+                    <CheckOutlined className="text-green-500 mr-2" />
+                    <span>Completed</span>
+                  </div>
+                </Select.Option>
+                <Select.Option value="3">
+                  <div className="flex items-center">
+                    <ClockCircleOutlined className="text-red-500 mr-2" />
+                    <span>Overdue</span>
+                  </div>
+                </Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          {phasesForm.getFieldValue("status") === "2" && (
+            <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
+              <div className="flex items-start">
+                <InfoCircleOutlined className="text-green-600 mt-0.5 mr-2" />
+                <Text className="text-green-700">
+                  Once you mark this phase as completed, you will be able to
+                  request fund disbursement.
+                </Text>
+              </div>
+            </div>
+          )}
         </Form>
       </Modal>
 
@@ -1322,6 +1454,148 @@ const ProjectDetails = () => {
           </div>
         )}
       </Drawer>
+
+      {/* Fund Request Modal */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <DollarOutlined className="text-green-500 mr-2" />
+            <span>Request Fund Disbursement</span>
+          </div>
+        }
+        open={fundRequestModalVisible}
+        onCancel={() => setFundRequestModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
+          <div className="flex items-start">
+            <CheckOutlined className="text-green-500 text-lg mt-0.5 mr-2" />
+            <div>
+              <Text strong className="text-green-700">
+                Phase Completed
+              </Text>
+              <Text className="text-green-600 block">
+                You are requesting funds for a completed project phase. The
+                request will be reviewed by administrators before disbursement.
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        <Form
+          form={fundRequestForm}
+          layout="vertical"
+          onFinish={handleFundRequestSubmit}
+          className="mt-4"
+        >
+          <Form.Item name="phaseId" hidden>
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="phaseTitle" label="Completed Phase">
+            <Input disabled className="bg-gray-50" />
+          </Form.Item>
+
+          <Form.Item
+            name="requestedAmount"
+            label="Requested Amount (VND)"
+            rules={[
+              { required: true, message: "Please enter the requested amount" },
+              {
+                validator: (_, value) => {
+                  if (!value || value <= 0) {
+                    return Promise.reject(
+                      new Error("Amount must be greater than 0")
+                    );
+                  }
+                  if (value > projectDetails.approvedBudget) {
+                    return Promise.reject(
+                      new Error(
+                        `Amount cannot exceed project budget (₫${projectDetails.approvedBudget.toLocaleString()})`
+                      )
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <InputNumber
+              min={1}
+              max={projectDetails.approvedBudget}
+              formatter={(value) =>
+                `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
+              className="w-full"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="purpose"
+            label="Purpose"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the purpose of this fund request",
+              },
+            ]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Describe how the funds will be used"
+            />
+          </Form.Item>
+
+          <Form.Item name="itemizedExpenses" label="Itemized Expenses">
+            <Input.TextArea
+              rows={4}
+              placeholder="List specific expenses (e.g., Equipment: ₫5,000,000, Materials: ₫3,000,000, etc.)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="documentationFiles"
+            label="Supporting Documentation"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) {
+                return e;
+              }
+              return e && e.fileList;
+            }}
+          >
+            <Upload.Dragger
+              name="files"
+              beforeUpload={() => false}
+              multiple={true}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined className="text-gray-400" />
+              </p>
+              <p className="ant-upload-text">Click or drag files to upload</p>
+              <p className="ant-upload-hint text-xs text-gray-500">
+                Upload invoices, receipts, quotes, or other supporting documents
+              </p>
+            </Upload.Dragger>
+          </Form.Item>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button onClick={() => setFundRequestModalVisible(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-gradient-to-r from-[#22c55e] to-[#16a34a] hover:from-[#16a34a] hover:to-[#15803d] border-none"
+              icon={<DollarOutlined />}
+            >
+              Submit Fund Request
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };
