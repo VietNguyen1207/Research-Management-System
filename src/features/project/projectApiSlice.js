@@ -124,6 +124,16 @@ export const projectApiSlice = apiSlice.injectEndpoints({
         { type: "ApprovedProjects", id: "LIST" },
       ],
     }),
+    updateProjectPhase: builder.mutation({
+      query: ({ projectPhaseId, data }) => ({
+        url: `/project-phases/${projectPhaseId}`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { projectPhaseId }) => [
+        { type: "Projects", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -137,4 +147,5 @@ export const {
   useGetProjectsByDepartmentQuery,
   useApproveProjectMutation,
   useRejectProjectMutation,
+  useUpdateProjectPhaseMutation,
 } = projectApiSlice;
