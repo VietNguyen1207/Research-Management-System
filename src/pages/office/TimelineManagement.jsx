@@ -22,6 +22,7 @@ import {
   Statistic,
   Spin,
   ConfigProvider,
+  Skeleton,
 } from "antd";
 import {
   CalendarOutlined,
@@ -582,6 +583,53 @@ const TimelineManagement = () => {
     }
   }, [editingTimeline, isModalVisible]);
 
+  // Timeline Visualization Card Skeleton
+  const TimelineVisualizationSkeleton = () => (
+    <div className="p-4">
+      <Skeleton.Input style={{ width: 150, marginBottom: 16 }} active />
+      <Skeleton paragraph={{ rows: 1, width: "90%" }} active />
+      <div className="ml-4 mt-6">
+        {[1, 2, 3, 4].map((item) => (
+          <div key={item} className="mb-6">
+            <div className="flex">
+              <div className="mr-4">
+                <Skeleton.Avatar size="small" active />
+              </div>
+              <div className="flex-1">
+                <Skeleton.Input style={{ width: "100%" }} active />
+                <Skeleton paragraph={{ rows: 1, width: ["60%"] }} active />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Timeline Table Skeleton
+  const TimelineTableSkeleton = () => (
+    <div className="p-4">
+      <Skeleton
+        active
+        paragraph={{
+          rows: 6,
+          width: ["100%", "100%", "100%", "100%", "100%", "100%"],
+        }}
+      />
+    </div>
+  );
+
+  // Timeline Sequence Cards Skeleton
+  const TimelineSequencesSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[1, 2, 3].map((item) => (
+        <Card key={item} className="border border-gray-200">
+          <Skeleton active avatar paragraph={{ rows: 2 }} />
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -628,9 +676,7 @@ const TimelineManagement = () => {
                 styles={{ body: { height: "500px", overflowY: "auto" } }}
               >
                 {isLoadingSequences ? (
-                  <div className="h-full flex justify-center items-center">
-                    <Spin size="large" />
-                  </div>
+                  <TimelineVisualizationSkeleton />
                 ) : isErrorSequences ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8">
                     <ExclamationCircleOutlined className="text-4xl text-red-500 mb-4" />
@@ -651,9 +697,7 @@ const TimelineManagement = () => {
                   </div>
                 ) : selectedGroup ? (
                   isLoadingTimelines ? (
-                    <div className="h-full flex justify-center items-center">
-                      <Spin size="large" />
-                    </div>
+                    <TimelineVisualizationSkeleton />
                   ) : isErrorTimelines ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8">
                       <ExclamationCircleOutlined className="text-4xl text-red-500 mb-4" />
@@ -1017,7 +1061,10 @@ const TimelineManagement = () => {
                 <Table
                   columns={columns}
                   dataSource={timelineData}
-                  loading={isLoadingTimelines}
+                  loading={{
+                    spinning: isLoadingTimelines,
+                    indicator: <></>,
+                  }}
                   rowKey="id"
                   pagination={{ pageSize: 5 }}
                   scroll={{ x: "max-content" }}
@@ -1029,6 +1076,7 @@ const TimelineManagement = () => {
                       : "Please select a timeline sequence",
                   }}
                 />
+                {isLoadingTimelines && <TimelineTableSkeleton />}
               </Card>
             </motion.div>
           </Col>
@@ -1352,48 +1400,54 @@ const TimelineManagement = () => {
               }
               className="shadow-md rounded-xl border-0"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {timelineSequences.map((sequence) => (
-                  <Card
-                    key={sequence.id}
-                    hoverable
-                    className={`border border-gray-200 hover:shadow-md transition-all duration-300 ${
-                      selectedGroup === sequence.id
-                        ? "border-[#F2722B] shadow-md"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      setSelectedGroup(sequence.id);
-                      form.setFieldsValue({ timelineGroup: sequence.id });
-                    }}
-                  >
-                    <div className="flex items-start">
-                      <div
-                        className="w-4 h-4 rounded-full mt-1 mr-3 flex-shrink-0"
-                        style={{ backgroundColor: sequence.sequenceColor }}
-                      ></div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-800 mb-1">
-                          {sequence.sequenceName}
-                        </div>
-                        <Text
-                          type="secondary"
-                          ellipsis={{ tooltip: sequence.sequenceDescription }}
-                          className="text-sm mb-2 block"
-                        >
-                          {sequence.sequenceDescription}
-                        </Text>
-                        <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
-                          <div>Created by: {sequence.createdByName}</div>
-                          <div>
-                            {new Date(sequence.createdAt).toLocaleDateString()}
+              {isLoadingSequences ? (
+                <TimelineSequencesSkeleton />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {timelineSequences.map((sequence) => (
+                    <Card
+                      key={sequence.id}
+                      hoverable
+                      className={`border border-gray-200 hover:shadow-md transition-all duration-300 ${
+                        selectedGroup === sequence.id
+                          ? "border-[#F2722B] shadow-md"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedGroup(sequence.id);
+                        form.setFieldsValue({ timelineGroup: sequence.id });
+                      }}
+                    >
+                      <div className="flex items-start">
+                        <div
+                          className="w-4 h-4 rounded-full mt-1 mr-3 flex-shrink-0"
+                          style={{ backgroundColor: sequence.sequenceColor }}
+                        ></div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800 mb-1">
+                            {sequence.sequenceName}
+                          </div>
+                          <Text
+                            type="secondary"
+                            ellipsis={{ tooltip: sequence.sequenceDescription }}
+                            className="text-sm mb-2 block"
+                          >
+                            {sequence.sequenceDescription}
+                          </Text>
+                          <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+                            <div>Created by: {sequence.createdByName}</div>
+                            <div>
+                              {new Date(
+                                sequence.createdAt
+                              ).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </Card>
           </motion.div>
         )}
@@ -1414,92 +1468,131 @@ const TimelineManagement = () => {
             }
             className="shadow-md rounded-xl border-0"
           >
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={6}>
-                <Card className="text-center border-0 bg-gray-50">
-                  <Statistic
-                    title={<span className="text-gray-600">Sequences</span>}
-                    value={timelineSequences?.length || 0}
-                    valueStyle={{ color: "#F2722B" }}
+            {isLoadingSequences || isLoadingTimelines ? (
+              <>
+                <Row gutter={[16, 16]}>
+                  {[1, 2, 3, 4].map((item) => (
+                    <Col xs={24} sm={12} md={6} key={item}>
+                      <Card className="text-center border-0 bg-gray-50">
+                        <Skeleton.Input
+                          style={{ width: "60%", height: 16 }}
+                          active
+                        />
+                        <Skeleton.Input
+                          style={{ width: "40%", height: 32, marginTop: 12 }}
+                          active
+                        />
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+                <div className="mt-6">
+                  <Skeleton.Input
+                    style={{ width: 180, height: 24, marginBottom: 16 }}
+                    active
                   />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Card className="text-center border-0 bg-gray-50">
-                  <Statistic
-                    title={
-                      <span className="text-gray-600">Total Timelines</span>
-                    }
-                    value={timelineData?.length || 0}
-                    valueStyle={{ color: "#F2722B" }}
+                  <Skeleton.Input
+                    style={{ width: "100%", height: 40 }}
+                    active
                   />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Card className="text-center border-0 bg-gray-50">
-                  <Statistic
-                    title={<span className="text-gray-600">Active</span>}
-                    value={
-                      timelineData?.filter((item) => item.status === "active")
-                        .length
-                    }
-                    valueStyle={{ color: "#4CAF50" }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Card className="text-center border-0 bg-gray-50">
-                  <Statistic
-                    title={<span className="text-gray-600">Upcoming</span>}
-                    value={
-                      timelineData?.filter((item) => item.status === "upcoming")
-                        .length
-                    }
-                    valueStyle={{ color: "#2196F3" }}
-                  />
-                </Card>
-              </Col>
-            </Row>
+                </div>
+              </>
+            ) : (
+              <>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card className="text-center border-0 bg-gray-50">
+                      <Statistic
+                        title={<span className="text-gray-600">Sequences</span>}
+                        value={timelineSequences?.length || 0}
+                        valueStyle={{ color: "#F2722B" }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card className="text-center border-0 bg-gray-50">
+                      <Statistic
+                        title={
+                          <span className="text-gray-600">Total Timelines</span>
+                        }
+                        value={timelineData?.length || 0}
+                        valueStyle={{ color: "#F2722B" }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card className="text-center border-0 bg-gray-50">
+                      <Statistic
+                        title={<span className="text-gray-600">Active</span>}
+                        value={
+                          timelineData?.filter(
+                            (item) => item.status === "active"
+                          ).length
+                        }
+                        valueStyle={{ color: "#4CAF50" }}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} md={6}>
+                    <Card className="text-center border-0 bg-gray-50">
+                      <Statistic
+                        title={<span className="text-gray-600">Upcoming</span>}
+                        value={
+                          timelineData?.filter(
+                            (item) => item.status === "upcoming"
+                          ).length
+                        }
+                        valueStyle={{ color: "#2196F3" }}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
 
-            <div className="mt-6">
-              <Title level={5} className="mb-4">
-                Timeline Distribution by Type
-              </Title>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  {
-                    type: "registration",
-                    color: "#F2722B",
-                    label: "Registration",
-                  },
-                  { type: "review", color: "#4CAF50", label: "Review" },
-                  { type: "submission", color: "#2196F3", label: "Submission" },
-                  { type: "budget", color: "#9C27B0", label: "Budget" },
-                ].map((item) => {
-                  const count = timelineData?.filter(
-                    (timeline) => timeline.type === item.type
-                  ).length;
-                  return (
-                    <Badge
-                      key={item.type}
-                      count={count}
-                      showZero
-                      style={{
-                        backgroundColor: item.color,
-                      }}
-                    >
-                      <Tag
-                        color={item.color}
-                        style={{ padding: "5px 12px" }}
-                        className="mr-0"
-                      >
-                        {item.label}
-                      </Tag>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
+                <div className="mt-6">
+                  <Title level={5} className="mb-4">
+                    Timeline Distribution by Type
+                  </Title>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      {
+                        type: "registration",
+                        color: "#F2722B",
+                        label: "Registration",
+                      },
+                      { type: "review", color: "#4CAF50", label: "Review" },
+                      {
+                        type: "submission",
+                        color: "#2196F3",
+                        label: "Submission",
+                      },
+                      { type: "budget", color: "#9C27B0", label: "Budget" },
+                    ].map((item) => {
+                      const count = timelineData?.filter(
+                        (timeline) => timeline.type === item.type
+                      ).length;
+                      return (
+                        <Badge
+                          key={item.type}
+                          count={count}
+                          showZero
+                          style={{
+                            backgroundColor: item.color,
+                          }}
+                        >
+                          <Tag
+                            color={item.color}
+                            style={{ padding: "5px 12px" }}
+                            className="mr-0"
+                          >
+                            {item.label}
+                          </Tag>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </Card>
         </motion.div>
 
