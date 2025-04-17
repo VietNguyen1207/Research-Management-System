@@ -22,6 +22,7 @@ import Timeline from "../pages/office/TimelineManagement";
 import TimelineManagement from "../pages/office/TimelineManagement";
 import AllTimelines from "../pages/office/AllTimelines";
 import ReviewProject from "../pages/lecturer/ReviewProject";
+import ProjectQuota from "../pages/office/ProjectQuota";
 
 export const routes = [
   {
@@ -137,7 +138,8 @@ export const routes = [
           </ProtectedRoutes>
         ),
         children: [
-          { path: "office-quota", element: <OfficeQuota /> },
+          { path: "quota-management", element: <OfficeQuota /> },
+          { path: "project-quota/:departmentId", element: <ProjectQuota /> },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
         ],

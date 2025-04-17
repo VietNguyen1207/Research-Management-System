@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Card,
@@ -19,6 +19,7 @@ import {
   Statistic,
   Alert,
   message,
+  Spin,
 } from "antd";
 import {
   SearchOutlined,
@@ -37,6 +38,8 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
+import { useGetQuotasQuery } from "../../features/quota/quotaApiSlice";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
@@ -49,8 +52,92 @@ const OfficeQuota = () => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState(null);
   const [budgetRangeFilter, setBudgetRangeFilter] = useState(null);
+  const navigate = useNavigate();
 
-  // Enhanced mock data
+  // Fetch quota data from API
+  const { data: quotasData, isLoading, isError, error } = useGetQuotasQuery();
+  const [departmentData, setDepartmentData] = useState([]);
+
+  // Transform API data to our component format
+  useEffect(() => {
+    if (quotasData) {
+      // Group quotas by department
+      const deptMap = new Map();
+
+      quotasData.forEach((quota) => {
+        if (!deptMap.has(quota.departmentId)) {
+          deptMap.set(quota.departmentId, {
+            key: quota.departmentId,
+            name: quota.departmentName,
+            email: "department@university.edu", // Default values since API doesn't provide these
+            phone: "+84 123 456 789", // Default values
+            department: quota.departmentName,
+            title: "Department",
+            ongoingProjects: 0,
+            totalBudget: 0,
+            usedBudget: 0,
+            remainingBudget: 0,
+            projectTypes: {
+              research: 0,
+              conference: 0,
+              journal: 0,
+            },
+            status: "Active",
+            budgetHistory: [],
+            projectQuotas: {
+              research: 2,
+              conference: 1,
+              journal: 1,
+            },
+            projects: [],
+          });
+        }
+
+        const dept = deptMap.get(quota.departmentId);
+
+        // Add project to department
+        dept.projects.push(quota);
+
+        // Update budget totals
+        dept.totalBudget += quota.projectApprovedBudget;
+        dept.usedBudget += quota.projectSpentBudget;
+
+        // Update project count by type
+        dept.ongoingProjects += 1;
+
+        // Update project types count
+        if (quota.projectTypeName === "Research") {
+          dept.projectTypes.research += 1;
+        } else if (quota.projectTypeName === "Conference") {
+          dept.projectTypes.conference += 1;
+        } else if (quota.projectTypeName === "Journal") {
+          dept.projectTypes.journal += 1;
+        }
+
+        // Add to budget history if not already there
+        const historyEntry = {
+          date: quota.createdAt,
+          amount: quota.allocatedBudget,
+          type: "Initial Allocation",
+          approvedBy: quota.allocatorName,
+        };
+
+        if (!dept.budgetHistory.some((h) => h.date === historyEntry.date)) {
+          dept.budgetHistory.push(historyEntry);
+        }
+      });
+
+      // Calculate remaining budget
+      deptMap.forEach((dept) => {
+        dept.remainingBudget = dept.totalBudget - dept.usedBudget;
+      });
+
+      setDepartmentData(Array.from(deptMap.values()));
+    }
+  }, [quotasData]);
+
+  // Enhanced mock data - commented out but preserved
+  /*
   const lecturersData = [
     {
       key: 1,
@@ -214,10 +301,11 @@ const OfficeQuota = () => {
       },
     },
   ];
+  */
 
   const columns = [
     {
-      title: "Lecturer Information",
+      title: "Department Information",
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
@@ -296,7 +384,10 @@ const OfficeQuota = () => {
       title: "Budget Allocation",
       key: "budget",
       render: (_, record) => {
-        const usagePercentage = (record.usedBudget / record.totalBudget) * 100;
+        const usagePercentage =
+          record.totalBudget === 0
+            ? 0
+            : (record.usedBudget / record.totalBudget) * 100;
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -409,7 +500,7 @@ const OfficeQuota = () => {
   };
 
   const handleViewDetails = (record) => {
-    // Implement detailed view
+    navigate(`/project-quota/${record.key}`);
   };
 
   const handleBudgetSubmit = async (values) => {
@@ -448,26 +539,50 @@ const OfficeQuota = () => {
     setBudgetRangeFilter(value);
   };
 
-  const filteredData = lecturersData.filter((lecturer) => {
+  const filteredData = departmentData.filter((dept) => {
     const matchesSearch =
       searchText === "" ||
-      lecturer.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      lecturer.department.toLowerCase().includes(searchText.toLowerCase());
+      dept.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      dept.department.toLowerCase().includes(searchText.toLowerCase());
 
     const matchesStatus =
-      !statusFilter ||
-      lecturer.status.toLowerCase() === statusFilter.toLowerCase();
+      !statusFilter || dept.status.toLowerCase() === statusFilter.toLowerCase();
 
     const matchesBudget =
       !budgetRangeFilter ||
-      (budgetRangeFilter === "high" && lecturer.totalBudget > 50000000) ||
+      (budgetRangeFilter === "high" && dept.totalBudget > 50000000) ||
       (budgetRangeFilter === "medium" &&
-        lecturer.totalBudget >= 20000000 &&
-        lecturer.totalBudget <= 50000000) ||
-      (budgetRangeFilter === "low" && lecturer.totalBudget < 20000000);
+        dept.totalBudget >= 20000000 &&
+        dept.totalBudget <= 50000000) ||
+      (budgetRangeFilter === "low" && dept.totalBudget < 20000000);
 
     return matchesSearch && matchesStatus && matchesBudget;
   });
+
+  // Show loading or error states
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spin size="large" tip="Loading quota data..." />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen pt-24 px-4 sm:px-6 lg:px-8">
+        <Alert
+          message="Error loading quotas"
+          description={
+            error?.data?.message ||
+            "Failed to load quota data. Please try again later."
+          }
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -476,12 +591,12 @@ const OfficeQuota = () => {
         <div className="text-center mb-16">
           <div className="inline-block">
             <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
-              Lecturer Quota Management
+              Quota Management
             </h2>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Manage and monitor lecturer budgets and project allocations
+            Manage and monitor department budgets and project allocations
           </p>
         </div>
 
@@ -490,8 +605,8 @@ const OfficeQuota = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
-                title={<Text className="text-gray-600">Total Lecturers</Text>}
-                value={lecturersData.length}
+                title={<Text className="text-gray-600">Total Departments</Text>}
+                value={departmentData.length}
                 prefix={<BankOutlined className="text-[#F2722B]" />}
               />
             </Card>
@@ -500,8 +615,8 @@ const OfficeQuota = () => {
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={<Text className="text-gray-600">Total Budget</Text>}
-                value={lecturersData.reduce(
-                  (sum, lecturer) => sum + lecturer.totalBudget,
+                value={departmentData.reduce(
+                  (sum, dept) => sum + dept.totalBudget,
                   0
                 )}
                 prefix={<DollarOutlined className="text-[#F2722B]" />}
@@ -514,8 +629,8 @@ const OfficeQuota = () => {
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={<Text className="text-gray-600">Active Projects</Text>}
-                value={lecturersData.reduce(
-                  (sum, lecturer) => sum + lecturer.ongoingProjects,
+                value={departmentData.reduce(
+                  (sum, dept) => sum + dept.ongoingProjects,
                   0
                 )}
                 prefix={<TeamOutlined className="text-[#F2722B]" />}
@@ -528,17 +643,21 @@ const OfficeQuota = () => {
                 title={
                   <Text className="text-gray-600">Budget Utilization</Text>
                 }
-                value={Math.round(
-                  (lecturersData.reduce(
-                    (sum, lecturer) => sum + lecturer.usedBudget,
-                    0
-                  ) /
-                    lecturersData.reduce(
-                      (sum, lecturer) => sum + lecturer.totalBudget,
-                      0
-                    )) *
-                    100
-                )}
+                value={
+                  departmentData.length
+                    ? Math.round(
+                        (departmentData.reduce(
+                          (sum, dept) => sum + dept.usedBudget,
+                          0
+                        ) /
+                          departmentData.reduce(
+                            (sum, dept) => sum + dept.totalBudget,
+                            0
+                          )) *
+                          100
+                      )
+                    : 0
+                }
                 suffix="%"
                 prefix={<BarChartOutlined className="text-[#F2722B]" />}
               />
@@ -551,7 +670,7 @@ const OfficeQuota = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Lecturers
+                Search Departments
               </label>
               <Search
                 placeholder="Search by name or department..."

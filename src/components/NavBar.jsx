@@ -81,7 +81,7 @@ const navItems = [
     label: "Quotas",
     subItems: [
       { icon: <FundOutlined />, label: "Department Quota" },
-      { icon: <FormOutlined />, label: "Office Quota" },
+      { icon: <FormOutlined />, label: "Quota Management" },
     ],
   },
   {
@@ -190,7 +190,7 @@ const NavBar = () => {
             return {
               ...item,
               subItems: item.subItems.filter(
-                (subItem) => subItem.label === "Office Quota"
+                (subItem) => subItem.label === "Quota Management"
               ),
             };
           }
@@ -296,8 +296,8 @@ const NavBar = () => {
       case "Department Quota":
         navigate("/department-quota");
         break;
-      case "Office Quota":
-        navigate("/office-quota");
+      case "Quota Management":
+        navigate("/quota-management");
         break;
       default:
         break;

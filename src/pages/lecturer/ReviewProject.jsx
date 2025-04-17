@@ -230,7 +230,7 @@ const ReviewProject = () => {
 
       // Create FormData and append the file
       const formData = new FormData();
-      formData.append("documentFile", file);
+      formData.append("documentFiles", file);
 
       // Call the API
       await approveProject({
@@ -267,7 +267,7 @@ const ReviewProject = () => {
 
       // Create FormData and append the file
       const formData = new FormData();
-      formData.append("documentFile", file);
+      formData.append("documentFiles", file);
 
       // Call the API
       await rejectProject({
