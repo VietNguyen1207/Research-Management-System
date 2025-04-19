@@ -254,11 +254,11 @@ const ProjectDetails = () => {
     setFundRequestModalVisible(true);
     fundRequestForm.resetFields();
 
-    // Set default values
+    // Set default values including the spent budget as the requested amount
     fundRequestForm.setFieldsValue({
       phaseId: phase.projectPhaseId,
       phaseTitle: phase.title,
-      requestedAmount: Math.round(projectDetails.approvedBudget * 0.2), // Default to 20% of project budget
+      requestedAmount: phase.spentBudget || 0, // Set amount to phase's spent budget
       purpose: `Funding for completed phase: ${phase.title}`,
     });
   };
@@ -284,33 +284,33 @@ const ProjectDetails = () => {
       // Get the disbursementId from the response
       const disbursementId = response.data?.disbursementId;
 
+      // Step 2: Upload documents if documents are provided and we have a disbursementId
       if (disbursementId && values.documentationFiles?.length > 0) {
-        // Step 2: Upload documents if documents are provided and we have a disbursementId
+        // Create a single FormData for all files
         const formData = new FormData();
-        for (const file of values.documentationFiles) {
-          try {
-            // Create a new FormData for each file
-            const singleFileFormData = new FormData();
-            singleFileFormData.append("documentFile", file.originFileObj);
 
-            // Upload the document
-            await uploadDisbursementDocument({
-              disbursementId,
-              formData: singleFileFormData,
-            }).unwrap();
+        // Append each file to the formData with the key 'documentFiles'
+        values.documentationFiles.forEach((file) => {
+          formData.append("documentFiles", file.originFileObj);
+        });
 
-            console.log(`Document ${file.name} uploaded successfully`);
-          } catch (fileError) {
-            console.error(`Failed to upload file ${file.name}:`, fileError);
-            message.warning(
-              `Failed to upload ${file.name}. ${
-                fileError.data?.message || "Please try again."
-              }`
-            );
-          }
+        try {
+          // Upload all documents in a single request
+          await uploadDisbursementDocument({
+            disbursementId,
+            formData: formData,
+          }).unwrap();
+
+          console.log(`All documents uploaded successfully`);
+          message.success("All documents uploaded successfully!");
+        } catch (fileError) {
+          console.error(`Failed to upload files:`, fileError);
+          message.warning(
+            `Failed to upload documents. ${
+              fileError.data?.message || "Please try again."
+            }`
+          );
         }
-
-        message.success("All documents uploaded successfully!");
       }
 
       message.success("Fund disbursement request submitted successfully!");
@@ -1761,9 +1761,9 @@ const ProjectDetails = () => {
               { required: true, message: "Please enter the requested amount" },
               {
                 validator: (_, value) => {
-                  if (!value || value <= 0) {
+                  if (!value || value < 0) {
                     return Promise.reject(
-                      new Error("Amount must be greater than 0")
+                      new Error("Amount must be non-negative")
                     );
                   }
                   if (value > projectDetails.approvedBudget) {
@@ -1779,13 +1779,14 @@ const ProjectDetails = () => {
             ]}
           >
             <InputNumber
-              min={1}
+              min={0}
               max={projectDetails.approvedBudget}
               formatter={(value) =>
                 `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
               }
               parser={(value) => value.replace(/₫\s?|(,*)/g, "")}
               className="w-full"
+              disabled
             />
           </Form.Item>
 

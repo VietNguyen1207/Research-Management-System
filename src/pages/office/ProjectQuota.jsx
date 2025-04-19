@@ -94,6 +94,15 @@ const ProjectQuota = () => {
           spentBudget: project.projectSpentBudget,
           remainingBudget:
             project.projectApprovedBudget - project.projectSpentBudget,
+          disbursedAmount:
+            typeof project.disbursedAmount === "number"
+              ? project.disbursedAmount
+              : 0,
+          pendingDisbursement:
+            project.projectApprovedBudget -
+            (typeof project.disbursedAmount === "number"
+              ? project.disbursedAmount
+              : 0),
           allocatedBy: project.allocatorName,
           createdAt: new Date(project.createdAt).toLocaleDateString(),
           status: project.status === 0 ? "Active" : "Completed",
@@ -154,6 +163,12 @@ const ProjectQuota = () => {
           record.approvedBudget === 0
             ? 0
             : (record.spentBudget / record.approvedBudget) * 100;
+
+        const disbursementPercentage =
+          record.approvedBudget === 0
+            ? 0
+            : (record.disbursedAmount / record.approvedBudget) * 100;
+
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -177,6 +192,16 @@ const ProjectQuota = () => {
                 "100%": "#ff4d4f",
               }}
               size="small"
+              format={() => `${Math.round(usagePercentage)}% Used`}
+            />
+            <Progress
+              percent={Math.round(disbursementPercentage)}
+              strokeColor={{
+                "0%": "#1890ff",
+                "100%": "#52c41a",
+              }}
+              size="small"
+              format={() => `${Math.round(disbursementPercentage)}% Disbursed`}
             />
             <div className="grid grid-cols-1 gap-1 text-sm">
               <Tooltip title="Used Budget">
@@ -184,9 +209,19 @@ const ProjectQuota = () => {
                   Used: ₫{record.spentBudget.toLocaleString()}
                 </div>
               </Tooltip>
+              <Tooltip title="Disbursed Amount">
+                <div className="text-green-600">
+                  Disbursed: ₫{record.disbursedAmount.toLocaleString()}
+                </div>
+              </Tooltip>
               <Tooltip title="Remaining Budget">
                 <div className="text-orange-600">
                   Remaining: ₫{record.remainingBudget.toLocaleString()}
+                </div>
+              </Tooltip>
+              <Tooltip title="Pending Disbursement">
+                <div className="text-purple-600">
+                  To Disburse: ₫{record.pendingDisbursement.toLocaleString()}
                 </div>
               </Tooltip>
             </div>

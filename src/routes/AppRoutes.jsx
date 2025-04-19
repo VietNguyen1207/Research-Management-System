@@ -23,6 +23,8 @@ import TimelineManagement from "../pages/office/TimelineManagement";
 import AllTimelines from "../pages/office/AllTimelines";
 import ReviewProject from "../pages/lecturer/ReviewProject";
 import ProjectQuota from "../pages/office/ProjectQuota";
+import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
+import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
 
 export const routes = [
   {
@@ -140,6 +142,11 @@ export const routes = [
         children: [
           { path: "quota-management", element: <OfficeQuota /> },
           { path: "project-quota/:departmentId", element: <ProjectQuota /> },
+          { path: "fund-disbursement", element: <FundDisbursementRequest /> },
+          {
+            path: "fund-disbursement-details/:disbursementId",
+            element: <FundDisbursementRequestDetails />,
+          },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
         ],

@@ -20,6 +20,7 @@ import {
   FundOutlined,
   FileTextOutlined,
   AuditOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -82,6 +83,7 @@ const navItems = [
     subItems: [
       { icon: <FundOutlined />, label: "Department Quota" },
       { icon: <FormOutlined />, label: "Quota Management" },
+      { icon: <DollarOutlined />, label: "Fund Disbursement" },
     ],
   },
   {
@@ -190,7 +192,9 @@ const NavBar = () => {
             return {
               ...item,
               subItems: item.subItems.filter(
-                (subItem) => subItem.label === "Quota Management"
+                (subItem) =>
+                  subItem.label === "Quota Management" ||
+                  subItem.label === "Fund Disbursement"
               ),
             };
           }
@@ -298,6 +302,9 @@ const NavBar = () => {
         break;
       case "Quota Management":
         navigate("/quota-management");
+        break;
+      case "Fund Disbursement":
+        navigate("/fund-disbursement");
         break;
       default:
         break;
