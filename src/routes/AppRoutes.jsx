@@ -27,6 +27,8 @@ import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
 import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
 import QuotaDetails from "../pages/office/QuotaDetails";
 import RequestRecord from "../pages/lecturer/RequestRecord";
+import { useSelector } from "react-redux";
+import UserManagement from "../pages/admin/UserManagement";
 
 export const routes = [
   {
@@ -121,7 +123,7 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["department", "office", "admin"]}>
+          <ProtectedRoutes allowedRoles={["department", "office"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
@@ -155,16 +157,22 @@ export const routes = [
           { path: "manage-council", element: <ManageCouncil /> },
         ],
       },
+      {
+        path: "",
+        element: (
+          <ProtectedRoutes allowedRoles={["admin"]}>
+            <Outlet />
+          </ProtectedRoutes>
+        ),
+        children: [
+          { path: "admin/users", element: <UserManagement /> },
+          { path: "admin/projects", element: <div>Projects Management</div> },
+          { path: "admin/quotas", element: <div>Quotas Management</div> },
+          { path: "admin/timelines", element: <div>Timelines Management</div> },
+          { path: "admin/dashboard", element: <UserManagement /> },
+        ],
+      },
     ],
-  },
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoutes allowedRoles={["admin"]}>
-        <Outlet />
-      </ProtectedRoutes>
-    ),
-    children: [],
   },
   {
     path: "*",
@@ -173,8 +181,12 @@ export const routes = [
 ];
 
 const AppRoutes = () => {
-  const element = useRoutes(routes);
-  return element;
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.role === 0;
+
+  const routeElement = useRoutes(routes);
+
+  return routeElement;
 };
 
 export default AppRoutes;

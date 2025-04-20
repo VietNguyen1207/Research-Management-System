@@ -106,6 +106,26 @@ const navItems = [
   },
 ];
 
+// Update the adminSpecificNavItems to remove subItems
+const adminSpecificNavItems = [
+  {
+    icon: <TeamOutlined />,
+    label: "User Management",
+  },
+  {
+    icon: <ProjectOutlined />,
+    label: "Project Management",
+  },
+  {
+    icon: <FundOutlined />,
+    label: "Quota Management",
+  },
+  {
+    icon: <FieldTimeOutlined />,
+    label: "Timeline Management",
+  },
+];
+
 const NavBar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -170,8 +190,12 @@ const NavBar = () => {
           allowedItems = officeNavItems;
           break;
         case "admin":
-          allowedItems = adminNavItems;
-          break;
+        // Comment out original code
+        // allowedItems = adminNavItems;
+        // break;
+        case 0: // Add numeric check for admin
+          // Return admin-specific items instead of filtering from navItems
+          return adminSpecificNavItems;
       }
     }
 
@@ -319,10 +343,24 @@ const NavBar = () => {
   const handleItemClick = (item) => {
     switch (item.label) {
       case "Timeline Management":
-        navigate("/timeline-management");
+        // Check if user is admin
+        if (user && user.role === 0) {
+          navigate("/admin/timelines");
+        } else {
+          navigate("/timeline-management");
+        }
         break;
       case "Quotas":
         navigate("/quotas");
+        break;
+      case "User Management":
+        navigate("/admin/users");
+        break;
+      case "Project Management":
+        navigate("/admin/projects");
+        break;
+      case "Quota Management":
+        navigate("/admin/quotas");
         break;
       default:
         break;
