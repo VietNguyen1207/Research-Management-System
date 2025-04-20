@@ -306,6 +306,9 @@ const NavBar = () => {
       case "Fund Disbursement":
         navigate("/fund-disbursement");
         break;
+      case "Request Record":
+        navigate("/request-record");
+        break;
       default:
         break;
     }

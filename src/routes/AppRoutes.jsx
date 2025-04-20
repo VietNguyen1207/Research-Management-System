@@ -25,6 +25,8 @@ import ReviewProject from "../pages/lecturer/ReviewProject";
 import ProjectQuota from "../pages/office/ProjectQuota";
 import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
 import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
+import QuotaDetails from "../pages/office/QuotaDetails";
+import RequestRecord from "../pages/lecturer/RequestRecord";
 
 export const routes = [
   {
@@ -83,6 +85,7 @@ export const routes = [
             path: "active-paper-details",
             element: <ActivePaperDetails />,
           },
+          { path: "request-record", element: <RequestRecord /> },
         ],
       },
       {
@@ -142,6 +145,7 @@ export const routes = [
         children: [
           { path: "quota-management", element: <OfficeQuota /> },
           { path: "project-quota/:departmentId", element: <ProjectQuota /> },
+          { path: "quota-details/:quotaId", element: <QuotaDetails /> },
           { path: "fund-disbursement", element: <FundDisbursementRequest /> },
           {
             path: "fund-disbursement-details/:disbursementId",

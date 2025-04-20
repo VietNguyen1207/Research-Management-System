@@ -261,6 +261,14 @@ const ProjectQuota = () => {
           >
             Modify Budget
           </Button>
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            className="w-full border-[#F2722B] text-[#F2722B] hover:bg-[#F2722B]/10"
+            onClick={() => navigate(`/quota-details/${record.quotaId}`)}
+          >
+            View Details
+          </Button>
         </motion.div>
       ),
     },

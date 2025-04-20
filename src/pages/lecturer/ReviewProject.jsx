@@ -18,6 +18,7 @@ import {
   Typography,
   Alert,
   Upload,
+  Checkbox,
 } from "antd";
 import {
   CheckOutlined,
@@ -109,6 +110,7 @@ const ReviewProject = () => {
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const [form] = Form.useForm();
+  const [rejectionForm] = Form.useForm();
 
   // Get departmentId from user or from query params
   const departmentId = user?.department?.departmentId;
@@ -132,6 +134,10 @@ const ReviewProject = () => {
   const [currentProject, setCurrentProject] = useState(null);
   const [approvalFileList, setApprovalFileList] = useState([]);
   const [rejectionFileList, setRejectionFileList] = useState([]);
+
+  // Add these state variables to track checkbox status
+  const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const [rejectionConfirmed, setRejectionConfirmed] = useState(false);
 
   // Fetch projects data
   const {
@@ -201,26 +207,47 @@ const ReviewProject = () => {
     window.open(documentUrl, "_blank");
   };
 
+  // Add onChange handlers for the checkboxes
+  const handleApprovalCheckboxChange = (e) => {
+    setApprovalConfirmed(e.target.checked);
+  };
+
+  const handleRejectionCheckboxChange = (e) => {
+    setRejectionConfirmed(e.target.checked);
+  };
+
+  // Reset the confirmation state when opening the modals
   const handleApproveProject = (project) => {
     setCurrentProject(project);
     setApprovalFileList([]);
+    setApprovalConfirmed(false); // Reset checkbox state
+    form.resetFields();
+    form.setFieldsValue({
+      confirmAction: false,
+    });
     setApprovalModalVisible(true);
   };
 
   const handleRejectProject = (project) => {
     setCurrentProject(project);
     setRejectionFileList([]);
+    setRejectionConfirmed(false); // Reset checkbox state
+    form.resetFields();
+    form.setFieldsValue({
+      confirmAction: false,
+    });
     setRejectionModalVisible(true);
   };
 
   // Add these two new functions for submitting approval/rejection
-  const handleApprovalSubmit = async () => {
-    if (approvalFileList.length === 0) {
-      message.error("Please upload an approval document");
-      return;
-    }
-
+  const handleApprovalSubmit = async (values) => {
     try {
+      // First check if we have files
+      if (approvalFileList.length === 0) {
+        message.error("Please upload an approval document");
+        return;
+      }
+
       // Get the file from the upload component
       const file = approvalFileList[0]?.originFileObj;
       if (!file) {
@@ -242,6 +269,7 @@ const ReviewProject = () => {
         `Project "${currentProject.projectName}" has been approved`
       );
       setApprovalModalVisible(false);
+      form.resetFields();
       refetch();
     } catch (err) {
       console.error("Error approving project:", err);
@@ -251,13 +279,14 @@ const ReviewProject = () => {
     }
   };
 
-  const handleRejectionSubmit = async () => {
-    if (rejectionFileList.length === 0) {
-      message.error("Please upload a rejection document");
-      return;
-    }
-
+  const handleRejectionSubmit = async (values) => {
     try {
+      // First check if we have files
+      if (rejectionFileList.length === 0) {
+        message.error("Please upload a rejection document");
+        return;
+      }
+
       // Get the file from the upload component
       const file = rejectionFileList[0]?.originFileObj;
       if (!file) {
@@ -269,6 +298,11 @@ const ReviewProject = () => {
       const formData = new FormData();
       formData.append("documentFiles", file);
 
+      // Add the rejection reason to the FormData
+      formData.append("rejectionReason", values.rejectionReason || "");
+
+      console.log("Sending rejection with reason:", values.rejectionReason);
+
       // Call the API
       await rejectProject({
         projectId: currentProject.projectId,
@@ -279,6 +313,7 @@ const ReviewProject = () => {
         `Project "${currentProject.projectName}" has been rejected`
       );
       setRejectionModalVisible(false);
+      rejectionForm.resetFields();
       refetch();
     } catch (err) {
       console.error("Error rejecting project:", err);
@@ -470,7 +505,7 @@ const ReviewProject = () => {
                 icon={<CheckOutlined />}
                 onClick={() => handleApproveProject(record)}
                 loading={isApproving}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
+                className="bg-green-600 hover:bg-green-700 w-full"
               >
                 Approve
               </Button>
@@ -789,6 +824,141 @@ const ReviewProject = () => {
                   </Button>
                 </div>
               )}
+
+              <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Approval Record:
+                </h4>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-center">
+                    <CheckCircleOutlined className="text-green-500 mr-2" />
+                    <span className="text-gray-600">Approver: </span>
+                    <span className="ml-1 font-medium">
+                      {user?.name || "Current User"}
+                    </span>
+                  </li>
+                  <li className="flex items-center">
+                    <TeamOutlined className="text-blue-500 mr-2" />
+                    <span className="text-gray-600">Role: </span>
+                    <span className="ml-1 font-medium">
+                      {(() => {
+                        // Find council group where user is Chairman or Secretary
+                        const councilGroup = user?.groups?.find(
+                          (group) =>
+                            group.groupType === 1 &&
+                            (group.role === 3 || group.role === 4)
+                        );
+
+                        if (councilGroup) {
+                          // Map role ID to role name
+                          let roleName = "";
+                          switch (councilGroup.role) {
+                            case 3:
+                              roleName = "Council Chairman";
+                              break;
+                            case 4:
+                              roleName = "Secretary";
+                              break;
+                            default:
+                              roleName = "Council Member";
+                          }
+                          return `${roleName} from ${councilGroup.groupName}`;
+                        } else {
+                          return "Not Authorized";
+                        }
+                      })()}
+                    </span>
+                  </li>
+                  <li className="flex items-center">
+                    <CalendarOutlined className="text-orange-500 mr-2" />
+                    <span className="text-gray-600">Date: </span>
+                    <span className="ml-1 font-medium">
+                      {new Date().toLocaleDateString()}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-gray-700 mb-3">
+                  Approval Status:
+                </h4>
+                <div className="flex items-center justify-around">
+                  <div
+                    className={`flex flex-col items-center ${
+                      isChairmanApproved ? "text-green-600" : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isChairmanApproved ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      <UserOutlined className="text-xl" />
+                    </div>
+                    <p className="mt-2 font-medium">Chairman</p>
+                    <Tag color={isChairmanApproved ? "success" : "default"}>
+                      {isChairmanApproved ? "Approved" : "Pending"}
+                    </Tag>
+                  </div>
+
+                  <div className="w-24 h-0.5 bg-gray-200"></div>
+
+                  <div
+                    className={`flex flex-col items-center ${
+                      isSecretaryApproved ? "text-green-600" : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isSecretaryApproved ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      <UserOutlined className="text-xl" />
+                    </div>
+                    <p className="mt-2 font-medium">Secretary</p>
+                    <Tag color={isSecretaryApproved ? "success" : "default"}>
+                      {isSecretaryApproved ? "Approved" : "Pending"}
+                    </Tag>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Review History:
+                </h4>
+                <Timeline>
+                  {reviewHistory.map((review) => (
+                    <Timeline.Item
+                      key={review.id}
+                      color={
+                        review.action === "approve"
+                          ? "green"
+                          : review.action === "reject"
+                          ? "red"
+                          : "blue"
+                      }
+                    >
+                      <p className="font-medium">
+                        {review.action === "approve" ? "Approved" : "Rejected"}{" "}
+                        by {review.reviewer}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Role: {review.role}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(review.date).toLocaleString()}
+                      </p>
+                      {review.comments && (
+                        <p className="mt-1 text-gray-700">
+                          "{review.comments}"
+                        </p>
+                      )}
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              </div>
             </div>
           )}
         </Modal>
@@ -811,8 +981,9 @@ const ReviewProject = () => {
               key="submit"
               type="primary"
               loading={isApproving}
-              onClick={handleApprovalSubmit}
+              onClick={() => form.submit()}
               className="bg-green-600 hover:bg-green-700"
+              disabled={!approvalConfirmed}
             >
               Approve
             </Button>,
@@ -820,33 +991,115 @@ const ReviewProject = () => {
           width={550}
         >
           {currentProject && (
-            <div>
-              <p>Are you sure you want to approve this project?</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Project: <strong>{currentProject.projectName}</strong>
-              </p>
-              <Divider />
-              <p className="text-sm font-medium mb-2">
-                Please upload an approval document:
-              </p>
-              <Upload.Dragger
-                fileList={approvalFileList}
-                onChange={({ fileList }) => setApprovalFileList(fileList)}
-                beforeUpload={() => false}
-                maxCount={1}
-                onRemove={() => setApprovalFileList([])}
-              >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
+            <Form form={form} onFinish={handleApprovalSubmit}>
+              <div>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                  <div className="flex items-start">
+                    <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        You are approving as:{" "}
+                        <Tag color="blue">
+                          {(() => {
+                            // Find council group where user is Chairman or Secretary
+                            const councilGroup = user?.groups?.find(
+                              (group) =>
+                                group.groupType === 1 &&
+                                (group.role === 3 || group.role === 4)
+                            );
+
+                            if (councilGroup) {
+                              // Map role ID to role name
+                              let roleName = "";
+                              switch (councilGroup.role) {
+                                case 3:
+                                  roleName = "Council Chairman";
+                                  break;
+                                case 4:
+                                  roleName = "Secretary";
+                                  break;
+                                default:
+                                  roleName = "Council Member";
+                              }
+                              return `${roleName} from ${councilGroup.groupName}`;
+                            } else {
+                              return "Not Authorized";
+                            }
+                          })()}
+                        </Tag>
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {user?.fullName || "User"} ({user?.email})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p>Are you sure you want to approve this project?</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Project: <strong>{currentProject.projectName}</strong>
                 </p>
-                <p className="ant-upload-text">
-                  Click or drag approval document to this area
+                <Divider />
+                <p className="text-sm font-medium mb-2">
+                  Please upload an approval document:
                 </p>
-                <p className="ant-upload-hint">
-                  Support for PDF, DOC, DOCX files.
-                </p>
-              </Upload.Dragger>
-            </div>
+                <Upload.Dragger
+                  fileList={approvalFileList}
+                  onChange={({ fileList }) => setApprovalFileList(fileList)}
+                  beforeUpload={() => false}
+                  maxCount={1}
+                  onRemove={() => setApprovalFileList([])}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or drag approval document to this area
+                  </p>
+                  <p className="ant-upload-hint">
+                    Support for PDF, DOC, DOCX files.
+                  </p>
+                </Upload.Dragger>
+                <Form.Item
+                  name="confirmAction"
+                  valuePropName="checked"
+                  rules={[
+                    { required: true, message: "Please confirm your action" },
+                  ]}
+                >
+                  <Checkbox onChange={handleApprovalCheckboxChange}>
+                    I,{" "}
+                    {(() => {
+                      // Find council group where user is Chairman or Secretary
+                      const councilGroup = user?.groups?.find(
+                        (group) =>
+                          group.groupType === 1 &&
+                          (group.role === 3 || group.role === 4)
+                      );
+
+                      if (councilGroup) {
+                        // Map role ID to role name
+                        let roleName = "";
+                        switch (councilGroup.role) {
+                          case 3:
+                            roleName = "Council Chairman";
+                            break;
+                          case 4:
+                            roleName = "Secretary";
+                            break;
+                          default:
+                            roleName = "Council Member";
+                        }
+                        return `${roleName} from ${councilGroup.groupName}`;
+                      } else {
+                        return "Not Authorized";
+                      }
+                    })()}
+                    , confirm that I have reviewed this project and approve its
+                    registration.
+                  </Checkbox>
+                </Form.Item>
+              </div>
+            </Form>
           )}
         </Modal>
 
@@ -869,7 +1122,8 @@ const ReviewProject = () => {
               type="primary"
               danger
               loading={isRejecting}
-              onClick={handleRejectionSubmit}
+              onClick={() => rejectionForm.submit()}
+              disabled={!rejectionConfirmed}
             >
               Reject
             </Button>,
@@ -877,12 +1131,54 @@ const ReviewProject = () => {
           width={550}
         >
           {currentProject && (
-            <div>
+            <Form form={rejectionForm} onFinish={handleRejectionSubmit}>
+              <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
+                <div className="flex items-start">
+                  <UserOutlined className="text-red-500 mt-1 mr-3 text-lg" />
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      You are rejecting as:{" "}
+                      <Tag color="red">
+                        {(() => {
+                          // Find council group where user is Chairman or Secretary
+                          const councilGroup = user?.groups?.find(
+                            (group) =>
+                              group.groupType === 1 &&
+                              (group.role === 3 || group.role === 4)
+                          );
+
+                          if (councilGroup) {
+                            // Map role ID to role name
+                            let roleName = "";
+                            switch (councilGroup.role) {
+                              case 3:
+                                roleName = "Council Chairman";
+                                break;
+                              case 4:
+                                roleName = "Secretary";
+                                break;
+                              default:
+                                roleName = "Council Member";
+                            }
+                            return `${roleName} from ${councilGroup.groupName}`;
+                          } else {
+                            return "Not Authorized";
+                          }
+                        })()}
+                      </Tag>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {user?.fullName || "User"} ({user?.email})
+                    </p>
+                  </div>
+                </div>
+              </div>
               <p>Are you sure you want to reject this project?</p>
               <p className="text-sm text-gray-500 mb-4">
                 Project: <strong>{currentProject.projectName}</strong>
               </p>
               <Divider />
+
               <p className="text-sm font-medium mb-2">
                 Please upload a rejection document:
               </p>
@@ -903,7 +1199,64 @@ const ReviewProject = () => {
                   Support for PDF, DOC, DOCX files.
                 </p>
               </Upload.Dragger>
-            </div>
+
+              <Form.Item
+                name="rejectionReason"
+                label="Reason for Rejection"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a reason for rejection",
+                  },
+                ]}
+                className="mt-4"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Please explain why this project is being rejected..."
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="confirmAction"
+                valuePropName="checked"
+                rules={[
+                  { required: true, message: "Please confirm your action" },
+                ]}
+              >
+                <Checkbox onChange={handleRejectionCheckboxChange}>
+                  I,{" "}
+                  {(() => {
+                    // Find council group where user is Chairman or Secretary
+                    const councilGroup = user?.groups?.find(
+                      (group) =>
+                        group.groupType === 1 &&
+                        (group.role === 3 || group.role === 4)
+                    );
+
+                    if (councilGroup) {
+                      // Map role ID to role name
+                      let roleName = "";
+                      switch (councilGroup.role) {
+                        case 3:
+                          roleName = "Council Chairman";
+                          break;
+                        case 4:
+                          roleName = "Secretary";
+                          break;
+                        default:
+                          roleName = "Council Member";
+                      }
+                      return `${roleName} from ${councilGroup.groupName}`;
+                    } else {
+                      return "Not Authorized";
+                    }
+                  })()}
+                  , confirm that I have reviewed this project and reject its
+                  registration.
+                </Checkbox>
+              </Form.Item>
+            </Form>
           )}
         </Modal>
       </div>

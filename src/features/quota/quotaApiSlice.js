@@ -7,7 +7,12 @@ export const quotaApiSlice = apiSlice.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: ["Quotas"],
     }),
+    getQuotaDetails: builder.query({
+      query: (id) => `/quotas/${id}`,
+      transformResponse: (response) => response.data,
+      providesTags: (result, error, id) => [{ type: "Quotas", id }],
+    }),
   }),
 });
 
-export const { useGetQuotasQuery } = quotaApiSlice;
+export const { useGetQuotasQuery, useGetQuotaDetailsQuery } = quotaApiSlice;
