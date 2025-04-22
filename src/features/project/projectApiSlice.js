@@ -134,6 +134,106 @@ export const projectApiSlice = apiSlice.injectEndpoints({
         { type: "Projects", id: "LIST" },
       ],
     }),
+    getDepartmentProjectRequests: builder.query({
+      query: (departmentId) => ({
+        url: `/departments/${departmentId}/project-requests`,
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ requestId }) => ({
+                type: "DepartmentProjectRequests",
+                id: requestId,
+              })),
+              { type: "DepartmentProjectRequests", id: "LIST" },
+            ]
+          : [{ type: "DepartmentProjectRequests", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
+    approveProjectRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/project-requests/${requestId}/approve`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "DepartmentProjectRequests", id: "LIST" },
+      ],
+    }),
+    rejectProjectRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/project-requests/${requestId}/reject`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "DepartmentProjectRequests", id: "LIST" },
+      ],
+    }),
+    getProjectRequestDetails: builder.query({
+      query: (requestId) => ({
+        url: `/project-requests/${requestId}/details`,
+        method: "GET",
+      }),
+      providesTags: (result, error, requestId) => [
+        { type: "ProjectRequestDetails", id: requestId },
+      ],
+      transformResponse: (response) => response,
+    }),
+    getPendingDepartmentProjectRequests: builder.query({
+      query: (departmentId) => ({
+        url: `/departments/${departmentId}/project-requests/pending`,
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ requestId }) => ({
+                type: "DepartmentPendingProjectRequests",
+                id: requestId,
+              })),
+              { type: "DepartmentPendingProjectRequests", id: "LIST" },
+            ]
+          : [{ type: "DepartmentPendingProjectRequests", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
+    getUserPendingProjectRequests: builder.query({
+      query: () => ({
+        url: `/users/me/project-requests/pending`,
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ requestId }) => ({
+                type: "UserPendingProjectRequests",
+                id: requestId,
+              })),
+              { type: "UserPendingProjectRequests", id: "LIST" },
+            ]
+          : [{ type: "UserPendingProjectRequests", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
+    getUserProjectRequests: builder.query({
+      query: () => ({
+        url: `/users/me/project-requests`,
+        method: "GET",
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ requestId }) => ({
+                type: "UserProjectRequests",
+                id: requestId,
+              })),
+              { type: "UserProjectRequests", id: "LIST" },
+            ]
+          : [{ type: "UserProjectRequests", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
   }),
 });
 
@@ -148,4 +248,11 @@ export const {
   useApproveProjectMutation,
   useRejectProjectMutation,
   useUpdateProjectPhaseMutation,
+  useGetDepartmentProjectRequestsQuery,
+  useApproveProjectRequestMutation,
+  useRejectProjectRequestMutation,
+  useGetProjectRequestDetailsQuery,
+  useGetPendingDepartmentProjectRequestsQuery,
+  useGetUserPendingProjectRequestsQuery,
+  useGetUserProjectRequestsQuery,
 } = projectApiSlice;

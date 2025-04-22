@@ -1,43 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Card,
+  Button,
+  Modal,
   Tag,
   Space,
-  Button,
-  Typography,
-  Spin,
-  Alert,
-  Tabs,
-  Statistic,
-  Row,
-  Col,
-  Badge,
-  Collapse,
-  Empty,
   Divider,
-  Modal,
-  Timeline,
+  Select,
+  Collapse,
+  Spin,
+  Empty,
+  Typography,
+  Alert,
+  Skeleton,
+  Input,
 } from "antd";
 import {
-  DollarOutlined,
-  FileOutlined,
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  HistoryOutlined,
-  FolderOpenOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  InfoCircleOutlined,
   TeamOutlined,
-  EyeOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  UserOutlined,
+  CheckCircleOutlined,
+  SearchOutlined,
   DownloadOutlined,
+  BankOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
-import { useGetMyProjectsQuery } from "../../features/project/projectApiSlice";
 import { useNavigate } from "react-router-dom";
+import { useGetUserProjectRequestsQuery } from "../../features/project/projectApiSlice";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
-const { TabPane } = Tabs;
+const { Option } = Select;
 
 // Project Type enum mapping
 const PROJECT_TYPE = {
@@ -50,41 +48,59 @@ const PROJECT_TYPE = {
 const PROJECT_STATUS = {
   0: "Pending",
   1: "Approved",
-  2: "Work in Progress",
+  2: "Work in progress",
   3: "Rejected",
+};
+
+// Request Type enum mapping
+const REQUEST_TYPE = {
+  1: "Research Creation",
+  2: "Phase Update",
+  3: "Completion",
+  4: "Paper Creation",
+  5: "Conference Creation",
+  6: "Fund Disbursement",
+};
+
+const APPROVAL_STATUS = {
+  0: "Pending",
+  1: "Approved",
+  2: "Rejected",
 };
 
 // Document Type enum mapping
 const DOCUMENT_TYPE = {
   0: "Project Document",
-  1: "Disbursement Document",
+  1: "Research Publication",
   2: "Council Document",
-  5: "Approval/Rejection Document",
+  6: "Completion Document",
 };
 
 // Status colors
 const STATUS_COLORS = {
   0: "gold", // Pending
   1: "green", // Approved
-  2: "blue", // Work in Progress
-  3: "red", // Rejected
+  2: "red", // Rejected
 };
 
-// Phase Status mapping
-const PHASE_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "In Progress",
-  3: "Completed",
-};
+// Request options for filter
+const REQUEST_OPTIONS = [
+  { value: "all", label: "All Type" },
+  { value: "1", label: "Research Creation" },
+  { value: "2", label: "Phase Update" },
+  { value: "3", label: "Completion" },
+  { value: "4", label: "Paper Creation" },
+  { value: "5", label: "Conference Creation" },
+  { value: "6", label: "Fund Disbursement" },
+];
 
-// Phase Status colors
-const PHASE_STATUS_COLORS = {
-  0: "gold", // Pending
-  1: "blue", // Approved
-  2: "processing", // In Progress
-  3: "green", // Completed
-};
+// Status options for filter
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "0", label: "Pending" },
+  { value: "1", label: "Approved" },
+  { value: "2", label: "Rejected" },
+];
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
@@ -106,116 +122,167 @@ const formatCurrency = (value) => {
 
 const RequestRecord = () => {
   const navigate = useNavigate();
-  const [detailsVisible, setDetailsVisible] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [activeTab, setActiveTab] = useState("all");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
+  const [filteredRequests, setFilteredRequests] = useState([]);
 
   const {
-    data: projectsData,
+    data: requestsData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useGetMyProjectsQuery();
+  } = useGetUserProjectRequestsQuery();
 
-  const handleViewProject = (project) => {
-    setSelectedProject(project);
-    setDetailsVisible(true);
+  // Filter and process the data when it's loaded
+  useEffect(() => {
+    if (requestsData && requestsData.data) {
+      // Apply filters
+      const filtered = requestsData.data.filter((request) => {
+        const matchesSearch =
+          searchText.toLowerCase() === ""
+            ? true
+            : request.projectName
+                ?.toLowerCase()
+                .includes(searchText.toLowerCase()) ||
+              request.projectDescription
+                ?.toLowerCase()
+                .includes(searchText.toLowerCase());
+
+        const matchesType =
+          typeFilter === "all"
+            ? true
+            : request.requestType.toString() === typeFilter;
+
+        const matchesStatus =
+          statusFilter === "all"
+            ? true
+            : request.approvalStatus.toString() === statusFilter;
+
+        return matchesSearch && matchesType && matchesStatus;
+      });
+
+      setFilteredRequests(filtered);
+    }
+  }, [requestsData, searchText, typeFilter, statusFilter]);
+
+  const handleViewDetails = (request) => {
+    navigate(`/project-request/${request.requestId}`);
   };
 
   const handleViewDocument = (documentUrl) => {
     window.open(documentUrl, "_blank");
   };
 
-  const filterProjectsByStatus = (projects, status) => {
-    if (!projects) return [];
-    if (status === "all") return projects;
-
-    return projects.filter((project) => {
-      if (status === "pending") return project.status === 0;
-      if (status === "approved") return project.status === 1;
-      if (status === "rejected") return project.status === 3;
-      return true;
-    });
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 0:
-        return <ClockCircleOutlined style={{ color: "#faad14" }} />;
-      case 1:
-        return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
-      case 2:
-        return <HistoryOutlined style={{ color: "#1890ff" }} />;
-      case 3:
-        return <CloseCircleOutlined style={{ color: "#f5222d" }} />;
-      default:
-        return <ClockCircleOutlined style={{ color: "#faad14" }} />;
-    }
-  };
-
   const columns = [
     {
-      title: "Project Details",
-      dataIndex: "projectName",
-      key: "projectName",
+      title: "Basic Information",
+      key: "basic",
       width: "40%",
-      render: (_, project) => (
-        <div>
-          <div className="flex items-center mb-2">
-            <FolderOpenOutlined className="mr-2 text-blue-500" />
-            <Text strong className="text-lg">
-              {project.projectName}
-            </Text>
+      render: (_, record) => (
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-lg font-medium text-gray-900">
+              {record.projectName}
+            </h4>
+            <p className="text-sm text-gray-500">{record.projectDescription}</p>
           </div>
-          <Tag color="blue" className="mb-2">
-            {PROJECT_TYPE[project.projectType]}
-          </Tag>
-          <Text type="secondary" className="block mb-2">
-            {project.description}
-          </Text>
-
-          <div className="flex items-center text-sm text-gray-500 mb-1">
-            <TeamOutlined className="mr-2" />
-            <span>Group: {project.groupName}</span>
+          <div className="flex items-center space-x-2">
+            <Tag color="blue">{record.projectTypeName}</Tag>
+            <Tag color="green">{record.departmentName}</Tag>
+            <Tag color="purple">{REQUEST_TYPE[record.requestType]}</Tag>
           </div>
 
-          <div className="flex items-center text-sm text-gray-500">
-            <CalendarOutlined className="mr-2" />
-            <span>
-              {formatDate(project.startDate)} - {formatDate(project.endDate)}
+          <Divider className="my-3" />
+
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <UserOutlined className="text-gray-400 mr-2" />
+              <span className="text-sm text-gray-600">Requested by: </span>
+              <span className="text-sm font-medium ml-1">
+                {record.requesterName || "Unknown"}
+              </span>
+            </div>
+            <div className="text-sm text-gray-500 ml-6">
+              <div>Requested at: {formatDate(record.requestedAt)}</div>
+            </div>
+          </div>
+
+          {/* Group Info */}
+          <div className="flex items-center mt-2">
+            <TeamOutlined className="text-gray-400 mr-2" />
+            <span className="text-sm text-gray-600">Group: </span>
+            <span className="text-sm font-medium ml-1">
+              {record.groupName || "Unknown Group"}
             </span>
           </div>
         </div>
       ),
     },
     {
-      title: "Budget",
-      dataIndex: "budget",
-      key: "budget",
-      width: "25%",
-      render: (_, project) => (
-        <div>
-          <div className="mb-3">
-            <Text type="secondary">Approved Budget:</Text>
-            <div className="text-lg font-semibold">
-              {formatCurrency(project.approvedBudget)}
+      title: "Resource Requests",
+      key: "resources",
+      width: "30%",
+      render: (_, record) => (
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <DollarOutlined className="text-gray-400 mr-2" />
+            <div className="flex-1">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm text-gray-600">Approved Budget</span>
+                <span className="text-sm font-medium">
+                  ₫{record.approvedBudget?.toLocaleString() || "0"}
+                </span>
+              </div>
+              {record.spentBudget > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Spent Budget</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.spentBudget?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
+              {record.fundRequestAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Requested Funds</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.fundRequestAmount?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="mb-3">
-            <Text type="secondary">Spent Budget:</Text>
-            <div className="text-lg font-semibold">
-              {formatCurrency(project.spentBudget)}
+          <div className="flex items-center">
+            <CalendarOutlined className="text-gray-400 mr-2" />
+            <div className="text-sm">
+              <span className="text-gray-600">Project Status: </span>
+              <span className="font-medium">
+                {PROJECT_STATUS[record.projectStatus] || "N/A"}
+              </span>
             </div>
           </div>
 
-          <div>
-            <Text type="secondary">Remaining:</Text>
-            <div className="text-lg font-semibold text-green-600">
-              {formatCurrency(project.approvedBudget - project.spentBudget)}
+          {record.approvedAt && (
+            <div className="flex items-center">
+              <CheckCircleOutlined
+                className={`mr-2 ${
+                  record.approvalStatus === 1
+                    ? "text-green-500"
+                    : "text-red-500"
+                }`}
+              />
+              <div className="text-sm">
+                <span className="text-gray-600">Processed: </span>
+                <span className="font-medium">
+                  {formatDate(record.approvedAt)}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ),
     },
@@ -223,52 +290,47 @@ const RequestRecord = () => {
       title: "Status",
       key: "status",
       width: "15%",
-      render: (_, project) => (
+      render: (_, record) => (
         <div>
           <Tag
-            icon={getStatusIcon(project.status)}
-            color={STATUS_COLORS[project.status]}
+            color={STATUS_COLORS[record.approvalStatus]}
             className="px-3 py-1 text-base"
           >
-            {PROJECT_STATUS[project.status]}
+            {record.statusName || APPROVAL_STATUS[record.approvalStatus]}
           </Tag>
 
-          {project.rejectionReason && (
+          {record.rejectionReason && (
             <div className="mt-2 text-red-500 text-sm">
               <Text type="danger" strong>
-                Reason for rejection:
+                Reason:
               </Text>
-              <div className="mt-1 p-2 bg-red-50 rounded-md">
-                {project.rejectionReason}
+              <div className="mt-1 p-2 bg-red-50 rounded-md max-h-20 overflow-y-auto">
+                {record.rejectionReason}
               </div>
             </div>
           )}
-
-          <div className="mt-2 text-gray-500 text-sm">
-            Created: {formatDate(project.createdAt)}
-          </div>
         </div>
       ),
     },
     {
       title: "Actions",
       key: "actions",
-      width: "20%",
-      render: (_, project) => (
+      width: "15%",
+      render: (_, record) => (
         <Space direction="vertical" className="w-full">
           <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewProject(project)}
-            className="w-full"
+            type="default"
+            icon={<InfoCircleOutlined />}
+            onClick={() => handleViewDetails(record)}
+            className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] text-white border-none"
           >
             View Details
           </Button>
 
-          {project.status === 1 && (
+          {record.approvalStatus === 1 && (
             <Button
               type="default"
-              onClick={() => navigate(`/project-details/${project.projectId}`)}
+              onClick={() => navigate(`/project-details/${record.projectId}`)}
               className="w-full"
             >
               Manage Project
@@ -279,418 +341,352 @@ const RequestRecord = () => {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spin size="large" tip="Loading project records..." />
-      </div>
-    );
-  }
+  // For table skeleton loading
+  const skeletonRows = Array(5).fill(null);
+
+  // Table columns for skeleton loading
+  const skeletonColumns = [
+    {
+      title: "Basic Information",
+      key: "basic",
+      width: "40%",
+      render: () => <Skeleton active paragraph={{ rows: 3 }} title={true} />,
+    },
+    {
+      title: "Resource Requests",
+      key: "resources",
+      width: "30%",
+      render: () => <Skeleton active paragraph={{ rows: 2 }} title={false} />,
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: "15%",
+      render: () => <Skeleton.Button active size="small" shape="round" />,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: "15%",
+      render: () => <Skeleton.Button active size="default" block={true} />,
+    },
+  ];
 
   if (isError) {
     return (
-      <div className="p-6">
-        <Alert
-          message="Error Loading Projects"
-          description={
-            error?.data?.message ||
-            "Failed to load project records. Please try again later."
-          }
-          type="error"
-          showIcon
-          action={
-            <Button type="primary" onClick={refetch}>
-              Try Again
-            </Button>
-          }
-        />
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-red-600">
+            Error loading project requests
+          </h2>
+          <p className="mt-2 text-gray-600">
+            {error?.data?.message ||
+              "Failed to load project requests. Please try again later."}
+          </p>
+          <Button
+            type="primary"
+            onClick={() => refetch()}
+            className="mt-4 bg-[#F2722B]"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const projectCount = projectsData?.data?.length || 0;
-  const pendingCount =
-    projectsData?.data?.filter((p) => p.status === 0)?.length || 0;
-  const approvedCount =
-    projectsData?.data?.filter((p) => p.status === 1)?.length || 0;
-  const rejectedCount =
-    projectsData?.data?.filter((p) => p.status === 3)?.length || 0;
-
-  const filteredProjects = filterProjectsByStatus(
-    projectsData?.data,
-    activeTab
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <Title level={2} className="text-gradient">
-            Project Request Records
-          </Title>
-          <Text className="text-gray-500">
-            Manage and track all your project requests
-          </Text>
+        <div className="text-center mb-12">
+          <div className="inline-block">
+            <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FF8C00] to-[#FFA500] mb-2">
+              Project Request Records
+            </h2>
+            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#FF8C00] to-[#FFA500] rounded-full"></div>
+          </div>
+          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+            View and manage all your research project requests
+          </p>
         </div>
 
-        {/* Statistics Cards */}
-        <Row gutter={16} className="mb-6">
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} className="shadow-sm">
-              <Statistic
-                title="Total Projects"
-                value={projectCount}
-                prefix={<FolderOpenOutlined />}
+        {/* Add Filter Section - Disabled during loading */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center space-x-4 flex-wrap gap-2">
+              {/* Search bar */}
+              <Input
+                placeholder="Search requests..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="max-w-md"
+                allowClear
+                value={searchText}
+                disabled={isLoading}
               />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} className="shadow-sm">
-              <Statistic
-                title="Pending"
-                value={pendingCount}
-                prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
-                valueStyle={{ color: "#faad14" }}
+              <span className="text-gray-700 font-medium">Filter by:</span>
+              {/* Request type filter */}
+              <Select
+                value={typeFilter}
+                style={{ width: 180 }}
+                onChange={setTypeFilter}
+                options={REQUEST_OPTIONS}
+                className="rounded-md"
+                disabled={isLoading}
+                placeholder="Request Type"
               />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} className="shadow-sm">
-              <Statistic
-                title="Approved"
-                value={approvedCount}
-                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-                valueStyle={{ color: "#52c41a" }}
+              {/* Status filter */}
+              <Select
+                value={statusFilter}
+                style={{ width: 150 }}
+                onChange={setStatusFilter}
+                options={STATUS_OPTIONS}
+                className="rounded-md"
+                disabled={isLoading}
+                placeholder="Status"
               />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false} className="shadow-sm">
-              <Statistic
-                title="Rejected"
-                value={rejectedCount}
-                prefix={<CloseCircleOutlined style={{ color: "#f5222d" }} />}
-                valueStyle={{ color: "#f5222d" }}
-              />
-            </Card>
-          </Col>
-        </Row>
+            </div>
+          </div>
+        </div>
 
-        {/* Tab Filter */}
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          className="mb-6"
-          type="card"
-        >
-          <TabPane
-            tab={
-              <span>
-                <FolderOpenOutlined />
-                All Projects
-              </span>
-            }
-            key="all"
-          />
-          <TabPane
-            tab={
-              <span>
-                <ClockCircleOutlined style={{ color: "#faad14" }} />
-                Pending
-                <Badge
-                  count={pendingCount}
-                  className="ml-2"
-                  style={{ backgroundColor: "#faad14" }}
-                />
-              </span>
-            }
-            key="pending"
-          />
-          <TabPane
-            tab={
-              <span>
-                <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                Approved
-                <Badge
-                  count={approvedCount}
-                  className="ml-2"
-                  style={{ backgroundColor: "#52c41a" }}
-                />
-              </span>
-            }
-            key="approved"
-          />
-          <TabPane
-            tab={
-              <span>
-                <CloseCircleOutlined style={{ color: "#f5222d" }} />
-                Rejected
-                <Badge
-                  count={rejectedCount}
-                  className="ml-2"
-                  style={{ backgroundColor: "#f5222d" }}
-                />
-              </span>
-            }
-            key="rejected"
-          />
-        </Tabs>
-
-        {/* Projects Table */}
-        <Card className="shadow-md mb-10">
-          <Table
-            columns={columns}
-            dataSource={filteredProjects}
-            rowKey="projectId"
-            pagination={{ pageSize: 10 }}
-            locale={{
-              emptyText: <Empty description="No project records found" />,
-            }}
-          />
+        {/* Table with Skeleton Loading */}
+        <Card className="shadow-md">
+          {isLoading ? (
+            <Table
+              columns={skeletonColumns}
+              dataSource={skeletonRows}
+              rowKey={(_, index) => index}
+              pagination={{ pageSize: 5 }}
+              className="custom-table"
+              rowClassName="align-top"
+            />
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={filteredRequests}
+              rowKey="requestId"
+              pagination={{ pageSize: 5 }}
+              className="custom-table"
+              rowClassName="align-top"
+              locale={{ emptyText: "No project requests found" }}
+            />
+          )}
         </Card>
 
-        {/* Project Details Modal */}
+        {/* Modal for request details */}
         <Modal
           title={
             <div className="text-lg">
-              <div className="font-semibold">
-                {selectedProject?.projectName}
+              <div className="font-semibold text-gray-800">Request Details</div>
+              <div className="text-sm font-normal text-gray-500 mt-1">
+                {selectedRequest?.projectName || (
+                  <Skeleton.Input active size="small" style={{ width: 200 }} />
+                )}
               </div>
-              <Tag
-                color={STATUS_COLORS[selectedProject?.status]}
-                className="mt-1"
-              >
-                {PROJECT_STATUS[selectedProject?.status]}
-              </Tag>
             </div>
           }
-          open={detailsVisible}
-          onCancel={() => setDetailsVisible(false)}
+          open={isModalVisible}
+          onCancel={() => setIsModalVisible(false)}
           width={800}
           footer={[
-            <Button key="back" onClick={() => setDetailsVisible(false)}>
+            <Button key="cancel" onClick={() => setIsModalVisible(false)}>
               Close
             </Button>,
           ]}
         >
-          {selectedProject && (
+          {selectedRequest ? (
             <div className="max-h-[70vh] overflow-y-auto pr-2">
-              {/* Project Information */}
-              <Collapse defaultActiveKey={["1"]} className="mb-4">
-                <Panel
-                  header={
-                    <span className="font-medium">Project Information</span>
-                  }
-                  key="1"
+              {/* Project Status */}
+              <div className="mb-4">
+                <Tag
+                  color={STATUS_COLORS[selectedRequest.approvalStatus]}
+                  className="text-base px-3 py-1"
                 >
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <div className="mb-4">
-                        <Text type="secondary">Project Type</Text>
-                        <div>
-                          <Tag color="blue">
-                            {PROJECT_TYPE[selectedProject.projectType]}
-                          </Tag>
-                        </div>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="mb-4">
-                        <Text type="secondary">Group</Text>
-                        <div>{selectedProject.groupName}</div>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="mb-4">
-                        <Text type="secondary">Start Date</Text>
-                        <div>{formatDate(selectedProject.startDate)}</div>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="mb-4">
-                        <Text type="secondary">End Date</Text>
-                        <div>{formatDate(selectedProject.endDate)}</div>
-                      </div>
-                    </Col>
-                    <Col span={24}>
-                      <div className="mb-4">
-                        <Text type="secondary">Description</Text>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {selectedProject.description}
-                        </div>
-                      </div>
-                    </Col>
-                    <Col span={24}>
-                      <div className="mb-4">
-                        <Text type="secondary">Methodology</Text>
-                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                          {selectedProject.methodology}
-                        </div>
-                      </div>
-                    </Col>
-                    {selectedProject.rejectionReason && (
-                      <Col span={24}>
-                        <div className="mb-4">
-                          <Text type="danger" strong>
-                            Reason for Rejection
-                          </Text>
-                          <div className="mt-1 p-3 bg-red-50 rounded-md border border-red-100">
-                            {selectedProject.rejectionReason}
-                          </div>
-                        </div>
-                      </Col>
-                    )}
-                  </Row>
-                </Panel>
-              </Collapse>
+                  {selectedRequest.statusName ||
+                    APPROVAL_STATUS[selectedRequest.approvalStatus]}
+                </Tag>
+              </div>
 
-              {/* Budget Information */}
+              {/* Project Creator Information */}
               <Collapse defaultActiveKey={["1"]} className="mb-4">
-                <Panel
+                <Collapse.Panel
                   header={
-                    <span className="font-medium">Budget Information</span>
-                  }
-                  key="1"
-                >
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Statistic
-                        title="Approved Budget"
-                        value={selectedProject.approvedBudget}
-                        precision={0}
-                        formatter={(value) => formatCurrency(value)}
-                        valueStyle={{ color: "#3f8600" }}
-                        prefix={<DollarOutlined />}
-                      />
-                    </Col>
-                    <Col span={8}>
-                      <Statistic
-                        title="Spent Budget"
-                        value={selectedProject.spentBudget}
-                        precision={0}
-                        formatter={(value) => formatCurrency(value)}
-                        valueStyle={{ color: "#cf1322" }}
-                        prefix={<DollarOutlined />}
-                      />
-                    </Col>
-                    <Col span={8}>
-                      <Statistic
-                        title="Remaining Budget"
-                        value={
-                          selectedProject.approvedBudget -
-                          selectedProject.spentBudget
-                        }
-                        precision={0}
-                        formatter={(value) => formatCurrency(value)}
-                        valueStyle={{ color: "#1890ff" }}
-                        prefix={<DollarOutlined />}
-                      />
-                    </Col>
-                  </Row>
-                </Panel>
-              </Collapse>
-
-              {/* Project Phases */}
-              <Collapse defaultActiveKey={["1"]} className="mb-4">
-                <Panel
-                  header={<span className="font-medium">Project Phases</span>}
-                  key="1"
-                >
-                  {selectedProject.projectPhases &&
-                  selectedProject.projectPhases.length > 0 ? (
-                    <Timeline>
-                      {selectedProject.projectPhases.map((phase) => (
-                        <Timeline.Item
-                          key={phase.projectPhaseId}
-                          color={PHASE_STATUS_COLORS[phase.status]}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">{phase.title}</div>
-                              <div className="text-sm text-gray-500">
-                                {formatDate(phase.startDate)} to{" "}
-                                {formatDate(phase.endDate)}
-                              </div>
-                            </div>
-                            <div>
-                              <Badge
-                                status={
-                                  PHASE_STATUS_COLORS[phase.status] ===
-                                  "processing"
-                                    ? "processing"
-                                    : "default"
-                                }
-                                text={
-                                  <Tag
-                                    color={PHASE_STATUS_COLORS[phase.status]}
-                                  >
-                                    {PHASE_STATUS[phase.status]}
-                                  </Tag>
-                                }
-                              />
-                              {phase.spentBudget > 0 && (
-                                <div className="text-sm mt-1">
-                                  Budget: {formatCurrency(phase.spentBudget)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </Timeline.Item>
-                      ))}
-                    </Timeline>
-                  ) : (
-                    <Empty description="No project phases defined" />
-                  )}
-                </Panel>
-              </Collapse>
-
-              {/* Documents */}
-              <Collapse defaultActiveKey={["1"]} className="mb-4">
-                <Panel
-                  header={
-                    <span className="font-medium">Project Documents</span>
-                  }
-                  key="1"
-                >
-                  {selectedProject.documents &&
-                  selectedProject.documents.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedProject.documents.map((doc) => (
-                        <div
-                          key={doc.documentId}
-                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <FileOutlined className="text-gray-500 mr-3 text-lg" />
-                            <div>
-                              <div className="font-medium text-gray-800 mb-1 max-w-md truncate">
-                                {doc.fileName}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                <Tag color="blue">
-                                  {DOCUMENT_TYPE[doc.documentType]}
-                                </Tag>
-                                <span className="ml-2">
-                                  Uploaded: {formatDate(doc.uploadAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            type="primary"
-                            icon={<DownloadOutlined />}
-                            onClick={() => handleViewDocument(doc.documentUrl)}
-                          >
-                            View
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="flex items-center">
+                      <UserOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-medium">Requester Information</span>
                     </div>
-                  ) : (
-                    <Empty description="No documents available" />
-                  )}
-                </Panel>
+                  }
+                  key="1"
+                >
+                  <div className="flex items-center bg-gray-50 p-4 rounded-lg">
+                    <div className="ml-4">
+                      <h4 className="text-lg font-medium">
+                        {selectedRequest.requesterName}
+                      </h4>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <BankOutlined className="mr-2" />
+                        <span>{selectedRequest.departmentName}</span>
+                      </div>
+                      <div className="flex items-center text-gray-500 mt-1">
+                        <TeamOutlined className="mr-2" />
+                        <span>{selectedRequest.groupName}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Collapse.Panel>
               </Collapse>
+
+              {/* Project Details */}
+              <Collapse defaultActiveKey={["1"]} className="mb-4">
+                <Collapse.Panel
+                  header={
+                    <div className="flex items-center">
+                      <InfoCircleOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-medium">Request Details</span>
+                    </div>
+                  }
+                  key="1"
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500">Request Type</div>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                        {REQUEST_TYPE[selectedRequest.requestType]}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-gray-500">Description</div>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                        {selectedRequest.projectDescription}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between flex-wrap gap-4">
+                      <div>
+                        <div className="text-sm text-gray-500">Budget</div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md font-medium">
+                          ₫{selectedRequest.approvedBudget?.toLocaleString()}
+                        </div>
+                      </div>
+
+                      {selectedRequest.fundRequestAmount > 0 && (
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Requested Funds
+                          </div>
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md font-medium">
+                            ₫
+                            {selectedRequest.fundRequestAmount?.toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Project Status
+                        </div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {PROJECT_STATUS[selectedRequest.projectStatus]}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Requested At
+                        </div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {formatDate(selectedRequest.requestedAt)}
+                        </div>
+                      </div>
+
+                      {selectedRequest.approvedAt && (
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Processed At
+                          </div>
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                            {formatDate(selectedRequest.approvedAt)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedRequest.rejectionReason && (
+                      <div>
+                        <div className="text-sm text-red-500 font-medium">
+                          Rejection Reason
+                        </div>
+                        <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-md">
+                          {selectedRequest.rejectionReason}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Collapse.Panel>
+              </Collapse>
+
+              {/* Documents Section - If available in the future */}
+              {selectedRequest.documents &&
+                selectedRequest.documents.length > 0 && (
+                  <Collapse defaultActiveKey={["1"]} className="mb-4">
+                    <Collapse.Panel
+                      header={
+                        <div className="flex items-center">
+                          <FileTextOutlined className="text-[#F2722B] mr-2" />
+                          <span className="font-medium">Project Documents</span>
+                        </div>
+                      }
+                      key="1"
+                    >
+                      <div className="space-y-3">
+                        {selectedRequest.documents.map((doc) => (
+                          <div
+                            key={doc.documentId}
+                            className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center">
+                              <FileTextOutlined className="text-gray-500 mr-3 text-lg" />
+                              <div>
+                                <div className="font-medium text-gray-800 mb-1">
+                                  {doc.fileName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  <Tag color="blue">
+                                    {DOCUMENT_TYPE[doc.documentType]}
+                                  </Tag>
+                                  <span className="ml-2">
+                                    Uploaded: {formatDate(doc.uploadAt)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              type="primary"
+                              icon={<DownloadOutlined />}
+                              onClick={() =>
+                                handleViewDocument(doc.documentUrl)
+                              }
+                              className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                            >
+                              View
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </Collapse.Panel>
+                  </Collapse>
+                )}
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <Skeleton active avatar paragraph={{ rows: 3 }} />
+              <Divider />
+              <Skeleton active paragraph={{ rows: 4 }} />
+              <Divider />
+              <Skeleton active paragraph={{ rows: 2 }} />
             </div>
           )}
         </Modal>

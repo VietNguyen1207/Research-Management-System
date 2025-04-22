@@ -29,6 +29,8 @@ import QuotaDetails from "../pages/office/QuotaDetails";
 import RequestRecord from "../pages/lecturer/RequestRecord";
 import { useSelector } from "react-redux";
 import UserManagement from "../pages/admin/UserManagement";
+import AssignTimeline from "../pages/office/AssignTimeline";
+import ProjectRequestDetail from "../pages/lecturer/ProjectRequestDetail";
 
 export const routes = [
   {
@@ -117,6 +119,10 @@ export const routes = [
             path: "review-project",
             element: <ReviewProject />,
           },
+          {
+            path: "project-request/:requestId",
+            element: <ProjectRequestDetail />,
+          },
         ],
       },
       //Department + Office
@@ -155,6 +161,7 @@ export const routes = [
           },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
+          { path: "assign-timeline", element: <AssignTimeline /> },
         ],
       },
       {

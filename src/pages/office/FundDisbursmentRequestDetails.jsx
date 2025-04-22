@@ -21,6 +21,7 @@ import {
   Modal,
   Input,
   Upload,
+  Form,
 } from "antd";
 import {
   FileTextOutlined,
@@ -121,6 +122,11 @@ const FundDisbursementRequestDetails = () => {
   };
 
   const handleApproveConfirm = async () => {
+    if (approveFileList.length === 0) {
+      message.error("Please attach at least one supporting document");
+      return;
+    }
+
     const documentFiles = extractFiles(approveFileList);
     console.log(
       "Attempting to approve request:",
@@ -175,6 +181,10 @@ const FundDisbursementRequestDetails = () => {
   const handleRejectConfirm = async () => {
     if (!rejectionReason.trim()) {
       message.warning("Please provide a reason for rejection.");
+      return;
+    }
+    if (rejectFileList.length === 0) {
+      message.error("Please attach at least one supporting document");
       return;
     }
     const documentFiles = extractFiles(rejectFileList);

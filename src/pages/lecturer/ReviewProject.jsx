@@ -42,6 +42,9 @@ import {
   useGetProjectsByDepartmentQuery,
   useApproveProjectMutation,
   useRejectProjectMutation,
+  useGetPendingDepartmentProjectRequestsQuery,
+  useApproveProjectRequestMutation,
+  useRejectProjectRequestMutation,
 } from "../../features/project/projectApiSlice";
 
 const { Text } = Typography;
@@ -95,6 +98,23 @@ const STATUS_OPTIONS = [
   { value: "3", label: "Rejected" },
 ];
 
+// Add these mapping constants for request types
+const REQUEST_TYPE = {
+  1: "Research Creation",
+  2: "Phase Update",
+  3: "Completion",
+  4: "Paper Creation",
+  5: "Conference Creation",
+  6: "Fund Disbursement",
+};
+
+// Add this mapping for approval status
+const APPROVAL_STATUS = {
+  0: "Pending",
+  1: "Approved",
+  2: "Rejected",
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -141,57 +161,52 @@ const ReviewProject = () => {
 
   // Fetch projects data
   const {
-    data: projectsData,
+    data: projectRequestsData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useGetProjectsByDepartmentQuery(departmentId, {
+  } = useGetPendingDepartmentProjectRequestsQuery(departmentId, {
     skip: !departmentId,
   });
 
   // Mutations for approve/reject
-  const [approveProject, { isLoading: isApproving }] =
-    useApproveProjectMutation();
-  const [rejectProject, { isLoading: isRejecting }] =
-    useRejectProjectMutation();
+  const [approveProjectRequest, { isLoading: isApproving }] =
+    useApproveProjectRequestMutation();
+  const [rejectProjectRequest, { isLoading: isRejecting }] =
+    useRejectProjectRequestMutation();
 
   // Filter projects based on search text, project type, and status
   useEffect(() => {
-    if (projectsData && projectsData.data) {
-      // Filter projects based on selected filters
-      const filtered = projectsData.data.filter((project) => {
+    if (projectRequestsData && projectRequestsData.data) {
+      // Since we're getting only pending requests now, we only need to filter by search text and type
+      const filtered = projectRequestsData.data.filter((request) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
-            : project.projectName
+            : request.projectName
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase()) ||
-              project.description
+              request.projectDescription
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase());
 
         const matchesType =
           typeFilter === "all"
             ? true
-            : project.projectType.toString() === typeFilter;
-
-        const matchesStatus =
-          statusFilter === "all"
-            ? true
-            : project.status.toString() === statusFilter;
+            : request.projectType.toString() === typeFilter;
 
         // If groupId is provided, filter to show only projects from that group
         const matchesGroup = groupId
-          ? project.groupId.toString() === groupId
+          ? request.groupId.toString() === groupId
           : true;
 
-        return matchesSearch && matchesType && matchesStatus && matchesGroup;
+        return matchesSearch && matchesType && matchesGroup;
       });
 
       setFilteredProjects(filtered);
     }
-  }, [projectsData, searchText, typeFilter, statusFilter, groupId]);
+  }, [projectRequestsData, searchText, typeFilter, groupId]);
 
   const handleViewDetails = (project) => {
     setSelectedProject(project);
@@ -259,22 +274,23 @@ const ReviewProject = () => {
       const formData = new FormData();
       formData.append("documentFiles", file);
 
-      // Call the API
-      await approveProject({
-        projectId: currentProject.projectId,
+      // Call the API with requestId instead of projectId
+      await approveProjectRequest({
+        requestId: currentProject.requestId,
         formData: formData,
       }).unwrap();
 
       message.success(
-        `Project "${currentProject.projectName}" has been approved`
+        `Request for "${currentProject.projectName}" has been approved`
       );
       setApprovalModalVisible(false);
       form.resetFields();
       refetch();
     } catch (err) {
-      console.error("Error approving project:", err);
+      console.error("Error approving project request:", err);
       message.error(
-        err.data?.message || "Failed to approve project. Please try again."
+        err.data?.message ||
+          "Failed to approve project request. Please try again."
       );
     }
   };
@@ -303,22 +319,23 @@ const ReviewProject = () => {
 
       console.log("Sending rejection with reason:", values.rejectionReason);
 
-      // Call the API
-      await rejectProject({
-        projectId: currentProject.projectId,
+      // Call the API with requestId instead of projectId
+      await rejectProjectRequest({
+        requestId: currentProject.requestId,
         formData: formData,
       }).unwrap();
 
       message.success(
-        `Project "${currentProject.projectName}" has been rejected`
+        `Request for "${currentProject.projectName}" has been rejected`
       );
       setRejectionModalVisible(false);
       rejectionForm.resetFields();
       refetch();
     } catch (err) {
-      console.error("Error rejecting project:", err);
+      console.error("Error rejecting project request:", err);
       message.error(
-        err.data?.message || "Failed to reject project. Please try again."
+        err.data?.message ||
+          "Failed to reject project request. Please try again."
       );
     }
   };
@@ -334,16 +351,14 @@ const ReviewProject = () => {
             <h4 className="text-lg font-medium text-gray-900">
               {record.projectName}
             </h4>
-            <p className="text-sm text-gray-500">{record.description}</p>
+            <p className="text-sm text-gray-500">{record.projectDescription}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Tag color="blue">{PROJECT_TYPE[record.projectType]}</Tag>
-            {record.departmentId && (
-              <Tag color="green">
-                {user?.department?.departmentName ||
-                  `Department ${record.departmentId}`}
-              </Tag>
-            )}
+            <Tag color="blue">{record.projectTypeName}</Tag>
+            <Tag color="green">
+              {record.departmentName || `Department ${record.departmentId}`}
+            </Tag>
+            <Tag color="purple">{REQUEST_TYPE[record.requestType]}</Tag>
           </div>
 
           <Divider className="my-3" />
@@ -351,13 +366,13 @@ const ReviewProject = () => {
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Created by ID: </span>
+              <span className="text-sm text-gray-600">Requested by: </span>
               <span className="text-sm font-medium ml-1">
-                {record.createdBy || "Unknown"}
+                {record.requesterName || "Unknown"}
               </span>
             </div>
             <div className="text-sm text-gray-500 ml-6">
-              <div>Created at: {formatDate(record.createdAt)}</div>
+              <div>Requested at: {formatDate(record.requestedAt)}</div>
             </div>
           </div>
 
@@ -375,98 +390,38 @@ const ReviewProject = () => {
     {
       title: "Resource Requests",
       key: "resources",
-      width: "40%",
+      width: "30%",
       render: (_, record) => (
         <div className="space-y-4">
           <div className="flex items-center">
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-600">Requested Budget</span>
+                <span className="text-sm text-gray-600">Approved Budget</span>
                 <span className="text-sm font-medium">
                   ₫{record.approvedBudget?.toLocaleString() || "0"}
                 </span>
               </div>
+              {record.spentBudget > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Spent Budget</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.spentBudget?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
+              {record.fundRequestAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Requested Funds</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.fundRequestAmount?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center">
-            <CalendarOutlined className="text-gray-400 mr-2" />
-            <div className="text-sm">
-              <span className="text-gray-600">Timeline: </span>
-              <span className="font-medium">
-                {formatDate(record.startDate)} to {formatDate(record.endDate)}
-              </span>
-            </div>
-          </div>
-
-          {/* Documents Section */}
-          {record.documents && record.documents.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <FileTextOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Documents</span>
-              </div>
-              <div className="space-y-2 ml-6">
-                {record.documents.map((doc) => (
-                  <div
-                    key={doc.documentId}
-                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100"
-                  >
-                    <div className="flex items-center">
-                      <FileTextOutlined className="text-gray-400 mr-2" />
-                      <div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Tag color="blue" size="small">
-                            {DOCUMENT_TYPE[doc.documentType]}
-                          </Tag>
-                          <span className="ml-2">
-                            {formatDate(doc.uploadAt)}
-                          </span>
-                        </div>
-                        <div
-                          className="text-sm font-medium truncate max-w-[250px]"
-                          title={doc.fileName}
-                        >
-                          {doc.fileName}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<DownloadOutlined />}
-                      onClick={() => handleViewDocument(doc.documentUrl)}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {record.milestones && record.milestones.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <CheckCircleOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Milestones</span>
-              </div>
-              <Timeline className="ml-6">
-                {record.milestones.map((milestone) => (
-                  <Timeline.Item key={milestone.milestoneId}>
-                    <div className="text-sm">
-                      <div className="font-medium">{milestone.title}</div>
-                      <div className="text-gray-500">
-                        Timeline: {formatDate(milestone.startDate)} to{" "}
-                        {formatDate(milestone.endDate)}
-                      </div>
-                    </div>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </div>
-          )}
+          {/* Documents would be added here if the API returns them */}
         </div>
       ),
     },
@@ -475,10 +430,16 @@ const ReviewProject = () => {
       key: "status",
       width: "10%",
       render: (_, record) => {
-        const statusText = PROJECT_STATUS[record.status].toLowerCase();
+        const statusColor =
+          record.approvalStatus === 0
+            ? "gold"
+            : record.approvalStatus === 1
+            ? "green"
+            : "red";
+
         return (
-          <Tag color={STATUS_COLORS[statusText] || "default"}>
-            {PROJECT_STATUS[record.status]}
+          <Tag color={statusColor}>
+            {APPROVAL_STATUS[record.approvalStatus]}
           </Tag>
         );
       },
@@ -492,13 +453,13 @@ const ReviewProject = () => {
           <Button
             type="default"
             icon={<InfoCircleOutlined />}
-            onClick={() => handleViewDetails(record)}
+            onClick={() => navigate(`/project-request/${record.requestId}`)}
             className="w-full"
           >
             View Details
           </Button>
 
-          {record.status === 0 && ( // Only show Approve/Reject for pending projects
+          {record.approvalStatus === 0 && ( // Only show Approve/Reject for pending requests
             <>
               <Button
                 type="primary"
@@ -614,15 +575,7 @@ const ReviewProject = () => {
                 allowClear
                 value={searchText}
               />
-              <span className="text-gray-700 font-medium">Filter:</span>
-              {/* Status filter */}
-              <Select
-                value={statusFilter}
-                style={{ width: 160 }}
-                onChange={setStatusFilter}
-                options={STATUS_OPTIONS}
-                className="rounded-md"
-              />
+              <span className="text-gray-700 font-medium">Filter by type:</span>
               {/* Project type filter */}
               <Select
                 value={typeFilter}

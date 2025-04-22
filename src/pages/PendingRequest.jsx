@@ -43,7 +43,7 @@ import {
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
-  useGetMyPendingProjectsQuery,
+  useGetUserPendingProjectRequestsQuery,
   useGetMyProjectsQuery,
 } from "../features/project/projectApiSlice";
 import { useNavigate } from "react-router-dom";
@@ -116,6 +116,23 @@ const DOCUMENT_TYPE = {
   2: "Council Document",
 };
 
+// Add these mapping constants for request types
+const REQUEST_TYPE = {
+  1: "Research Creation",
+  2: "Phase Update",
+  3: "Completion",
+  4: "Paper Creation",
+  5: "Conference Creation",
+  6: "Fund Disbursement",
+};
+
+// Add this mapping for approval status
+const APPROVAL_STATUS = {
+  0: "Pending",
+  1: "Approved",
+  2: "Rejected",
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -142,7 +159,7 @@ const PendingRequest = () => {
     isLoading: isPendingLoading,
     isError: isPendingError,
     error: pendingError,
-  } = useGetMyPendingProjectsQuery();
+  } = useGetUserPendingProjectRequestsQuery();
 
   // Also fetch full project details for when a project is selected
   const { data: fullProjectsData } = useGetMyProjectsQuery();
@@ -151,21 +168,21 @@ const PendingRequest = () => {
   useEffect(() => {
     if (pendingProjectsData && pendingProjectsData.data) {
       // Apply filters
-      const filtered = pendingProjectsData.data.filter((project) => {
+      const filtered = pendingProjectsData.data.filter((request) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
-            : project.projectName
+            : request.projectName
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase()) ||
-              project.description
+              request.projectDescription
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase());
 
         const matchesType =
           typeFilter === "all"
             ? true
-            : project.projectType?.toString() === typeFilter;
+            : request.projectType.toString() === typeFilter;
 
         return matchesSearch && matchesType;
       });
@@ -185,13 +202,12 @@ const PendingRequest = () => {
             <h4 className="text-lg font-medium text-gray-900">
               {record.projectName}
             </h4>
-            <p className="text-sm text-gray-500">{record.description}</p>
+            <p className="text-sm text-gray-500">{record.projectDescription}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Tag color="blue">
-              {PROJECT_TYPE[record.projectType] || "Research"}
-            </Tag>
+            <Tag color="blue">{record.projectTypeName}</Tag>
             <Tag color="green">{record.departmentName}</Tag>
+            <Tag color="purple">{REQUEST_TYPE[record.requestType]}</Tag>
           </div>
 
           <Divider className="my-3" />
@@ -199,13 +215,13 @@ const PendingRequest = () => {
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Created by: </span>
+              <span className="text-sm text-gray-600">Requested by: </span>
               <span className="text-sm font-medium ml-1">
-                {record.creatorName || "Unknown"}
+                {record.requesterName || "Unknown"}
               </span>
             </div>
             <div className="text-sm text-gray-500 ml-6">
-              <div>Created at: {formatDate(record.createdAt)}</div>
+              <div>Requested at: {formatDate(record.requestedAt)}</div>
             </div>
           </div>
 
@@ -230,11 +246,27 @@ const PendingRequest = () => {
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-600">Requested Budget</span>
+                <span className="text-sm text-gray-600">Approved Budget</span>
                 <span className="text-sm font-medium">
                   ₫{record.approvedBudget?.toLocaleString() || "0"}
                 </span>
               </div>
+              {record.spentBudget > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Spent Budget</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.spentBudget?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
+              {record.fundRequestAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Requested Funds</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.fundRequestAmount?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -243,18 +275,9 @@ const PendingRequest = () => {
             <div className="text-sm">
               <span className="text-gray-600">Timeline: </span>
               <span className="font-medium">
-                {formatDate(record.startDate)} to {formatDate(record.endDate)}
+                Project Status: {PROJECT_STATUS[record.projectStatus] || "N/A"}
               </span>
             </div>
-          </div>
-
-          {/* Email Info */}
-          <div className="flex items-center mt-2">
-            <MailOutlined className="text-gray-400 mr-2" />
-            <span className="text-sm text-gray-600">Contact: </span>
-            <span className="text-sm font-medium ml-1">
-              {record.creatorEmail || "No email provided"}
-            </span>
           </div>
         </div>
       ),
@@ -264,10 +287,18 @@ const PendingRequest = () => {
       key: "status",
       width: "15%",
       render: (_, record) => {
-        const statusText = PROJECT_STATUS[record.status].toLowerCase();
+        // Now use the approval status instead
         return (
-          <Tag color={STATUS_COLORS[statusText] || "default"}>
-            {PROJECT_STATUS[record.status]}
+          <Tag
+            color={
+              record.approvalStatus === 0
+                ? "gold"
+                : record.approvalStatus === 1
+                ? "green"
+                : "red"
+            }
+          >
+            {record.statusName || APPROVAL_STATUS[record.approvalStatus]}
           </Tag>
         );
       },
@@ -292,7 +323,7 @@ const PendingRequest = () => {
   ];
 
   const handleViewDetails = (request) => {
-    navigate(`/project-details/${request.projectId}`);
+    navigate(`/project-request/${request.requestId}`);
   };
 
   // For table skeleton loading
