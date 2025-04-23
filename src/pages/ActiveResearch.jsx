@@ -22,6 +22,7 @@ import {
   Avatar,
   Tooltip,
   Skeleton,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -184,34 +185,6 @@ const ActiveResearch = () => {
   // Create a skeleton array for loading state
   const skeletonCards = Array(6).fill(null);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8 flex justify-center items-center">
-        <Spin
-          indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />}
-          tip="Loading projects..."
-        />
-      </div>
-    );
-  }
-
-  if (isError) {
-    message.error("Failed to load projects");
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-red-600">
-            Error loading projects
-          </h2>
-          <p className="mt-2 text-gray-600">
-            {error?.data?.message ||
-              "Failed to load projects. Please try again later."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -228,7 +201,21 @@ const ActiveResearch = () => {
           </p>
         </div>
 
-        {/* Statistics Cards - Skeleton loading */}
+        {/* Show error alert if there's an error */}
+        {isError && (
+          <Alert
+            type="error"
+            message="Error loading projects"
+            description={
+              error?.data?.message ||
+              "Failed to load projects. Please try again later."
+            }
+            className="mb-8"
+            showIcon
+          />
+        )}
+
+        {/* Statistics Cards - Always show skeletons when loading */}
         <Row gutter={[16, 16]} className="mb-12">
           {isLoading ? (
             <>
@@ -321,10 +308,14 @@ const ActiveResearch = () => {
           </div>
         </Card>
 
-        {/* Projects Grid with Skeleton Loading */}
+        {/* Projects Grid - Updated fix */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {isLoading ? (
-            // Skeleton loading cards
+          {isLoading ||
+          (!isLoading && !projectsData) ||
+          (projectsData?.data &&
+            filteredProjects.length === 0 &&
+            projectsData.data.length > 0) ? (
+            // Show skeletons during loading OR when we have data but filteredProjects hasn't been populated yet
             skeletonCards.map((_, index) => (
               <Card
                 key={index}
@@ -349,7 +340,20 @@ const ActiveResearch = () => {
                 </div>
               </Card>
             ))
+          ) : projectsData?.data && projectsData.data.length === 0 ? (
+            // Only show empty state when we DEFINITELY have empty data
+            <div className="col-span-full">
+              <Empty
+                description={
+                  <span className="text-gray-500">
+                    No active research projects found
+                  </span>
+                }
+                className="my-8"
+              />
+            </div>
           ) : filteredProjects.length > 0 ? (
+            // Show filtered projects
             filteredProjects.map((project, index) => (
               <motion.div
                 key={project.projectId}
@@ -435,11 +439,12 @@ const ActiveResearch = () => {
               </motion.div>
             ))
           ) : (
+            // Only show "no matches" when filtering actually reduced the results
             <div className="col-span-full">
               <Empty
                 description={
                   <span className="text-gray-500">
-                    No active research projects found
+                    No projects match your search criteria
                   </span>
                 }
                 className="my-8"

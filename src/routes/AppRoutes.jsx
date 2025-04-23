@@ -14,6 +14,7 @@ import RegisterPaper from "../pages/lecturer/RegisterPaper";
 import PendingRequest from "../pages/PendingRequest";
 import ProjectDetails from "../pages/ProjectDetails";
 import ActiveResearch from "../pages/ActiveResearch";
+import ResearchArchive from "../pages/ResearchArchive";
 import ActivePaper from "../pages/lecturer/ActivePaper";
 import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
 import CreateCouncil from "../pages/office/CreateCouncil";
@@ -114,6 +115,10 @@ export const routes = [
           {
             path: "active-research",
             element: <ActiveResearch />,
+          },
+          {
+            path: "research-archive",
+            element: <ResearchArchive />,
           },
           {
             path: "review-project",

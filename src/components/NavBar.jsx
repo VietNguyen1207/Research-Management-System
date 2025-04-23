@@ -312,6 +312,9 @@ const NavBar = () => {
       case "Active Research":
         navigate("/active-research");
         break;
+      case "Research Archive":
+        navigate("/research-archive");
+        break;
       case "Active Paper":
         navigate("/active-paper");
         break;

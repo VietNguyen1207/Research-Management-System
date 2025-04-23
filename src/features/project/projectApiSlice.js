@@ -234,6 +234,62 @@ export const projectApiSlice = apiSlice.injectEndpoints({
           : [{ type: "UserProjectRequests", id: "LIST" }],
       transformResponse: (response) => response,
     }),
+    getProjectCompletionSummary: builder.query({
+      query: (projectId) => ({
+        url: `/projects/${projectId}/completion-summary`,
+        method: "GET",
+      }),
+      providesTags: (result, error, projectId) => [
+        { type: "ProjectCompletionSummary", id: projectId },
+      ],
+    }),
+    requestProjectCompletion: builder.mutation({
+      query: ({ projectId, completionData }) => ({
+        url: `/project/${projectId}/request-completion`,
+        method: "POST",
+        body: completionData,
+      }),
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Projects", id: projectId },
+        { type: "ProjectCompletionSummary", id: projectId },
+      ],
+    }),
+    uploadCompletionDocuments: builder.mutation({
+      query: ({ projectId, formData }) => ({
+        url: `/project/${projectId}/upload-completion-documents`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Projects", id: projectId },
+        { type: "ProjectCompletionSummary", id: projectId },
+      ],
+    }),
+    approveCompletionRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/completion-requests/${requestId}/approve`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "DepartmentPendingProjectRequests", id: "LIST" },
+        { type: "ProjectRequestDetails", id: requestId },
+      ],
+    }),
+    rejectCompletionRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/completion-requests/${requestId}/reject`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "DepartmentPendingProjectRequests", id: "LIST" },
+        { type: "ProjectRequestDetails", id: requestId },
+      ],
+    }),
   }),
 });
 
@@ -255,4 +311,9 @@ export const {
   useGetPendingDepartmentProjectRequestsQuery,
   useGetUserPendingProjectRequestsQuery,
   useGetUserProjectRequestsQuery,
+  useGetProjectCompletionSummaryQuery,
+  useRequestProjectCompletionMutation,
+  useUploadCompletionDocumentsMutation,
+  useApproveCompletionRequestMutation,
+  useRejectCompletionRequestMutation,
 } = projectApiSlice;

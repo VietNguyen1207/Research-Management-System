@@ -39,6 +39,7 @@ import {
   InboxOutlined,
   ArrowLeftOutlined,
   HistoryOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -46,6 +47,8 @@ import {
   useGetProjectRequestDetailsQuery,
   useApproveProjectRequestMutation,
   useRejectProjectRequestMutation,
+  useApproveCompletionRequestMutation,
+  useRejectCompletionRequestMutation,
 } from "../../features/project/projectApiSlice";
 
 const { Title, Text, Paragraph } = Typography;
@@ -53,10 +56,13 @@ const { Panel } = Collapse;
 
 // Constants for document types
 const DOCUMENT_TYPE = {
-  0: "Project Document",
-  1: "Research Publication",
-  2: "Council Document",
-  6: "Completion Document",
+  0: "Project Proposal",
+  1: "Disbursement",
+  2: "Council Decision",
+  3: "Conference Proposal",
+  4: "Journal Paper",
+  5: "Disbursement Confirmation",
+  6: "Project Completion",
 };
 
 // Constants for request types
@@ -170,6 +176,12 @@ const ProjectRequestDetail = () => {
   const [rejectProjectRequest, { isLoading: isRejecting }] =
     useRejectProjectRequestMutation();
 
+  // Add these mutations
+  const [approveCompletionRequest, { isLoading: isApprovingCompletion }] =
+    useApproveCompletionRequestMutation();
+  const [rejectCompletionRequest, { isLoading: isRejectingCompletion }] =
+    useRejectCompletionRequestMutation();
+
   // Extract project request data
   const projectRequest = response?.data;
 
@@ -223,11 +235,20 @@ const ProjectRequestDetail = () => {
       const formData = new FormData();
       formData.append("documentFiles", file);
 
-      // Call the API
-      await approveProjectRequest({
-        requestId,
-        formData: formData,
-      }).unwrap();
+      // Use different API based on request type
+      if (projectRequest.requestType === 3) {
+        // Completion request
+        await approveCompletionRequest({
+          requestId,
+          formData: formData,
+        }).unwrap();
+      } else {
+        // Other request types
+        await approveProjectRequest({
+          requestId,
+          formData: formData,
+        }).unwrap();
+      }
 
       message.success("Project request has been approved successfully");
       setApprovalModalVisible(false);
@@ -261,15 +282,22 @@ const ProjectRequestDetail = () => {
       // Create FormData and append the file
       const formData = new FormData();
       formData.append("documentFiles", file);
-
-      // Add the rejection reason to the FormData
       formData.append("rejectionReason", values.rejectionReason || "");
 
-      // Call the API
-      await rejectProjectRequest({
-        requestId,
-        formData: formData,
-      }).unwrap();
+      // Use different API based on request type
+      if (projectRequest.requestType === 3) {
+        // Completion request
+        await rejectCompletionRequest({
+          requestId,
+          formData: formData,
+        }).unwrap();
+      } else {
+        // Other request types
+        await rejectProjectRequest({
+          requestId,
+          formData: formData,
+        }).unwrap();
+      }
 
       message.success("Project request has been rejected successfully");
       setRejectionModalVisible(false);
@@ -448,6 +476,99 @@ const ProjectRequestDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Project Completion Details Card - Move this up */}
+        {projectRequest.requestType === 3 && (
+          <Card
+            title={
+              <div className="flex items-center">
+                <CheckCircleOutlined className="text-[#F2722B] mr-2" />
+                <span className="font-semibold">
+                  Project Completion Details
+                </span>
+              </div>
+            }
+            className="mb-6 shadow-md hover:shadow-lg transition-shadow duration-300"
+          >
+            <div className="grid gap-6">
+              {/* Completion Summary */}
+              <div>
+                <h3 className="font-medium text-gray-700 mb-2">
+                  Project Outcomes
+                </h3>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  {projectRequest.completionSummary ||
+                    "No completion summary provided"}
+                </div>
+              </div>
+
+              {/* Budget Reconciliation */}
+              <div>
+                <h3 className="font-medium text-gray-700 mb-2">
+                  Budget Status
+                </h3>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center mb-3">
+                    <Tag
+                      color={
+                        projectRequest.budgetReconciled ? "success" : "error"
+                      }
+                      icon={
+                        projectRequest.budgetReconciled ? (
+                          <CheckCircleOutlined />
+                        ) : (
+                          <CloseCircleOutlined />
+                        )
+                      }
+                      className="px-3 py-1 text-base"
+                    >
+                      {projectRequest.budgetReconciled
+                        ? "Budget Reconciled"
+                        : "Budget Not Reconciled"}
+                    </Tag>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="bg-white p-3 rounded border border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Approved Budget
+                      </div>
+                      <div className="text-lg font-medium">
+                        {formatCurrency(projectRequest.approvedBudget)}
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-gray-200">
+                      <div className="text-sm text-gray-500">Spent Budget</div>
+                      <div className="text-lg font-medium">
+                        {formatCurrency(projectRequest.spentBudget)}
+                      </div>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-green-200">
+                      <div className="text-sm text-green-600">
+                        Remaining Budget
+                      </div>
+                      <div className="text-lg font-medium text-green-600">
+                        {formatCurrency(projectRequest.budgetRemaining)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget Variance Explanation */}
+              {projectRequest.budgetVarianceExplanation && (
+                <div>
+                  <h3 className="font-medium text-gray-700 mb-2">
+                    Budget Variance Explanation
+                  </h3>
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    {projectRequest.budgetVarianceExplanation}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={16}>

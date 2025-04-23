@@ -31,6 +31,7 @@ import {
   Badge,
   Steps,
   Drawer,
+  Checkbox,
 } from "antd";
 import {
   ProjectOutlined,
@@ -57,12 +58,16 @@ import {
   ArrowLeftOutlined,
   CloseOutlined,
   FolderOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import {
   useGetProjectDetailsQuery,
   useUpdateProjectPhaseMutation,
+  useGetProjectCompletionSummaryQuery,
+  useRequestProjectCompletionMutation,
+  useUploadCompletionDocumentsMutation,
 } from "../features/project/projectApiSlice";
 import {
   useRequestFundDisbursementMutation,
@@ -102,8 +107,12 @@ const PROJECT_TYPE = {
 const PROJECT_STATUS = {
   0: "Pending",
   1: "Approved",
-  2: "Work in progress",
+  2: "Closed",
   3: "Rejected",
+  4: "Completed",
+  5: "Completion Requested",
+  6: "Completion Approved",
+  7: "Completion Rejected",
 };
 
 // Document Type enum mapping
@@ -153,6 +162,9 @@ const ProjectDetails = () => {
   const [fundRequestModalVisible, setFundRequestModalVisible] = useState(false);
   const [selectedPhaseForFunding, setSelectedPhaseForFunding] = useState(null);
   const [fundRequestForm] = Form.useForm();
+  const [completionModalVisible, setCompletionModalVisible] = useState(false);
+  const [completionStep, setCompletionStep] = useState("preview"); // 'preview' or 'form'
+  const [completionForm] = Form.useForm();
 
   const {
     data: projectDetailsData,
@@ -172,6 +184,18 @@ const ProjectDetails = () => {
     useUploadDisbursementDocumentMutation();
   const [updateProjectPhase, { isLoading: isUpdatingPhase }] =
     useUpdateProjectPhaseMutation();
+
+  const { data: completionSummaryData, isLoading: isLoadingCompletionSummary } =
+    useGetProjectCompletionSummaryQuery(currentProjectId, {
+      skip: !currentProjectId || !completionModalVisible,
+    });
+
+  const completionSummary = completionSummaryData?.data;
+
+  const [requestProjectCompletion, { isLoading: isSubmittingCompletion }] =
+    useRequestProjectCompletionMutation();
+  const [uploadCompletionDocuments, { isLoading: isUploadingCompletionDocs }] =
+    useUploadCompletionDocumentsMutation();
 
   useEffect(() => {
     // Scroll to top when component mounts
@@ -330,6 +354,51 @@ const ProjectDetails = () => {
     }
   };
 
+  const handleCompletionRequest = () => {
+    setCompletionModalVisible(true);
+    setCompletionStep("preview");
+  };
+
+  const handleCompletionSubmit = async (values) => {
+    try {
+      // Step 1: Submit the completion request
+      const completionData = {
+        completionSummary: values.projectOutcomes,
+        budgetReconciled: values.budgetReconciled,
+        budgetVarianceExplanation: values.budgetVarianceExplanation || "",
+      };
+
+      const completionResponse = await requestProjectCompletion({
+        projectId: currentProjectId,
+        completionData,
+      }).unwrap();
+
+      // Step 2: Upload completion documents if provided
+      if (values.completionDocuments?.length > 0) {
+        const formData = new FormData();
+
+        values.completionDocuments.forEach((file) => {
+          formData.append("documentFiles", file.originFileObj);
+        });
+
+        await uploadCompletionDocuments({
+          projectId: currentProjectId,
+          formData,
+        }).unwrap();
+      }
+
+      message.success("Project completion request submitted successfully!");
+      setCompletionModalVisible(false);
+      refetch(); // Refresh project data
+    } catch (error) {
+      console.error("Failed to submit completion request:", error);
+      message.error(
+        error.data?.message ||
+          "Failed to submit completion request. Please try again."
+      );
+    }
+  };
+
   if (!currentProjectId) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -470,6 +539,8 @@ const ProjectDetails = () => {
   const progressPercentage =
     totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
 
+  const allPhasesCompleted = completedPhases === totalPhases;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -512,7 +583,7 @@ const ProjectDetails = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-col gap-2 items-end">
                     <Tag
                       color={
                         projectDetails.status === 0
@@ -521,12 +592,34 @@ const ProjectDetails = () => {
                           ? "green"
                           : projectDetails.status === 2
                           ? "blue"
-                          : "red"
+                          : projectDetails.status === 3
+                          ? "red"
+                          : projectDetails.status === 4
+                          ? "cyan"
+                          : projectDetails.status === 5
+                          ? "purple"
+                          : projectDetails.status === 6
+                          ? "success"
+                          : projectDetails.status === 7
+                          ? "volcano"
+                          : "default"
                       }
                       className="px-4 py-1.5 text-sm font-medium rounded-full border-0 shadow-sm"
                     >
                       {PROJECT_STATUS[projectDetails.status]}
                     </Tag>
+
+                    {/* Add completion button when all phases completed */}
+                    {allPhasesCompleted && projectDetails.status === 1 && (
+                      <Button
+                        type="primary"
+                        icon={<CheckCircleOutlined />}
+                        onClick={handleCompletionRequest}
+                        className="mt-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-md"
+                      >
+                        Request Completion
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1782,7 +1875,7 @@ const ProjectDetails = () => {
       >
         <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
           <div className="flex items-start">
-            <CheckOutlined className="text-green-500 text-lg mt-0.5 mr-2" />
+            <CheckOutlined className="text-green-500 text-lg mt-1 mr-3" />
             <div>
               <Text strong className="text-green-700">
                 Phase Completed
@@ -1935,6 +2028,672 @@ const ProjectDetails = () => {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Completion Modal */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <CheckCircleOutlined className="text-green-500 mr-2" />
+            <span>
+              {completionStep === "preview"
+                ? "Project Summary"
+                : "Request Project Completion"}
+            </span>
+          </div>
+        }
+        open={completionModalVisible}
+        onCancel={() => setCompletionModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {completionStep === "preview" ? (
+          <div>
+            {isLoadingCompletionSummary ? (
+              <div className="text-center py-8">
+                <Spin size="large" />
+                <p className="mt-4">Loading project summary...</p>
+              </div>
+            ) : completionSummary ? (
+              <>
+                <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-200">
+                  <div className="flex items-start">
+                    <CheckOutlined className="text-green-500 text-lg mt-1 mr-3" />
+                    <div>
+                      <Text strong className="text-green-700 text-lg">
+                        Project Summary
+                      </Text>
+                      <Text className="text-green-600 block mt-1">
+                        Review the project details before submitting your
+                        completion request.
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Statistics */}
+                <div className="bg-gray-50 p-5 rounded-lg mb-4">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">
+                    Project Overview
+                  </h3>
+
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <Statistic
+                        title="Total Budget"
+                        value={completionSummary.approvedBudget}
+                        precision={0}
+                        formatter={(value) => (
+                          <span>₫{value.toLocaleString()}</span>
+                        )}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="Spent Budget"
+                        value={completionSummary.spentBudget}
+                        precision={0}
+                        formatter={(value) => (
+                          <span>₫{value.toLocaleString()}</span>
+                        )}
+                        valueStyle={{ color: "#22c55e" }}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="Remaining Budget"
+                        value={completionSummary.remainingBudget}
+                        precision={0}
+                        formatter={(value) => (
+                          <span>₫{value.toLocaleString()}</span>
+                        )}
+                        valueStyle={{ color: "#3b82f6" }}
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="Budget Utilization"
+                        value={
+                          completionSummary.approvedBudget > 0
+                            ? (completionSummary.spentBudget /
+                                completionSummary.approvedBudget) *
+                              100
+                            : 0
+                        }
+                        precision={1}
+                        suffix="%"
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="Project Duration"
+                        value={Math.ceil(
+                          (new Date(completionSummary.endDate) -
+                            new Date(completionSummary.startDate)) /
+                            (1000 * 60 * 60 * 24)
+                        )}
+                        suffix="days"
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Statistic
+                        title="Phase Completion"
+                        value={`${completionSummary.completedPhases}/${completionSummary.totalPhases}`}
+                        valueStyle={{ color: "#22c55e" }}
+                      />
+                    </Col>
+                  </Row>
+                </div>
+
+                {/* Phase Timeline */}
+                <div className="bg-gray-50 p-5 rounded-lg mb-4">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">
+                    Phase Timeline
+                  </h3>
+                  <Timeline>
+                    {completionSummary.phases.map((phase) => (
+                      <Timeline.Item
+                        key={phase.projectPhaseId}
+                        color={
+                          phase.status === 2
+                            ? "green"
+                            : phase.status === 3
+                            ? "red"
+                            : "blue"
+                        }
+                        dot={
+                          phase.status === 2 ? (
+                            <CheckCircleOutlined />
+                          ) : (
+                            <ClockCircleOutlined />
+                          )
+                        }
+                      >
+                        <div className="font-medium">{phase.title}</div>
+                        <div className="text-sm text-gray-500">
+                          {formatDate(phase.startDate)} -{" "}
+                          {formatDate(phase.endDate)}
+                        </div>
+                        <div className="mt-1">
+                          <Tag
+                            color={
+                              phase.status === 2
+                                ? "success"
+                                : phase.status === 3
+                                ? "error"
+                                : phase.status === 1
+                                ? "warning"
+                                : "blue"
+                            }
+                            className="mr-2"
+                          >
+                            {PHASE_STATUS[phase.status]}
+                          </Tag>
+                          <Tag color="green">
+                            ₫{phase.spentBudget.toLocaleString()}
+                          </Tag>
+                        </div>
+                      </Timeline.Item>
+                    ))}
+                  </Timeline>
+                </div>
+
+                {/* Team Members */}
+                <div className="bg-gray-50 p-5 rounded-lg mb-4">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">
+                    Team Members ({completionSummary.teamMembers.length})
+                  </h3>
+                  <div className="max-h-60 overflow-y-auto pr-2">
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={completionSummary.teamMembers}
+                      renderItem={(member) => (
+                        <List.Item>
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar
+                                icon={<UserOutlined />}
+                                style={{
+                                  backgroundColor:
+                                    member.role === 0
+                                      ? "#F2722B"
+                                      : member.role === 2
+                                      ? "#8b5cf6"
+                                      : "#3b82f6",
+                                }}
+                              />
+                            }
+                            title={<span>{member.memberName}</span>}
+                            description={
+                              <div>
+                                <div>{member.memberEmail}</div>
+                                <Tag
+                                  color={
+                                    member.role === 0
+                                      ? "orange"
+                                      : member.role === 2
+                                      ? "purple"
+                                      : "blue"
+                                  }
+                                >
+                                  {MEMBER_ROLE[member.role]}
+                                </Tag>
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Disbursements */}
+                <div className="bg-gray-50 p-5 rounded-lg mb-4">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">
+                    Fund Disbursements ({completionSummary.disbursementCount})
+                  </h3>
+                  <div className="max-h-60 overflow-y-auto pr-2">
+                    <Timeline>
+                      {completionSummary.disbursements.map((disbursement) => (
+                        <Timeline.Item
+                          key={disbursement.fundDisbursementId}
+                          color={
+                            disbursement.status === 1
+                              ? "green"
+                              : disbursement.status === 2
+                              ? "red"
+                              : "blue"
+                          }
+                        >
+                          <div className="font-medium">
+                            ₫{disbursement.fundRequest.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {disbursement.description}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Requested on {formatDate(disbursement.createdAt)}
+                          </div>
+                          <div className="mt-1">
+                            <Tag
+                              color={
+                                disbursement.status === 1
+                                  ? "success"
+                                  : disbursement.status === 2
+                                  ? "error"
+                                  : "warning"
+                              }
+                            >
+                              {disbursement.statusName}
+                            </Tag>
+                          </div>
+                        </Timeline.Item>
+                      ))}
+                    </Timeline>
+                  </div>
+                </div>
+
+                {/* Documents - Organized by type */}
+                <div className="bg-gray-50 p-5 rounded-lg mb-4">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">
+                    Project Documents ({completionSummary.documentCount})
+                  </h3>
+
+                  <Collapse
+                    defaultActiveKey={["0"]}
+                    className="bg-white shadow-sm rounded-xl"
+                  >
+                    {/* Project Documents */}
+                    <Panel
+                      header={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
+                              <FileOutlined />
+                            </div>
+                            <span className="font-medium">
+                              Project Documents
+                            </span>
+                          </div>
+                          <Badge
+                            count={
+                              completionSummary.documents.filter(
+                                (d) => d.documentType === 0
+                              ).length
+                            }
+                            style={{ backgroundColor: "#3b82f6" }}
+                          />
+                        </div>
+                      }
+                      key="0"
+                    >
+                      <List
+                        size="small"
+                        dataSource={completionSummary.documents.filter(
+                          (d) => d.documentType === 0
+                        )}
+                        locale={{ emptyText: "No project documents" }}
+                        renderItem={(doc) => (
+                          <List.Item
+                            actions={[
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                onClick={() =>
+                                  handleDownloadDocument(doc.documentUrl)
+                                }
+                              >
+                                View
+                              </Button>,
+                            ]}
+                          >
+                            <List.Item.Meta
+                              avatar={
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-600">
+                                  <FileOutlined />
+                                </div>
+                              }
+                              title={
+                                <Tooltip title={doc.fileName}>
+                                  <div className="truncate max-w-xs">
+                                    {doc.fileName}
+                                  </div>
+                                </Tooltip>
+                              }
+                              description={
+                                <div className="text-xs text-gray-500">
+                                  Uploaded: {formatDate(doc.uploadAt)}
+                                </div>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </Panel>
+
+                    {/* Research Publications */}
+                    <Panel
+                      header={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-3">
+                              <FileOutlined />
+                            </div>
+                            <span className="font-medium">
+                              Research Publications
+                            </span>
+                          </div>
+                          <Badge
+                            count={
+                              completionSummary.documents.filter(
+                                (d) => d.documentType === 1
+                              ).length
+                            }
+                            style={{ backgroundColor: "#22c55e" }}
+                          />
+                        </div>
+                      }
+                      key="1"
+                    >
+                      <List
+                        size="small"
+                        dataSource={completionSummary.documents.filter(
+                          (d) => d.documentType === 1
+                        )}
+                        locale={{ emptyText: "No research publications" }}
+                        renderItem={(doc) => (
+                          <List.Item
+                            actions={[
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                onClick={() =>
+                                  handleDownloadDocument(doc.documentUrl)
+                                }
+                              >
+                                View
+                              </Button>,
+                            ]}
+                          >
+                            <List.Item.Meta
+                              avatar={
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600">
+                                  <FileOutlined />
+                                </div>
+                              }
+                              title={
+                                <Tooltip title={doc.fileName}>
+                                  <div className="truncate max-w-xs">
+                                    {doc.fileName}
+                                  </div>
+                                </Tooltip>
+                              }
+                              description={
+                                <div className="text-xs text-gray-500">
+                                  Uploaded: {formatDate(doc.uploadAt)}
+                                </div>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </Panel>
+
+                    {/* Council Documents */}
+                    <Panel
+                      header={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#F2722B] flex items-center justify-center mr-3">
+                              <FileOutlined />
+                            </div>
+                            <span className="font-medium">
+                              Council Documents
+                            </span>
+                          </div>
+                          <Badge
+                            count={
+                              completionSummary.documents.filter(
+                                (d) => d.documentType === 2
+                              ).length
+                            }
+                            style={{ backgroundColor: "#F2722B" }}
+                          />
+                        </div>
+                      }
+                      key="2"
+                    >
+                      <List
+                        size="small"
+                        dataSource={completionSummary.documents.filter(
+                          (d) => d.documentType === 2
+                        )}
+                        locale={{ emptyText: "No council documents" }}
+                        renderItem={(doc) => (
+                          <List.Item
+                            actions={[
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                onClick={() =>
+                                  handleDownloadDocument(doc.documentUrl)
+                                }
+                              >
+                                View
+                              </Button>,
+                            ]}
+                          >
+                            <List.Item.Meta
+                              avatar={
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 text-[#F2722B]">
+                                  <FileOutlined />
+                                </div>
+                              }
+                              title={
+                                <Tooltip title={doc.fileName}>
+                                  <div className="truncate max-w-xs">
+                                    {doc.fileName}
+                                  </div>
+                                </Tooltip>
+                              }
+                              description={
+                                <div className="text-xs text-gray-500">
+                                  Uploaded: {formatDate(doc.uploadAt)}
+                                </div>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </Panel>
+                  </Collapse>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <Button onClick={() => setCompletionModalVisible(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={() => setCompletionStep("form")}
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
+                  >
+                    Continue to Form
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Empty description="Could not load project summary" />
+                <Button
+                  onClick={() => setCompletionModalVisible(false)}
+                  className="mt-4"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Form
+            form={completionForm}
+            layout="vertical"
+            onFinish={handleCompletionSubmit}
+          >
+            <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-200">
+              <div className="flex items-start">
+                <InfoCircleOutlined className="text-blue-500 text-lg mt-1 mr-3" />
+                <div>
+                  <Text strong className="text-blue-700">
+                    Please provide final project details
+                  </Text>
+                  <Text className="text-blue-600 block mt-1">
+                    This information will be reviewed by the council before
+                    approving project completion.
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <Form.Item
+              name="projectOutcomes"
+              label="Project Outcomes"
+              rules={[
+                {
+                  required: true,
+                  message: "Please describe the project outcomes",
+                },
+              ]}
+            >
+              <Input.TextArea
+                rows={4}
+                placeholder="Summarize what the project has achieved compared to its original objectives"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="budgetVarianceExplanation"
+              label="Budget Explanation"
+              rules={[
+                {
+                  required: true,
+                  message: "Please provide budget information",
+                },
+              ]}
+            >
+              <Input.TextArea
+                rows={3}
+                placeholder="Explain any budget variances or how the budget was utilized"
+              />
+            </Form.Item>
+
+            {/* Budget reconciliation section */}
+            <div className="bg-yellow-50 p-4 rounded-lg mb-4 border border-yellow-200">
+              <div className="flex items-start">
+                <InfoCircleOutlined className="text-yellow-600 text-lg mt-1 mr-3" />
+                <div>
+                  <Text strong className="text-yellow-700">
+                    Budget Reconciliation Required
+                  </Text>
+                  <Text className="text-yellow-600 block mt-1">
+                    If your project has remaining unspent budget (₫
+                    {completionSummary?.remainingBudget?.toLocaleString() ||
+                      "0"}
+                    ), you must confirm that you have returned these funds to
+                    the finance department before requesting project completion.
+                  </Text>
+                  <Text className="text-red-500 font-medium mt-2">
+                    * You must check the confirmation box below to submit your
+                    completion request
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <Form.Item
+              name="budgetReconciled"
+              valuePropName="checked"
+              rules={[
+                {
+                  validator: (_, value) =>
+                    value
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            "Budget reconciliation confirmation is required to complete this project"
+                          )
+                        ),
+                },
+              ]}
+              className="bg-yellow-50 p-4 rounded-lg border border-yellow-200"
+            >
+              <Checkbox>
+                <span className="font-medium">
+                  I confirm that all project funds have been accounted for and
+                  any remaining budget has been returned to the finance
+                  department
+                </span>
+              </Checkbox>
+            </Form.Item>
+
+            <Form.Item
+              name="completionDocuments"
+              label="Completion Documents"
+              valuePropName="fileList"
+              getValueFromEvent={(e) => {
+                if (Array.isArray(e)) {
+                  return e;
+                }
+                return e && e.fileList;
+              }}
+              rules={[
+                {
+                  required: true,
+                  message: "Please upload at least one completion document",
+                },
+              ]}
+            >
+              <Upload.Dragger
+                name="documentFiles"
+                multiple
+                beforeUpload={() => false}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">Click or drag files to upload</p>
+                <p className="ant-upload-hint">
+                  Attach final reports, publications, financial records, or
+                  other relevant completion documents
+                </p>
+              </Upload.Dragger>
+            </Form.Item>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button onClick={() => setCompletionStep("preview")}>
+                Back to Summary
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
+                icon={<CheckCircleOutlined />}
+                loading={isSubmittingCompletion || isUploadingCompletionDocs}
+                disabled={isSubmittingCompletion || isUploadingCompletionDocs}
+              >
+                {isSubmittingCompletion
+                  ? "Submitting Request..."
+                  : isUploadingCompletionDocs
+                  ? "Uploading Documents..."
+                  : "Submit Completion Request"}
+              </Button>
+            </div>
+          </Form>
+        )}
       </Modal>
     </div>
   );
