@@ -18,6 +18,7 @@ import {
   Typography,
   Alert,
   Upload,
+  Checkbox,
 } from "antd";
 import {
   CheckOutlined,
@@ -41,6 +42,9 @@ import {
   useGetProjectsByDepartmentQuery,
   useApproveProjectMutation,
   useRejectProjectMutation,
+  useGetPendingDepartmentProjectRequestsQuery,
+  useApproveProjectRequestMutation,
+  useRejectProjectRequestMutation,
 } from "../../features/project/projectApiSlice";
 
 const { Text } = Typography;
@@ -94,6 +98,23 @@ const STATUS_OPTIONS = [
   { value: "3", label: "Rejected" },
 ];
 
+// Add these mapping constants for request types
+const REQUEST_TYPE = {
+  1: "Research Creation",
+  2: "Phase Update",
+  3: "Completion",
+  4: "Paper Creation",
+  5: "Conference Creation",
+  6: "Fund Disbursement",
+};
+
+// Add this mapping for approval status
+const APPROVAL_STATUS = {
+  0: "Pending",
+  1: "Approved",
+  2: "Rejected",
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -109,6 +130,7 @@ const ReviewProject = () => {
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const [form] = Form.useForm();
+  const [rejectionForm] = Form.useForm();
 
   // Get departmentId from user or from query params
   const departmentId = user?.department?.departmentId;
@@ -133,59 +155,58 @@ const ReviewProject = () => {
   const [approvalFileList, setApprovalFileList] = useState([]);
   const [rejectionFileList, setRejectionFileList] = useState([]);
 
+  // Add these state variables to track checkbox status
+  const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const [rejectionConfirmed, setRejectionConfirmed] = useState(false);
+
   // Fetch projects data
   const {
-    data: projectsData,
+    data: projectRequestsData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useGetProjectsByDepartmentQuery(departmentId, {
+  } = useGetPendingDepartmentProjectRequestsQuery(departmentId, {
     skip: !departmentId,
   });
 
   // Mutations for approve/reject
-  const [approveProject, { isLoading: isApproving }] =
-    useApproveProjectMutation();
-  const [rejectProject, { isLoading: isRejecting }] =
-    useRejectProjectMutation();
+  const [approveProjectRequest, { isLoading: isApproving }] =
+    useApproveProjectRequestMutation();
+  const [rejectProjectRequest, { isLoading: isRejecting }] =
+    useRejectProjectRequestMutation();
 
   // Filter projects based on search text, project type, and status
   useEffect(() => {
-    if (projectsData && projectsData.data) {
-      // Filter projects based on selected filters
-      const filtered = projectsData.data.filter((project) => {
+    if (projectRequestsData && projectRequestsData.data) {
+      // Since we're getting only pending requests now, we only need to filter by search text and type
+      const filtered = projectRequestsData.data.filter((request) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
-            : project.projectName
+            : request.projectName
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase()) ||
-              project.description
+              request.projectDescription
                 ?.toLowerCase()
                 .includes(searchText.toLowerCase());
 
         const matchesType =
           typeFilter === "all"
             ? true
-            : project.projectType.toString() === typeFilter;
-
-        const matchesStatus =
-          statusFilter === "all"
-            ? true
-            : project.status.toString() === statusFilter;
+            : request.projectType.toString() === typeFilter;
 
         // If groupId is provided, filter to show only projects from that group
         const matchesGroup = groupId
-          ? project.groupId.toString() === groupId
+          ? request.groupId.toString() === groupId
           : true;
 
-        return matchesSearch && matchesType && matchesStatus && matchesGroup;
+        return matchesSearch && matchesType && matchesGroup;
       });
 
       setFilteredProjects(filtered);
     }
-  }, [projectsData, searchText, typeFilter, statusFilter, groupId]);
+  }, [projectRequestsData, searchText, typeFilter, groupId]);
 
   const handleViewDetails = (project) => {
     setSelectedProject(project);
@@ -201,26 +222,47 @@ const ReviewProject = () => {
     window.open(documentUrl, "_blank");
   };
 
+  // Add onChange handlers for the checkboxes
+  const handleApprovalCheckboxChange = (e) => {
+    setApprovalConfirmed(e.target.checked);
+  };
+
+  const handleRejectionCheckboxChange = (e) => {
+    setRejectionConfirmed(e.target.checked);
+  };
+
+  // Reset the confirmation state when opening the modals
   const handleApproveProject = (project) => {
     setCurrentProject(project);
     setApprovalFileList([]);
+    setApprovalConfirmed(false); // Reset checkbox state
+    form.resetFields();
+    form.setFieldsValue({
+      confirmAction: false,
+    });
     setApprovalModalVisible(true);
   };
 
   const handleRejectProject = (project) => {
     setCurrentProject(project);
     setRejectionFileList([]);
+    setRejectionConfirmed(false); // Reset checkbox state
+    form.resetFields();
+    form.setFieldsValue({
+      confirmAction: false,
+    });
     setRejectionModalVisible(true);
   };
 
   // Add these two new functions for submitting approval/rejection
-  const handleApprovalSubmit = async () => {
-    if (approvalFileList.length === 0) {
-      message.error("Please upload an approval document");
-      return;
-    }
-
+  const handleApprovalSubmit = async (values) => {
     try {
+      // First check if we have files
+      if (approvalFileList.length === 0) {
+        message.error("Please upload an approval document");
+        return;
+      }
+
       // Get the file from the upload component
       const file = approvalFileList[0]?.originFileObj;
       if (!file) {
@@ -230,34 +272,37 @@ const ReviewProject = () => {
 
       // Create FormData and append the file
       const formData = new FormData();
-      formData.append("documentFile", file);
+      formData.append("documentFiles", file);
 
-      // Call the API
-      await approveProject({
-        projectId: currentProject.projectId,
+      // Call the API with requestId instead of projectId
+      await approveProjectRequest({
+        requestId: currentProject.requestId,
         formData: formData,
       }).unwrap();
 
       message.success(
-        `Project "${currentProject.projectName}" has been approved`
+        `Request for "${currentProject.projectName}" has been approved`
       );
       setApprovalModalVisible(false);
+      form.resetFields();
       refetch();
     } catch (err) {
-      console.error("Error approving project:", err);
+      console.error("Error approving project request:", err);
       message.error(
-        err.data?.message || "Failed to approve project. Please try again."
+        err.data?.message ||
+          "Failed to approve project request. Please try again."
       );
     }
   };
 
-  const handleRejectionSubmit = async () => {
-    if (rejectionFileList.length === 0) {
-      message.error("Please upload a rejection document");
-      return;
-    }
-
+  const handleRejectionSubmit = async (values) => {
     try {
+      // First check if we have files
+      if (rejectionFileList.length === 0) {
+        message.error("Please upload a rejection document");
+        return;
+      }
+
       // Get the file from the upload component
       const file = rejectionFileList[0]?.originFileObj;
       if (!file) {
@@ -267,23 +312,30 @@ const ReviewProject = () => {
 
       // Create FormData and append the file
       const formData = new FormData();
-      formData.append("documentFile", file);
+      formData.append("documentFiles", file);
 
-      // Call the API
-      await rejectProject({
-        projectId: currentProject.projectId,
+      // Add the rejection reason to the FormData
+      formData.append("rejectionReason", values.rejectionReason || "");
+
+      console.log("Sending rejection with reason:", values.rejectionReason);
+
+      // Call the API with requestId instead of projectId
+      await rejectProjectRequest({
+        requestId: currentProject.requestId,
         formData: formData,
       }).unwrap();
 
       message.success(
-        `Project "${currentProject.projectName}" has been rejected`
+        `Request for "${currentProject.projectName}" has been rejected`
       );
       setRejectionModalVisible(false);
+      rejectionForm.resetFields();
       refetch();
     } catch (err) {
-      console.error("Error rejecting project:", err);
+      console.error("Error rejecting project request:", err);
       message.error(
-        err.data?.message || "Failed to reject project. Please try again."
+        err.data?.message ||
+          "Failed to reject project request. Please try again."
       );
     }
   };
@@ -299,16 +351,14 @@ const ReviewProject = () => {
             <h4 className="text-lg font-medium text-gray-900">
               {record.projectName}
             </h4>
-            <p className="text-sm text-gray-500">{record.description}</p>
+            <p className="text-sm text-gray-500">{record.projectDescription}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Tag color="blue">{PROJECT_TYPE[record.projectType]}</Tag>
-            {record.departmentId && (
-              <Tag color="green">
-                {user?.department?.departmentName ||
-                  `Department ${record.departmentId}`}
-              </Tag>
-            )}
+            <Tag color="blue">{record.projectTypeName}</Tag>
+            <Tag color="green">
+              {record.departmentName || `Department ${record.departmentId}`}
+            </Tag>
+            <Tag color="purple">{REQUEST_TYPE[record.requestType]}</Tag>
           </div>
 
           <Divider className="my-3" />
@@ -316,13 +366,13 @@ const ReviewProject = () => {
           <div className="space-y-2">
             <div className="flex items-center">
               <UserOutlined className="text-gray-400 mr-2" />
-              <span className="text-sm text-gray-600">Created by ID: </span>
+              <span className="text-sm text-gray-600">Requested by: </span>
               <span className="text-sm font-medium ml-1">
-                {record.createdBy || "Unknown"}
+                {record.requesterName || "Unknown"}
               </span>
             </div>
             <div className="text-sm text-gray-500 ml-6">
-              <div>Created at: {formatDate(record.createdAt)}</div>
+              <div>Requested at: {formatDate(record.requestedAt)}</div>
             </div>
           </div>
 
@@ -340,98 +390,38 @@ const ReviewProject = () => {
     {
       title: "Resource Requests",
       key: "resources",
-      width: "40%",
+      width: "30%",
       render: (_, record) => (
         <div className="space-y-4">
           <div className="flex items-center">
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-600">Requested Budget</span>
+                <span className="text-sm text-gray-600">Approved Budget</span>
                 <span className="text-sm font-medium">
                   ₫{record.approvedBudget?.toLocaleString() || "0"}
                 </span>
               </div>
+              {record.spentBudget > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Spent Budget</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.spentBudget?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
+              {record.fundRequestAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Requested Funds</span>
+                  <span className="text-sm font-medium">
+                    ₫{record.fundRequestAmount?.toLocaleString() || "0"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center">
-            <CalendarOutlined className="text-gray-400 mr-2" />
-            <div className="text-sm">
-              <span className="text-gray-600">Timeline: </span>
-              <span className="font-medium">
-                {formatDate(record.startDate)} to {formatDate(record.endDate)}
-              </span>
-            </div>
-          </div>
-
-          {/* Documents Section */}
-          {record.documents && record.documents.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <FileTextOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Documents</span>
-              </div>
-              <div className="space-y-2 ml-6">
-                {record.documents.map((doc) => (
-                  <div
-                    key={doc.documentId}
-                    className="flex items-center justify-between bg-gray-50 p-2 rounded-md hover:bg-gray-100"
-                  >
-                    <div className="flex items-center">
-                      <FileTextOutlined className="text-gray-400 mr-2" />
-                      <div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Tag color="blue" size="small">
-                            {DOCUMENT_TYPE[doc.documentType]}
-                          </Tag>
-                          <span className="ml-2">
-                            {formatDate(doc.uploadAt)}
-                          </span>
-                        </div>
-                        <div
-                          className="text-sm font-medium truncate max-w-[250px]"
-                          title={doc.fileName}
-                        >
-                          {doc.fileName}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<DownloadOutlined />}
-                      onClick={() => handleViewDocument(doc.documentUrl)}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {record.milestones && record.milestones.length > 0 && (
-            <div className="mt-2">
-              <div className="flex items-center mb-2">
-                <CheckCircleOutlined className="text-gray-400 mr-2" />
-                <span className="text-sm font-medium">Project Milestones</span>
-              </div>
-              <Timeline className="ml-6">
-                {record.milestones.map((milestone) => (
-                  <Timeline.Item key={milestone.milestoneId}>
-                    <div className="text-sm">
-                      <div className="font-medium">{milestone.title}</div>
-                      <div className="text-gray-500">
-                        Timeline: {formatDate(milestone.startDate)} to{" "}
-                        {formatDate(milestone.endDate)}
-                      </div>
-                    </div>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </div>
-          )}
+          {/* Documents would be added here if the API returns them */}
         </div>
       ),
     },
@@ -440,10 +430,16 @@ const ReviewProject = () => {
       key: "status",
       width: "10%",
       render: (_, record) => {
-        const statusText = PROJECT_STATUS[record.status].toLowerCase();
+        const statusColor =
+          record.approvalStatus === 0
+            ? "gold"
+            : record.approvalStatus === 1
+            ? "green"
+            : "red";
+
         return (
-          <Tag color={STATUS_COLORS[statusText] || "default"}>
-            {PROJECT_STATUS[record.status]}
+          <Tag color={statusColor}>
+            {APPROVAL_STATUS[record.approvalStatus]}
           </Tag>
         );
       },
@@ -457,20 +453,20 @@ const ReviewProject = () => {
           <Button
             type="default"
             icon={<InfoCircleOutlined />}
-            onClick={() => handleViewDetails(record)}
+            onClick={() => navigate(`/project-request/${record.requestId}`)}
             className="w-full"
           >
             View Details
           </Button>
 
-          {record.status === 0 && ( // Only show Approve/Reject for pending projects
+          {record.approvalStatus === 0 && ( // Only show Approve/Reject for pending requests
             <>
               <Button
                 type="primary"
                 icon={<CheckOutlined />}
                 onClick={() => handleApproveProject(record)}
                 loading={isApproving}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
+                className="bg-green-600 hover:bg-green-700 w-full"
               >
                 Approve
               </Button>
@@ -579,15 +575,7 @@ const ReviewProject = () => {
                 allowClear
                 value={searchText}
               />
-              <span className="text-gray-700 font-medium">Filter:</span>
-              {/* Status filter */}
-              <Select
-                value={statusFilter}
-                style={{ width: 160 }}
-                onChange={setStatusFilter}
-                options={STATUS_OPTIONS}
-                className="rounded-md"
-              />
+              <span className="text-gray-700 font-medium">Filter by type:</span>
               {/* Project type filter */}
               <Select
                 value={typeFilter}
@@ -789,6 +777,141 @@ const ReviewProject = () => {
                   </Button>
                 </div>
               )}
+
+              <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Approval Record:
+                </h4>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-center">
+                    <CheckCircleOutlined className="text-green-500 mr-2" />
+                    <span className="text-gray-600">Approver: </span>
+                    <span className="ml-1 font-medium">
+                      {user?.name || "Current User"}
+                    </span>
+                  </li>
+                  <li className="flex items-center">
+                    <TeamOutlined className="text-blue-500 mr-2" />
+                    <span className="text-gray-600">Role: </span>
+                    <span className="ml-1 font-medium">
+                      {(() => {
+                        // Find council group where user is Chairman or Secretary
+                        const councilGroup = user?.groups?.find(
+                          (group) =>
+                            group.groupType === 1 &&
+                            (group.role === 3 || group.role === 4)
+                        );
+
+                        if (councilGroup) {
+                          // Map role ID to role name
+                          let roleName = "";
+                          switch (councilGroup.role) {
+                            case 3:
+                              roleName = "Council Chairman";
+                              break;
+                            case 4:
+                              roleName = "Secretary";
+                              break;
+                            default:
+                              roleName = "Council Member";
+                          }
+                          return `${roleName} from ${councilGroup.groupName}`;
+                        } else {
+                          return "Not Authorized";
+                        }
+                      })()}
+                    </span>
+                  </li>
+                  <li className="flex items-center">
+                    <CalendarOutlined className="text-orange-500 mr-2" />
+                    <span className="text-gray-600">Date: </span>
+                    <span className="ml-1 font-medium">
+                      {new Date().toLocaleDateString()}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-gray-700 mb-3">
+                  Approval Status:
+                </h4>
+                <div className="flex items-center justify-around">
+                  <div
+                    className={`flex flex-col items-center ${
+                      isChairmanApproved ? "text-green-600" : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isChairmanApproved ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      <UserOutlined className="text-xl" />
+                    </div>
+                    <p className="mt-2 font-medium">Chairman</p>
+                    <Tag color={isChairmanApproved ? "success" : "default"}>
+                      {isChairmanApproved ? "Approved" : "Pending"}
+                    </Tag>
+                  </div>
+
+                  <div className="w-24 h-0.5 bg-gray-200"></div>
+
+                  <div
+                    className={`flex flex-col items-center ${
+                      isSecretaryApproved ? "text-green-600" : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isSecretaryApproved ? "bg-green-100" : "bg-gray-100"
+                      }`}
+                    >
+                      <UserOutlined className="text-xl" />
+                    </div>
+                    <p className="mt-2 font-medium">Secretary</p>
+                    <Tag color={isSecretaryApproved ? "success" : "default"}>
+                      {isSecretaryApproved ? "Approved" : "Pending"}
+                    </Tag>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Review History:
+                </h4>
+                <Timeline>
+                  {reviewHistory.map((review) => (
+                    <Timeline.Item
+                      key={review.id}
+                      color={
+                        review.action === "approve"
+                          ? "green"
+                          : review.action === "reject"
+                          ? "red"
+                          : "blue"
+                      }
+                    >
+                      <p className="font-medium">
+                        {review.action === "approve" ? "Approved" : "Rejected"}{" "}
+                        by {review.reviewer}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Role: {review.role}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(review.date).toLocaleString()}
+                      </p>
+                      {review.comments && (
+                        <p className="mt-1 text-gray-700">
+                          "{review.comments}"
+                        </p>
+                      )}
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              </div>
             </div>
           )}
         </Modal>
@@ -811,8 +934,9 @@ const ReviewProject = () => {
               key="submit"
               type="primary"
               loading={isApproving}
-              onClick={handleApprovalSubmit}
+              onClick={() => form.submit()}
               className="bg-green-600 hover:bg-green-700"
+              disabled={!approvalConfirmed}
             >
               Approve
             </Button>,
@@ -820,33 +944,115 @@ const ReviewProject = () => {
           width={550}
         >
           {currentProject && (
-            <div>
-              <p>Are you sure you want to approve this project?</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Project: <strong>{currentProject.projectName}</strong>
-              </p>
-              <Divider />
-              <p className="text-sm font-medium mb-2">
-                Please upload an approval document:
-              </p>
-              <Upload.Dragger
-                fileList={approvalFileList}
-                onChange={({ fileList }) => setApprovalFileList(fileList)}
-                beforeUpload={() => false}
-                maxCount={1}
-                onRemove={() => setApprovalFileList([])}
-              >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
+            <Form form={form} onFinish={handleApprovalSubmit}>
+              <div>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                  <div className="flex items-start">
+                    <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        You are approving as:{" "}
+                        <Tag color="blue">
+                          {(() => {
+                            // Find council group where user is Chairman or Secretary
+                            const councilGroup = user?.groups?.find(
+                              (group) =>
+                                group.groupType === 1 &&
+                                (group.role === 3 || group.role === 4)
+                            );
+
+                            if (councilGroup) {
+                              // Map role ID to role name
+                              let roleName = "";
+                              switch (councilGroup.role) {
+                                case 3:
+                                  roleName = "Council Chairman";
+                                  break;
+                                case 4:
+                                  roleName = "Secretary";
+                                  break;
+                                default:
+                                  roleName = "Council Member";
+                              }
+                              return `${roleName} from ${councilGroup.groupName}`;
+                            } else {
+                              return "Not Authorized";
+                            }
+                          })()}
+                        </Tag>
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {user?.fullName || "User"} ({user?.email})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p>Are you sure you want to approve this project?</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Project: <strong>{currentProject.projectName}</strong>
                 </p>
-                <p className="ant-upload-text">
-                  Click or drag approval document to this area
+                <Divider />
+                <p className="text-sm font-medium mb-2">
+                  Please upload an approval document:
                 </p>
-                <p className="ant-upload-hint">
-                  Support for PDF, DOC, DOCX files.
-                </p>
-              </Upload.Dragger>
-            </div>
+                <Upload.Dragger
+                  fileList={approvalFileList}
+                  onChange={({ fileList }) => setApprovalFileList(fileList)}
+                  beforeUpload={() => false}
+                  maxCount={1}
+                  onRemove={() => setApprovalFileList([])}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or drag approval document to this area
+                  </p>
+                  <p className="ant-upload-hint">
+                    Support for PDF, DOC, DOCX files.
+                  </p>
+                </Upload.Dragger>
+                <Form.Item
+                  name="confirmAction"
+                  valuePropName="checked"
+                  rules={[
+                    { required: true, message: "Please confirm your action" },
+                  ]}
+                >
+                  <Checkbox onChange={handleApprovalCheckboxChange}>
+                    I,{" "}
+                    {(() => {
+                      // Find council group where user is Chairman or Secretary
+                      const councilGroup = user?.groups?.find(
+                        (group) =>
+                          group.groupType === 1 &&
+                          (group.role === 3 || group.role === 4)
+                      );
+
+                      if (councilGroup) {
+                        // Map role ID to role name
+                        let roleName = "";
+                        switch (councilGroup.role) {
+                          case 3:
+                            roleName = "Council Chairman";
+                            break;
+                          case 4:
+                            roleName = "Secretary";
+                            break;
+                          default:
+                            roleName = "Council Member";
+                        }
+                        return `${roleName} from ${councilGroup.groupName}`;
+                      } else {
+                        return "Not Authorized";
+                      }
+                    })()}
+                    , confirm that I have reviewed this project and approve its
+                    registration.
+                  </Checkbox>
+                </Form.Item>
+              </div>
+            </Form>
           )}
         </Modal>
 
@@ -869,7 +1075,8 @@ const ReviewProject = () => {
               type="primary"
               danger
               loading={isRejecting}
-              onClick={handleRejectionSubmit}
+              onClick={() => rejectionForm.submit()}
+              disabled={!rejectionConfirmed}
             >
               Reject
             </Button>,
@@ -877,12 +1084,54 @@ const ReviewProject = () => {
           width={550}
         >
           {currentProject && (
-            <div>
+            <Form form={rejectionForm} onFinish={handleRejectionSubmit}>
+              <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
+                <div className="flex items-start">
+                  <UserOutlined className="text-red-500 mt-1 mr-3 text-lg" />
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      You are rejecting as:{" "}
+                      <Tag color="red">
+                        {(() => {
+                          // Find council group where user is Chairman or Secretary
+                          const councilGroup = user?.groups?.find(
+                            (group) =>
+                              group.groupType === 1 &&
+                              (group.role === 3 || group.role === 4)
+                          );
+
+                          if (councilGroup) {
+                            // Map role ID to role name
+                            let roleName = "";
+                            switch (councilGroup.role) {
+                              case 3:
+                                roleName = "Council Chairman";
+                                break;
+                              case 4:
+                                roleName = "Secretary";
+                                break;
+                              default:
+                                roleName = "Council Member";
+                            }
+                            return `${roleName} from ${councilGroup.groupName}`;
+                          } else {
+                            return "Not Authorized";
+                          }
+                        })()}
+                      </Tag>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {user?.fullName || "User"} ({user?.email})
+                    </p>
+                  </div>
+                </div>
+              </div>
               <p>Are you sure you want to reject this project?</p>
               <p className="text-sm text-gray-500 mb-4">
                 Project: <strong>{currentProject.projectName}</strong>
               </p>
               <Divider />
+
               <p className="text-sm font-medium mb-2">
                 Please upload a rejection document:
               </p>
@@ -903,7 +1152,64 @@ const ReviewProject = () => {
                   Support for PDF, DOC, DOCX files.
                 </p>
               </Upload.Dragger>
-            </div>
+
+              <Form.Item
+                name="rejectionReason"
+                label="Reason for Rejection"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a reason for rejection",
+                  },
+                ]}
+                className="mt-4"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Please explain why this project is being rejected..."
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="confirmAction"
+                valuePropName="checked"
+                rules={[
+                  { required: true, message: "Please confirm your action" },
+                ]}
+              >
+                <Checkbox onChange={handleRejectionCheckboxChange}>
+                  I,{" "}
+                  {(() => {
+                    // Find council group where user is Chairman or Secretary
+                    const councilGroup = user?.groups?.find(
+                      (group) =>
+                        group.groupType === 1 &&
+                        (group.role === 3 || group.role === 4)
+                    );
+
+                    if (councilGroup) {
+                      // Map role ID to role name
+                      let roleName = "";
+                      switch (councilGroup.role) {
+                        case 3:
+                          roleName = "Council Chairman";
+                          break;
+                        case 4:
+                          roleName = "Secretary";
+                          break;
+                        default:
+                          roleName = "Council Member";
+                      }
+                      return `${roleName} from ${councilGroup.groupName}`;
+                    } else {
+                      return "Not Authorized";
+                    }
+                  })()}
+                  , confirm that I have reviewed this project and reject its
+                  registration.
+                </Checkbox>
+              </Form.Item>
+            </Form>
           )}
         </Modal>
       </div>

@@ -121,37 +121,21 @@ const RegisterResearch = () => {
       // Step 2: If we have files and a valid project ID, upload the documents
       if (fileList.length > 0 && projectId) {
         try {
-          // Function to handle document uploads
-          const uploadProjectDocuments = async (projectId, files) => {
-            try {
-              // The API might only accept one file at a time
-              const file = files[0]; // Take only the first file
+          // Create a FormData object
+          const formData = new FormData();
 
-              if (!file || !file.originFileObj) {
-                message.error("Invalid file selected");
-                return;
-              }
-
-              // Create a FormData object
-              const formData = new FormData();
-
-              // Use the correct field name 'documentFile'
-              formData.append("documentFile", file.originFileObj);
-
-              // Call the upload API
-              await uploadDocument({ projectId, formData }).unwrap();
-              message.success(
-                "Research project registered and document uploaded successfully!"
-              );
-            } catch (uploadError) {
-              console.error("Error uploading documents:", uploadError);
-              message.warning(
-                "Project was created successfully, but document upload failed. You can upload documents later."
-              );
+          // Append all files to the FormData with the correct field name 'documentFiles'
+          fileList.forEach((file) => {
+            if (file.originFileObj) {
+              formData.append("documentFiles", file.originFileObj);
             }
-          };
+          });
 
-          await uploadProjectDocuments(projectId, fileList);
+          // Call the upload API
+          await uploadDocument({ projectId, formData }).unwrap();
+          message.success(
+            "Research project registered and documents uploaded successfully!"
+          );
         } catch (uploadError) {
           console.error("Error uploading documents:", uploadError);
           message.warning(

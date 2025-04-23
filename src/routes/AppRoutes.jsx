@@ -22,6 +22,15 @@ import Timeline from "../pages/office/TimelineManagement";
 import TimelineManagement from "../pages/office/TimelineManagement";
 import AllTimelines from "../pages/office/AllTimelines";
 import ReviewProject from "../pages/lecturer/ReviewProject";
+import ProjectQuota from "../pages/office/ProjectQuota";
+import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
+import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
+import QuotaDetails from "../pages/office/QuotaDetails";
+import RequestRecord from "../pages/lecturer/RequestRecord";
+import { useSelector } from "react-redux";
+import UserManagement from "../pages/admin/UserManagement";
+import AssignTimeline from "../pages/office/AssignTimeline";
+import ProjectRequestDetail from "../pages/lecturer/ProjectRequestDetail";
 
 export const routes = [
   {
@@ -80,6 +89,7 @@ export const routes = [
             path: "active-paper-details",
             element: <ActivePaperDetails />,
           },
+          { path: "request-record", element: <RequestRecord /> },
         ],
       },
       {
@@ -109,13 +119,17 @@ export const routes = [
             path: "review-project",
             element: <ReviewProject />,
           },
+          {
+            path: "project-request/:requestId",
+            element: <ProjectRequestDetail />,
+          },
         ],
       },
       //Department + Office
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["department", "office", "admin"]}>
+          <ProtectedRoutes allowedRoles={["department", "office"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
@@ -137,21 +151,35 @@ export const routes = [
           </ProtectedRoutes>
         ),
         children: [
-          { path: "office-quota", element: <OfficeQuota /> },
+          { path: "quota-management", element: <OfficeQuota /> },
+          { path: "project-quota/:departmentId", element: <ProjectQuota /> },
+          { path: "quota-details/:quotaId", element: <QuotaDetails /> },
+          { path: "fund-disbursement", element: <FundDisbursementRequest /> },
+          {
+            path: "fund-disbursement-details/:disbursementId",
+            element: <FundDisbursementRequestDetails />,
+          },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
+          { path: "assign-timeline", element: <AssignTimeline /> },
+        ],
+      },
+      {
+        path: "",
+        element: (
+          <ProtectedRoutes allowedRoles={["admin"]}>
+            <Outlet />
+          </ProtectedRoutes>
+        ),
+        children: [
+          { path: "admin/users", element: <UserManagement /> },
+          { path: "admin/projects", element: <div>Projects Management</div> },
+          { path: "admin/quotas", element: <div>Quotas Management</div> },
+          { path: "admin/timelines", element: <div>Timelines Management</div> },
+          { path: "admin/dashboard", element: <UserManagement /> },
         ],
       },
     ],
-  },
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoutes allowedRoles={["admin"]}>
-        <Outlet />
-      </ProtectedRoutes>
-    ),
-    children: [],
   },
   {
     path: "*",
@@ -160,8 +188,12 @@ export const routes = [
 ];
 
 const AppRoutes = () => {
-  const element = useRoutes(routes);
-  return element;
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.role === 0;
+
+  const routeElement = useRoutes(routes);
+
+  return routeElement;
 };
 
 export default AppRoutes;

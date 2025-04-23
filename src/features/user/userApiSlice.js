@@ -120,6 +120,38 @@ export const userApiSlice = apiSlice.injectEndpoints({
               { type: "UserGroups", id: userId },
             ],
     }),
+
+    getAllUsers: builder.query({
+      query: () => "/users",
+      transformResponse: (response) => {
+        if (!response.data) return [];
+
+        // Transform the level to readable format
+        const levelMap = {
+          0: "Professor",
+          1: "Associate Professor",
+          2: "PhD",
+          3: "Master",
+          4: "Bachelor",
+        };
+
+        // Map status to readable format
+        const statusMap = {
+          0: "Inactive",
+          1: "Active",
+          2: "Suspended",
+        };
+
+        return response.data.map((user) => ({
+          ...user,
+          levelText: user.level ? levelMap[user.level] : null,
+          statusText: statusMap[user.status] || "Unknown",
+          // Exclude the password
+          password: undefined,
+        }));
+      },
+      providesTags: ["Users"],
+    }),
   }),
 });
 
@@ -159,4 +191,5 @@ export const {
   useGetStudentsQuery,
   useGetAcademicUsersQuery,
   useGetUserGroupsQuery,
+  useGetAllUsersQuery,
 } = userApiSlice;

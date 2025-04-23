@@ -20,6 +20,7 @@ import {
   FundOutlined,
   FileTextOutlined,
   AuditOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -81,7 +82,8 @@ const navItems = [
     label: "Quotas",
     subItems: [
       { icon: <FundOutlined />, label: "Department Quota" },
-      { icon: <FormOutlined />, label: "Office Quota" },
+      { icon: <FormOutlined />, label: "Quota Management" },
+      { icon: <DollarOutlined />, label: "Fund Disbursement" },
     ],
   },
   {
@@ -101,6 +103,26 @@ const navItems = [
       { icon: <BuildOutlined />, label: "Manufactures" },
       { icon: <DeleteOutlined />, label: "Trash" },
     ],
+  },
+];
+
+// Update the adminSpecificNavItems to remove subItems
+const adminSpecificNavItems = [
+  {
+    icon: <TeamOutlined />,
+    label: "User Management",
+  },
+  {
+    icon: <ProjectOutlined />,
+    label: "Project Management",
+  },
+  {
+    icon: <FundOutlined />,
+    label: "Quota Management",
+  },
+  {
+    icon: <FieldTimeOutlined />,
+    label: "Timeline Management",
   },
 ];
 
@@ -168,8 +190,12 @@ const NavBar = () => {
           allowedItems = officeNavItems;
           break;
         case "admin":
-          allowedItems = adminNavItems;
-          break;
+        // Comment out original code
+        // allowedItems = adminNavItems;
+        // break;
+        case 0: // Add numeric check for admin
+          // Return admin-specific items instead of filtering from navItems
+          return adminSpecificNavItems;
       }
     }
 
@@ -190,7 +216,9 @@ const NavBar = () => {
             return {
               ...item,
               subItems: item.subItems.filter(
-                (subItem) => subItem.label === "Office Quota"
+                (subItem) =>
+                  subItem.label === "Quota Management" ||
+                  subItem.label === "Fund Disbursement"
               ),
             };
           }
@@ -296,8 +324,14 @@ const NavBar = () => {
       case "Department Quota":
         navigate("/department-quota");
         break;
-      case "Office Quota":
-        navigate("/office-quota");
+      case "Quota Management":
+        navigate("/quota-management");
+        break;
+      case "Fund Disbursement":
+        navigate("/fund-disbursement");
+        break;
+      case "Request Record":
+        navigate("/request-record");
         break;
       default:
         break;
@@ -309,10 +343,24 @@ const NavBar = () => {
   const handleItemClick = (item) => {
     switch (item.label) {
       case "Timeline Management":
-        navigate("/timeline-management");
+        // Check if user is admin
+        if (user && user.role === 0) {
+          navigate("/admin/timelines");
+        } else {
+          navigate("/timeline-management");
+        }
         break;
       case "Quotas":
         navigate("/quotas");
+        break;
+      case "User Management":
+        navigate("/admin/users");
+        break;
+      case "Project Management":
+        navigate("/admin/projects");
+        break;
+      case "Quota Management":
+        navigate("/admin/quotas");
         break;
       default:
         break;

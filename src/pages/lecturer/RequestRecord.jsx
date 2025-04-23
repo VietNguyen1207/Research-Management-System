@@ -4,26 +4,19 @@ import {
   Card,
   Button,
   Modal,
-  Form,
-  InputNumber,
-  DatePicker,
-  Input,
   Tag,
-  Tooltip,
   Space,
-  message,
   Divider,
-  Progress,
   Select,
-  Timeline,
   Collapse,
   Spin,
   Empty,
-  Avatar,
+  Typography,
+  Alert,
   Skeleton,
+  Input,
 } from "antd";
 import {
-  EditOutlined,
   CheckOutlined,
   CloseOutlined,
   InfoCircleOutlined,
@@ -33,23 +26,15 @@ import {
   FileTextOutlined,
   UserOutlined,
   CheckCircleOutlined,
-  ProjectOutlined,
   SearchOutlined,
-  GlobalOutlined,
-  CrownOutlined,
   DownloadOutlined,
-  MailOutlined,
   BankOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
-import { useSelector } from "react-redux";
-import {
-  useGetUserPendingProjectRequestsQuery,
-  useGetMyProjectsQuery,
-} from "../features/project/projectApiSlice";
 import { useNavigate } from "react-router-dom";
+import { useGetUserProjectRequestsQuery } from "../../features/project/projectApiSlice";
 
-const { RangePicker } = DatePicker;
-const { TextArea } = Input;
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 // Project Type enum mapping
@@ -67,56 +52,7 @@ const PROJECT_STATUS = {
   3: "Rejected",
 };
 
-const STATUS_COLORS = {
-  pending: "gold",
-  approved: "green",
-  rejected: "red",
-  "in review": "blue",
-  "revision needed": "orange",
-  "work in progress": "cyan",
-};
-// status
-const STATUS_OPTIONS = [
-  { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending" },
-  { value: "in review", label: "In Review" },
-  { value: "revision needed", label: "Revision Needed" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-];
-
-// request
-const REQUEST_OPTIONS = [
-  { value: "all", label: "All Type" },
-  { value: "0", label: "Research" },
-  { value: "1", label: "Conference" },
-  { value: "2", label: "Journal" },
-];
-
-// department
-const DEPARTMENT_OPTIONS = [
-  { value: "all", label: "All Department" },
-  { value: "information technology", label: "Information Technology" },
-  { value: "computer science", label: "Computer Science" },
-  { value: "software engineering", label: "Software Engineering" },
-];
-
-// category
-const CATEGORY_OPTIONS = [
-  { value: "all", label: "All Category" },
-  { value: "ai & machine learning", label: "AI & Machine Learning" },
-  { value: "data science", label: "Data Science" },
-  { value: "cybersecurity", label: "Cybersecurity" },
-];
-
-// Add this constant for document types
-const DOCUMENT_TYPE = {
-  0: "Project Document",
-  1: "Research Publication",
-  2: "Council Document",
-};
-
-// Add these mapping constants for request types
+// Request Type enum mapping
 const REQUEST_TYPE = {
   1: "Research Creation",
   2: "Phase Update",
@@ -126,12 +62,45 @@ const REQUEST_TYPE = {
   6: "Fund Disbursement",
 };
 
-// Add this mapping for approval status
 const APPROVAL_STATUS = {
   0: "Pending",
   1: "Approved",
   2: "Rejected",
 };
+
+// Document Type enum mapping
+const DOCUMENT_TYPE = {
+  0: "Project Document",
+  1: "Research Publication",
+  2: "Council Document",
+  6: "Completion Document",
+};
+
+// Status colors
+const STATUS_COLORS = {
+  0: "gold", // Pending
+  1: "green", // Approved
+  2: "red", // Rejected
+};
+
+// Request options for filter
+const REQUEST_OPTIONS = [
+  { value: "all", label: "All Type" },
+  { value: "1", label: "Research Creation" },
+  { value: "2", label: "Phase Update" },
+  { value: "3", label: "Completion" },
+  { value: "4", label: "Paper Creation" },
+  { value: "5", label: "Conference Creation" },
+  { value: "6", label: "Fund Disbursement" },
+];
+
+// Status options for filter
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "0", label: "Pending" },
+  { value: "1", label: "Approved" },
+  { value: "2", label: "Rejected" },
+];
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
@@ -143,32 +112,36 @@ const formatDate = (dateString) => {
   });
 };
 
-const PendingRequest = () => {
-  const [form] = Form.useForm();
-  const { user } = useSelector((state) => state.auth);
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    minimumFractionDigits: 0,
+  }).format(value);
+};
+
+const RequestRecord = () => {
+  const navigate = useNavigate();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [typeFilter, setTypeFilter] = useState("all");
-  const [filteredRequests, setFilteredRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
-  const navigate = useNavigate();
+  const [filteredRequests, setFilteredRequests] = useState([]);
 
-  // Fetch pending projects data from the new API
   const {
-    data: pendingProjectsData,
-    isLoading: isPendingLoading,
-    isError: isPendingError,
-    error: pendingError,
-  } = useGetUserPendingProjectRequestsQuery();
-
-  // Also fetch full project details for when a project is selected
-  const { data: fullProjectsData } = useGetMyProjectsQuery();
+    data: requestsData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetUserProjectRequestsQuery();
 
   // Filter and process the data when it's loaded
   useEffect(() => {
-    if (pendingProjectsData && pendingProjectsData.data) {
+    if (requestsData && requestsData.data) {
       // Apply filters
-      const filtered = pendingProjectsData.data.filter((request) => {
+      const filtered = requestsData.data.filter((request) => {
         const matchesSearch =
           searchText.toLowerCase() === ""
             ? true
@@ -182,14 +155,27 @@ const PendingRequest = () => {
         const matchesType =
           typeFilter === "all"
             ? true
-            : request.projectType.toString() === typeFilter;
+            : request.requestType.toString() === typeFilter;
 
-        return matchesSearch && matchesType;
+        const matchesStatus =
+          statusFilter === "all"
+            ? true
+            : request.approvalStatus.toString() === statusFilter;
+
+        return matchesSearch && matchesType && matchesStatus;
       });
 
       setFilteredRequests(filtered);
     }
-  }, [pendingProjectsData, searchText, typeFilter]);
+  }, [requestsData, searchText, typeFilter, statusFilter]);
+
+  const handleViewDetails = (request) => {
+    navigate(`/project-request/${request.requestId}`);
+  };
+
+  const handleViewDocument = (documentUrl) => {
+    window.open(documentUrl, "_blank");
+  };
 
   const columns = [
     {
@@ -239,7 +225,7 @@ const PendingRequest = () => {
     {
       title: "Resource Requests",
       key: "resources",
-      width: "40%",
+      width: "30%",
       render: (_, record) => (
         <div className="space-y-4">
           <div className="flex items-center">
@@ -273,12 +259,30 @@ const PendingRequest = () => {
           <div className="flex items-center">
             <CalendarOutlined className="text-gray-400 mr-2" />
             <div className="text-sm">
-              <span className="text-gray-600">Timeline: </span>
+              <span className="text-gray-600">Project Status: </span>
               <span className="font-medium">
-                Project Status: {PROJECT_STATUS[record.projectStatus] || "N/A"}
+                {PROJECT_STATUS[record.projectStatus] || "N/A"}
               </span>
             </div>
           </div>
+
+          {record.approvedAt && (
+            <div className="flex items-center">
+              <CheckCircleOutlined
+                className={`mr-2 ${
+                  record.approvalStatus === 1
+                    ? "text-green-500"
+                    : "text-red-500"
+                }`}
+              />
+              <div className="text-sm">
+                <span className="text-gray-600">Processed: </span>
+                <span className="font-medium">
+                  {formatDate(record.approvedAt)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -286,27 +290,32 @@ const PendingRequest = () => {
       title: "Status",
       key: "status",
       width: "15%",
-      render: (_, record) => {
-        // Now use the approval status instead
-        return (
+      render: (_, record) => (
+        <div>
           <Tag
-            color={
-              record.approvalStatus === 0
-                ? "gold"
-                : record.approvalStatus === 1
-                ? "green"
-                : "red"
-            }
+            color={STATUS_COLORS[record.approvalStatus]}
+            className="px-3 py-1 text-base"
           >
             {record.statusName || APPROVAL_STATUS[record.approvalStatus]}
           </Tag>
-        );
-      },
+
+          {record.rejectionReason && (
+            <div className="mt-2 text-red-500 text-sm">
+              <Text type="danger" strong>
+                Reason:
+              </Text>
+              <div className="mt-1 p-2 bg-red-50 rounded-md max-h-20 overflow-y-auto">
+                {record.rejectionReason}
+              </div>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Actions",
       key: "actions",
-      width: "20%",
+      width: "15%",
       render: (_, record) => (
         <Space direction="vertical" className="w-full">
           <Button
@@ -317,14 +326,20 @@ const PendingRequest = () => {
           >
             View Details
           </Button>
+
+          {record.approvalStatus === 1 && (
+            <Button
+              type="default"
+              onClick={() => navigate(`/project-details/${record.projectId}`)}
+              className="w-full"
+            >
+              Manage Project
+            </Button>
+          )}
         </Space>
       ),
     },
   ];
-
-  const handleViewDetails = (request) => {
-    navigate(`/project-request/${request.requestId}`);
-  };
 
   // For table skeleton loading
   const skeletonRows = Array(5).fill(null);
@@ -340,7 +355,7 @@ const PendingRequest = () => {
     {
       title: "Resource Requests",
       key: "resources",
-      width: "40%",
+      width: "30%",
       render: () => <Skeleton active paragraph={{ rows: 2 }} title={false} />,
     },
     {
@@ -352,22 +367,29 @@ const PendingRequest = () => {
     {
       title: "Actions",
       key: "actions",
-      width: "20%",
+      width: "15%",
       render: () => <Skeleton.Button active size="default" block={true} />,
     },
   ];
 
-  if (isPendingError) {
+  if (isError) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-red-600">
-            Error loading projects
+            Error loading project requests
           </h2>
           <p className="mt-2 text-gray-600">
-            {pendingError?.data?.message ||
-              "Failed to load projects. Please try again later."}
+            {error?.data?.message ||
+              "Failed to load project requests. Please try again later."}
           </p>
+          <Button
+            type="primary"
+            onClick={() => refetch()}
+            className="mt-4 bg-[#F2722B]"
+          >
+            Try Again
+          </Button>
         </div>
       </div>
     );
@@ -379,20 +401,19 @@ const PendingRequest = () => {
         <div className="text-center mb-12">
           <div className="inline-block">
             <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FF8C00] to-[#FFA500] mb-2">
-              Pending Requests
+              Project Request Records
             </h2>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#FF8C00] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Review and manage pending research, conference, and case study
-            requests
+            View and manage all your research project requests
           </p>
         </div>
 
         {/* Add Filter Section - Disabled during loading */}
         <div className="mb-6">
           <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center space-x-4 flex-1">
+            <div className="flex items-center space-x-4 flex-wrap gap-2">
               {/* Search bar */}
               <Input
                 placeholder="Search requests..."
@@ -401,17 +422,28 @@ const PendingRequest = () => {
                 className="max-w-md"
                 allowClear
                 value={searchText}
-                disabled={isPendingLoading}
+                disabled={isLoading}
               />
-              <span className="text-gray-700 font-medium">Filter:</span>
-              {/* filter request type */}
+              <span className="text-gray-700 font-medium">Filter by:</span>
+              {/* Request type filter */}
               <Select
                 value={typeFilter}
-                style={{ width: 200 }}
+                style={{ width: 180 }}
                 onChange={setTypeFilter}
                 options={REQUEST_OPTIONS}
                 className="rounded-md"
-                disabled={isPendingLoading}
+                disabled={isLoading}
+                placeholder="Request Type"
+              />
+              {/* Status filter */}
+              <Select
+                value={statusFilter}
+                style={{ width: 150 }}
+                onChange={setStatusFilter}
+                options={STATUS_OPTIONS}
+                className="rounded-md"
+                disabled={isLoading}
+                placeholder="Status"
               />
             </div>
           </div>
@@ -419,7 +451,7 @@ const PendingRequest = () => {
 
         {/* Table with Skeleton Loading */}
         <Card className="shadow-md">
-          {isPendingLoading ? (
+          {isLoading ? (
             <Table
               columns={skeletonColumns}
               dataSource={skeletonRows}
@@ -432,11 +464,11 @@ const PendingRequest = () => {
             <Table
               columns={columns}
               dataSource={filteredRequests}
-              rowKey="projectId"
+              rowKey="requestId"
               pagination={{ pageSize: 5 }}
               className="custom-table"
               rowClassName="align-top"
-              locale={{ emptyText: "No pending requests found" }}
+              locale={{ emptyText: "No project requests found" }}
             />
           )}
         </Card>
@@ -445,7 +477,7 @@ const PendingRequest = () => {
         <Modal
           title={
             <div className="text-lg">
-              <div className="font-semibold text-gray-800">Project Details</div>
+              <div className="font-semibold text-gray-800">Request Details</div>
               <div className="text-sm font-normal text-gray-500 mt-1">
                 {selectedRequest?.projectName || (
                   <Skeleton.Input active size="small" style={{ width: 200 }} />
@@ -467,14 +499,11 @@ const PendingRequest = () => {
               {/* Project Status */}
               <div className="mb-4">
                 <Tag
-                  color={
-                    STATUS_COLORS[
-                      PROJECT_STATUS[selectedRequest.status].toLowerCase()
-                    ] || "default"
-                  }
+                  color={STATUS_COLORS[selectedRequest.approvalStatus]}
                   className="text-base px-3 py-1"
                 >
-                  {PROJECT_STATUS[selectedRequest.status]}
+                  {selectedRequest.statusName ||
+                    APPROVAL_STATUS[selectedRequest.approvalStatus]}
                 </Tag>
               </div>
 
@@ -484,27 +513,16 @@ const PendingRequest = () => {
                   header={
                     <div className="flex items-center">
                       <UserOutlined className="text-[#F2722B] mr-2" />
-                      <span className="font-medium">Creator Information</span>
+                      <span className="font-medium">Requester Information</span>
                     </div>
                   }
                   key="1"
                 >
                   <div className="flex items-center bg-gray-50 p-4 rounded-lg">
-                    <Avatar
-                      size={64}
-                      icon={<UserOutlined />}
-                      className="bg-[#F2722B]"
-                    />
                     <div className="ml-4">
                       <h4 className="text-lg font-medium">
-                        {selectedRequest.creatorName}
+                        {selectedRequest.requesterName}
                       </h4>
-                      <div className="flex items-center text-gray-500 mt-1">
-                        <MailOutlined className="mr-2" />
-                        <a href={`mailto:${selectedRequest.creatorEmail}`}>
-                          {selectedRequest.creatorEmail}
-                        </a>
-                      </div>
                       <div className="flex items-center text-gray-500 mt-1">
                         <BankOutlined className="mr-2" />
                         <span>{selectedRequest.departmentName}</span>
@@ -524,48 +542,93 @@ const PendingRequest = () => {
                   header={
                     <div className="flex items-center">
                       <InfoCircleOutlined className="text-[#F2722B] mr-2" />
-                      <span className="font-medium">Project Details</span>
+                      <span className="font-medium">Request Details</span>
                     </div>
                   }
                   key="1"
                 >
                   <div className="space-y-4">
                     <div>
-                      <div className="text-sm text-gray-500">Description</div>
+                      <div className="text-sm text-gray-500">Request Type</div>
                       <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                        {selectedRequest.description}
+                        {REQUEST_TYPE[selectedRequest.requestType]}
                       </div>
                     </div>
 
-                    {selectedRequest.methodology && (
-                      <div>
-                        <div className="text-sm text-gray-500">Methodology</div>
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          {selectedRequest.methodology}
-                        </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Description</div>
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                        {selectedRequest.projectDescription}
                       </div>
-                    )}
+                    </div>
 
-                    <div className="flex justify-between">
+                    <div className="flex justify-between flex-wrap gap-4">
                       <div>
                         <div className="text-sm text-gray-500">Budget</div>
                         <div className="mt-2 p-3 bg-gray-50 rounded-md font-medium">
                           ₫{selectedRequest.approvedBudget?.toLocaleString()}
                         </div>
                       </div>
+
+                      {selectedRequest.fundRequestAmount > 0 && (
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Requested Funds
+                          </div>
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md font-medium">
+                            ₫
+                            {selectedRequest.fundRequestAmount?.toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+
                       <div>
-                        <div className="text-sm text-gray-500">Timeline</div>
+                        <div className="text-sm text-gray-500">
+                          Project Status
+                        </div>
                         <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          {formatDate(selectedRequest.startDate)} to{" "}
-                          {formatDate(selectedRequest.endDate)}
+                          {PROJECT_STATUS[selectedRequest.projectStatus]}
                         </div>
                       </div>
                     </div>
+
+                    <div className="flex justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Requested At
+                        </div>
+                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          {formatDate(selectedRequest.requestedAt)}
+                        </div>
+                      </div>
+
+                      {selectedRequest.approvedAt && (
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Processed At
+                          </div>
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                            {formatDate(selectedRequest.approvedAt)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedRequest.rejectionReason && (
+                      <div>
+                        <div className="text-sm text-red-500 font-medium">
+                          Rejection Reason
+                        </div>
+                        <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-md">
+                          {selectedRequest.rejectionReason}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Collapse.Panel>
               </Collapse>
 
-              {/* Documents Section - Only shown if available in detailed data */}
+              {/* Documents Section - If available in the future */}
               {selectedRequest.documents &&
                 selectedRequest.documents.length > 0 && (
                   <Collapse defaultActiveKey={["1"]} className="mb-4">
@@ -604,7 +667,7 @@ const PendingRequest = () => {
                               type="primary"
                               icon={<DownloadOutlined />}
                               onClick={() =>
-                                window.open(doc.documentUrl, "_blank")
+                                handleViewDocument(doc.documentUrl)
                               }
                               className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
                             >
@@ -613,38 +676,6 @@ const PendingRequest = () => {
                           </div>
                         ))}
                       </div>
-                    </Collapse.Panel>
-                  </Collapse>
-                )}
-
-              {/* Milestones Section - Only shown if available in detailed data */}
-              {selectedRequest.milestones &&
-                selectedRequest.milestones.length > 0 && (
-                  <Collapse defaultActiveKey={["1"]} className="mb-4">
-                    <Collapse.Panel
-                      header={
-                        <div className="flex items-center">
-                          <CheckCircleOutlined className="text-[#F2722B] mr-2" />
-                          <span className="font-medium">
-                            Project Milestones
-                          </span>
-                        </div>
-                      }
-                      key="1"
-                    >
-                      <Timeline>
-                        {selectedRequest.milestones.map((milestone) => (
-                          <Timeline.Item key={milestone.milestoneId}>
-                            <div className="text-base font-medium">
-                              {milestone.title}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {formatDate(milestone.startDate)} to{" "}
-                              {formatDate(milestone.endDate)}
-                            </div>
-                          </Timeline.Item>
-                        ))}
-                      </Timeline>
                     </Collapse.Panel>
                   </Collapse>
                 )}
@@ -664,4 +695,4 @@ const PendingRequest = () => {
   );
 };
 
-export default PendingRequest;
+export default RequestRecord;
