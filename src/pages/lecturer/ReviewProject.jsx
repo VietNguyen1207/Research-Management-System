@@ -19,6 +19,9 @@ import {
   Alert,
   Upload,
   Checkbox,
+  Skeleton,
+  Row,
+  Col,
 } from "antd";
 import {
   CheckOutlined,
@@ -591,8 +594,176 @@ const ReviewProject = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8 flex justify-center items-center">
-        <Spin size="large" tip="Loading projects..." />
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section Skeleton */}
+          <div className="text-center mb-12">
+            <Skeleton.Input
+              active
+              style={{ width: 250, height: 40 }}
+              className="mb-2"
+            />
+            <div className="h-1 w-24 mx-auto bg-gray-200 rounded-full"></div>
+            <Skeleton
+              active
+              paragraph={{ rows: 1, width: "60%" }}
+              title={false}
+              className="mt-4"
+            />
+          </div>
+
+          {/* Filter Section Skeleton */}
+          <div className="mb-6">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <Skeleton.Input
+                  active
+                  style={{ width: 300 }}
+                  className="mr-2"
+                />
+                <div className="flex flex-wrap gap-4">
+                  <Skeleton.Input active style={{ width: 160 }} />
+                  <Skeleton.Input active style={{ width: 180 }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Skeleton */}
+          <Card className="shadow-md mb-8">
+            {/* Table Header Skeleton */}
+            <div className="p-4 border-b border-gray-200 bg-gray-50 hidden md:flex">
+              <div className="w-[40%] px-4">
+                <Skeleton.Input active style={{ width: 150 }} />
+              </div>
+              <div className="w-[30%] px-4">
+                <Skeleton.Input active style={{ width: 120 }} />
+              </div>
+              <div className="w-[10%] px-4">
+                <Skeleton.Input active style={{ width: 80 }} />
+              </div>
+              <div className="w-[20%] px-4">
+                <Skeleton.Input active style={{ width: 80 }} />
+              </div>
+            </div>
+
+            {/* Generate 5 skeleton rows for the table */}
+            {[...Array(5)].map((_, index) => (
+              <div
+                key={index}
+                className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors`}
+              >
+                <Row gutter={[24, 16]}>
+                  {/* Basic Information Column */}
+                  <Col xs={24} md={10}>
+                    <div className="space-y-3">
+                      <Skeleton.Input
+                        active
+                        style={{ width: "70%", height: 24 }}
+                      />
+                      <Skeleton
+                        active
+                        paragraph={{ rows: 1, width: ["60%"] }}
+                        title={false}
+                      />
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Skeleton.Button
+                          active
+                          size="small"
+                          style={{ width: 80, height: 24 }}
+                        />
+                        <Skeleton.Button
+                          active
+                          size="small"
+                          style={{ width: 120, height: 24 }}
+                        />
+                        <Skeleton.Button
+                          active
+                          size="small"
+                          style={{ width: 100, height: 24 }}
+                        />
+                      </div>
+
+                      {/* User information skeleton */}
+                      <div className="flex items-center mt-3 pt-3 border-t border-gray-100">
+                        <Skeleton.Avatar active size="small" className="mr-2" />
+                        <Skeleton.Input active style={{ width: 150 }} />
+                      </div>
+
+                      <div className="flex items-center mt-1">
+                        <Skeleton.Avatar active size="small" className="mr-2" />
+                        <Skeleton.Input active style={{ width: 120 }} />
+                      </div>
+                    </div>
+                  </Col>
+
+                  {/* Resource Requests Column */}
+                  <Col xs={24} md={8}>
+                    <div className="space-y-3">
+                      <div className="flex items-center">
+                        <Skeleton.Avatar active size="small" className="mr-2" />
+                        <div className="flex-1">
+                          <div className="flex justify-between mb-1">
+                            <Skeleton.Input active style={{ width: 80 }} />
+                            <Skeleton.Input active style={{ width: 60 }} />
+                          </div>
+                          <div className="flex justify-between mb-1">
+                            <Skeleton.Input active style={{ width: 70 }} />
+                            <Skeleton.Input active style={{ width: 60 }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Col>
+
+                  {/* Status Column */}
+                  <Col
+                    xs={12}
+                    md={2}
+                    className="flex items-center justify-center"
+                  >
+                    <Skeleton.Button active style={{ width: 80, height: 24 }} />
+                  </Col>
+
+                  {/* Actions Column */}
+                  <Col xs={24} sm={12} md={4}>
+                    <div className="space-y-2">
+                      <Skeleton.Button
+                        active
+                        style={{ width: "100%", height: 32 }}
+                      />
+                      <Skeleton.Button
+                        active
+                        style={{ width: "100%", height: 32 }}
+                      />
+                      <Skeleton.Button
+                        active
+                        style={{ width: "100%", height: 32 }}
+                      />
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            ))}
+
+            {/* Pagination Skeleton */}
+            <div className="p-4 flex justify-end">
+              <div className="flex items-center space-x-2">
+                <Skeleton.Button active style={{ width: 32, height: 32 }} />
+                <Skeleton.Button active style={{ width: 32, height: 32 }} />
+                <Skeleton.Button active style={{ width: 32, height: 32 }} />
+                <Skeleton.Input active style={{ width: 50, height: 32 }} />
+                <Skeleton.Button active style={{ width: 32, height: 32 }} />
+                <Skeleton.Button active style={{ width: 32, height: 32 }} />
+              </div>
+            </div>
+          </Card>
+
+          {/* Empty state suggestion skeleton */}
+          <div className="flex justify-center">
+            <Skeleton.Avatar active size={64} shape="square" />
+          </div>
+        </div>
       </div>
     );
   }

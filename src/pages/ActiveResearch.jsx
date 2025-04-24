@@ -23,6 +23,7 @@ import {
   Tooltip,
   Skeleton,
   Alert,
+  Pagination,
 } from "antd";
 import {
   SearchOutlined,
@@ -95,6 +96,9 @@ const ActiveResearch = () => {
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6); // Number of items per page
 
   // Fetch projects data from API using the new endpoint
   const {
@@ -184,6 +188,30 @@ const ActiveResearch = () => {
 
   // Create a skeleton array for loading state
   const skeletonCards = Array(6).fill(null);
+
+  // Calculate pagination
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Handle page change
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    if (size !== pageSize) {
+      setPageSize(size);
+    }
+    // Scroll to top of the project grid when page changes
+    window.scrollTo({
+      top: document.getElementById("projects-grid").offsetTop - 120,
+      behavior: "smooth",
+    });
+  };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, typeFilter]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -308,8 +336,11 @@ const ActiveResearch = () => {
           </div>
         </Card>
 
-        {/* Projects Grid - Updated fix */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Projects Grid - Updated with pagination */}
+        <div
+          id="projects-grid"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
           {isLoading ||
           (!isLoading && !projectsData) ||
           (projectsData?.data &&
@@ -353,8 +384,8 @@ const ActiveResearch = () => {
               />
             </div>
           ) : filteredProjects.length > 0 ? (
-            // Show filtered projects
-            filteredProjects.map((project, index) => (
+            // Show paginated projects instead of all filtered projects
+            paginatedProjects.map((project, index) => (
               <motion.div
                 key={project.projectId}
                 initial={{ opacity: 0, y: 20 }}
@@ -452,6 +483,24 @@ const ActiveResearch = () => {
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredProjects.length > 0 && (
+          <div className="flex justify-center mt-12">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={filteredProjects.length}
+              onChange={handlePageChange}
+              showSizeChanger
+              pageSizeOptions={["6", "12", "24", "48"]}
+              showTotal={(total, range) =>
+                `${range[0]}-${range[1]} of ${total} projects`
+              }
+              className="bg-white px-4 py-2 rounded-lg shadow-sm"
+            />
+          </div>
+        )}
 
         {/* Project Details Modal */}
         <Modal

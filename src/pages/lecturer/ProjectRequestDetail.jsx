@@ -22,6 +22,7 @@ import {
   Form,
   Input,
   Checkbox,
+  Skeleton,
 } from "antd";
 import {
   FileTextOutlined,
@@ -314,12 +315,210 @@ const ProjectRequestDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 rounded-lg shadow-md bg-white">
-          <Spin size="large" />
-          <p className="mt-4 text-gray-600">
-            Loading project request details...
-          </p>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 pt-16 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section Skeleton */}
+          <Card className="mb-8 shadow-md rounded-lg border-0 border-l-4 border-[#F2722B]">
+            <div className="mb-4">
+              <Skeleton.Button active style={{ width: 100 }} />
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <Skeleton
+                active
+                title={{ width: 300 }}
+                paragraph={{ rows: 1, width: ["40%"] }}
+              />
+
+              <div className="mt-4 md:mt-0 flex gap-3">
+                <Skeleton.Button active style={{ width: 100, height: 40 }} />
+                <Skeleton.Button active style={{ width: 100, height: 40 }} />
+              </div>
+            </div>
+
+            <Divider className="my-4" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Skeleton.Input active style={{ width: "100%", height: 80 }} />
+              <Skeleton.Input active style={{ width: "100%", height: 80 }} />
+              <Skeleton.Input active style={{ width: "100%", height: 80 }} />
+            </div>
+          </Card>
+
+          {/* Project Completion Details Skeleton - This might be present depending on request type */}
+          <Card
+            title={<Skeleton.Input active style={{ width: 220 }} />}
+            className="mb-6 shadow-md"
+          >
+            <div className="grid gap-6">
+              <div>
+                <Skeleton.Input
+                  active
+                  style={{ width: 150, marginBottom: 12 }}
+                />
+                <Skeleton.Input active style={{ width: "100%", height: 100 }} />
+              </div>
+
+              <div>
+                <Skeleton.Input
+                  active
+                  style={{ width: 120, marginBottom: 12 }}
+                />
+                <div className="mb-3">
+                  <Skeleton.Button active style={{ width: 150, height: 32 }} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Skeleton.Input
+                    active
+                    style={{ width: "100%", height: 70 }}
+                  />
+                  <Skeleton.Input
+                    active
+                    style={{ width: "100%", height: 70 }}
+                  />
+                  <Skeleton.Input
+                    active
+                    style={{ width: "100%", height: 70 }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={16}>
+              {/* Project Details Card Skeleton */}
+              <Card
+                title={<Skeleton.Input active style={{ width: 200 }} />}
+                className="mb-6 shadow-md"
+              >
+                <Skeleton active paragraph={{ rows: 8 }} />
+              </Card>
+
+              {/* Project Phases Skeleton */}
+              <Card
+                title={<Skeleton.Input active style={{ width: 200 }} />}
+                className="mb-6 shadow-md"
+              >
+                <Skeleton active paragraph={{ rows: 5 }} />
+              </Card>
+
+              {/* Documents Section Skeleton */}
+              <Card
+                title={<Skeleton.Input active style={{ width: 200 }} />}
+                className="mb-6 shadow-md"
+              >
+                <Skeleton.Button
+                  active
+                  style={{ width: 150, marginBottom: 16 }}
+                />
+
+                {/* Document item skeletons */}
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center">
+                        <Skeleton.Avatar active size="small" className="mr-2" />
+                        <Skeleton.Input active style={{ width: 200 }} />
+                      </div>
+                      <Skeleton.Button active style={{ width: 80 }} />
+                    </div>
+                    <Skeleton active paragraph={{ rows: 1, width: ["60%"] }} />
+                  </div>
+                ))}
+              </Card>
+            </Col>
+
+            <Col xs={24} lg={8}>
+              {/* Group Info Skeleton */}
+              <Card
+                title={<Skeleton.Input active style={{ width: 200 }} />}
+                className="mb-6 shadow-md"
+              >
+                <Skeleton active paragraph={{ rows: 3 }} />
+
+                <Divider orientation="left" className="text-gray-600 my-4">
+                  <Skeleton.Input active style={{ width: 120 }} />
+                </Divider>
+
+                {/* Group Member skeletons */}
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="mb-4 p-3 border-b border-gray-100">
+                    <div className="flex items-center">
+                      <Skeleton.Avatar active size="default" className="mr-3" />
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <Skeleton.Input
+                            active
+                            style={{ width: 150 }}
+                            className="mr-2"
+                          />
+                          <Skeleton.Button
+                            active
+                            size="small"
+                            style={{ width: 60 }}
+                          />
+                        </div>
+                        <Skeleton
+                          active
+                          paragraph={{ rows: 1, width: ["80%"] }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+
+              {/* Request Timeline Skeleton */}
+              <Card
+                title={<Skeleton.Input active style={{ width: 200 }} />}
+                className="shadow-md"
+              >
+                <div className="relative">
+                  {/* Timeline dot and line */}
+                  <div className="absolute left-0 top-0 bottom-0 w-6 flex justify-center">
+                    <div className="w-1 bg-gray-200 h-full relative">
+                      <Skeleton.Avatar
+                        active
+                        size="small"
+                        className="absolute -top-1"
+                      />
+                      <Skeleton.Avatar
+                        active
+                        size="small"
+                        className="absolute top-1/2 -translate-y-1/2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Timeline content */}
+                  <div className="ml-10 space-y-6">
+                    <div>
+                      <Skeleton.Input
+                        active
+                        style={{ width: 150, marginBottom: 8 }}
+                      />
+                      <Skeleton
+                        active
+                        paragraph={{ rows: 2, width: ["90%", "60%"] }}
+                      />
+                    </div>
+                    <div>
+                      <Skeleton.Input
+                        active
+                        style={{ width: 150, marginBottom: 8 }}
+                      />
+                      <Skeleton
+                        active
+                        paragraph={{ rows: 2, width: ["90%", "60%"] }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
         </div>
       </div>
     );
