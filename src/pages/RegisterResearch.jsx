@@ -422,6 +422,9 @@ const RegisterResearch = () => {
                 suffixIcon={<TeamOutlined className="text-gray-400" />}
                 loading={isLoadingGroups}
                 disabled={isLoadingGroups}
+                optionLabelProp="label"
+                dropdownMatchSelectWidth={true}
+                style={{ width: "100%" }}
                 notFoundContent={
                   isLoadingGroups ? (
                     <Spin size="small" />
@@ -435,10 +438,16 @@ const RegisterResearch = () => {
                 {userGroups?.map((group) => {
                   const leader = getGroupLeader(group.members);
                   return (
-                    <Select.Option key={group.groupId} value={group.groupId}>
-                      <div>
-                        <div className="font-medium">{group.groupName}</div>
-                        <div className="text-xs text-gray-500">
+                    <Select.Option
+                      key={group.groupId}
+                      value={group.groupId}
+                      label={group.groupName}
+                    >
+                      <div className="w-full">
+                        <div className="font-medium truncate">
+                          {group.groupName}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
                           {leader
                             ? `Leader: ${leader.memberName}`
                             : "No active leader"}{" "}
