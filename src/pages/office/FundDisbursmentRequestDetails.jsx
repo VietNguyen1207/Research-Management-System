@@ -22,6 +22,7 @@ import {
   Input,
   Upload,
   Form,
+  Skeleton,
 } from "antd";
 import {
   FileTextOutlined,
@@ -39,6 +40,8 @@ import {
   CloseOutlined,
   UploadOutlined,
   InboxOutlined,
+  InfoCircleOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import {
@@ -122,35 +125,36 @@ const FundDisbursementRequestDetails = () => {
   };
 
   const handleApproveConfirm = async () => {
+    // Verify we have files
     if (approveFileList.length === 0) {
       message.error("Please attach at least one supporting document");
       return;
     }
 
-    const documentFiles = extractFiles(approveFileList);
-    console.log(
-      "Attempting to approve request:",
-      disbursementId,
-      "with files:",
-      documentFiles
-    );
+    // Make sure we have a valid requestId from the details
+    if (!details?.requestId) {
+      message.error("Request ID is missing - cannot process approval");
+      console.error("Missing requestId in details:", details);
+      return;
+    }
 
     try {
-      // Create FormData directly in the component
+      console.log("Approving request with ID:", details.requestId);
+
+      // Create FormData
       const formData = new FormData();
-      formData.append("FundDisbursementId", disbursementId);
 
-      // Append each file to the FormData
-      if (documentFiles && documentFiles.length > 0) {
-        documentFiles.forEach((file) => {
-          formData.append("documentFiles", file);
-        });
-      }
+      // Append each file to FormData
+      approveFileList.forEach((file) => {
+        if (file.originFileObj) {
+          formData.append("documentFiles", file.originFileObj);
+        }
+      });
 
-      // Pass the disbursementId for URL and the formData as the body
+      // Make the API call
       await approveRequest({
-        disbursementId,
-        formData, // Pass formData instead of documentFiles
+        requestId: details.requestId,
+        formData,
       }).unwrap();
 
       message.success("Request approved successfully!");
@@ -179,41 +183,45 @@ const FundDisbursementRequestDetails = () => {
   };
 
   const handleRejectConfirm = async () => {
+    // Verify we have a rejection reason
     if (!rejectionReason.trim()) {
       message.warning("Please provide a reason for rejection.");
       return;
     }
+
+    // Verify we have files
     if (rejectFileList.length === 0) {
       message.error("Please attach at least one supporting document");
       return;
     }
-    const documentFiles = extractFiles(rejectFileList);
-    console.log(
-      "Attempting to reject request:",
-      disbursementId,
-      "Reason:",
-      rejectionReason,
-      "with files:",
-      documentFiles
-    );
+
+    // Make sure we have a valid requestId from the details
+    if (!details?.requestId) {
+      message.error("Request ID is missing - cannot process rejection");
+      console.error("Missing requestId in details:", details);
+      return;
+    }
 
     try {
-      // Create FormData directly in the component
+      console.log("Rejecting request with ID:", details.requestId);
+
+      // Create FormData
       const formData = new FormData();
-      formData.append("FundDisbursementId", disbursementId);
-      formData.append("RejectionReason", rejectionReason);
 
-      // Append each file to the FormData
-      if (documentFiles && documentFiles.length > 0) {
-        documentFiles.forEach((file) => {
-          formData.append("documentFiles", file);
-        });
-      }
+      // Append rejection reason
+      formData.append("rejectionReason", rejectionReason);
 
-      // Pass the disbursementId for URL and the formData as the body
+      // Append each file to FormData
+      rejectFileList.forEach((file) => {
+        if (file.originFileObj) {
+          formData.append("documentFiles", file.originFileObj);
+        }
+      });
+
+      // Make the API call
       await rejectRequest({
-        disbursementId,
-        formData, // Pass formData instead of rejectionReason and documentFiles
+        requestId: details.requestId,
+        formData,
       }).unwrap();
 
       message.success("Request rejected successfully!");
@@ -239,8 +247,154 @@ const FundDisbursementRequestDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spin size="large" tip="Loading request details..." />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
+              className="bg-white hover:bg-gray-50 border border-gray-200 shadow-sm rounded-lg"
+              disabled
+            >
+              Back to Requests List
+            </Button>
+          </div>
+
+          {/* Header Card Skeleton */}
+          <Card className="shadow-lg rounded-2xl border border-gray-100 mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 mt-1 rounded-lg bg-orange-100 flex items-center justify-center shadow-sm">
+                  <Skeleton.Avatar active size="large" shape="square" />
+                </div>
+                <div className="w-full sm:w-80">
+                  <Skeleton.Input
+                    active
+                    size="large"
+                    style={{ width: "100%" }}
+                  />
+                  <div className="mt-2">
+                    <Skeleton.Button
+                      active
+                      size="small"
+                      style={{ width: 80, marginRight: 8 }}
+                    />
+                    <Skeleton.Button
+                      active
+                      size="small"
+                      style={{ width: 100, marginRight: 8 }}
+                    />
+                    <Skeleton.Button
+                      active
+                      size="small"
+                      style={{ width: 60 }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex-shrink-0 mt-4 sm:mt-0 w-full sm:w-auto">
+                <Space className="w-full flex justify-end sm:justify-start">
+                  <Skeleton.Button
+                    active
+                    size="large"
+                    style={{ width: 90, marginRight: 8 }}
+                  />
+                  <Skeleton.Button active size="large" style={{ width: 90 }} />
+                </Space>
+              </div>
+            </div>
+          </Card>
+
+          {/* Main Details Grid Skeleton */}
+          <Row gutter={[24, 24]}>
+            {/* Left Column Skeleton */}
+            <Col xs={24} lg={16}>
+              <div className="space-y-6">
+                {/* Request Info Card Skeleton */}
+                <Card
+                  title={<Skeleton.Input active style={{ width: 150 }} />}
+                  className="shadow-md rounded-xl border-0"
+                >
+                  <Skeleton active paragraph={{ rows: 5 }} />
+                </Card>
+
+                {/* Project Info Card Skeleton */}
+                <Card
+                  title={<Skeleton.Input active style={{ width: 150 }} />}
+                  className="shadow-md rounded-xl border-0"
+                >
+                  <Skeleton active paragraph={{ rows: 4 }} />
+                </Card>
+
+                {/* Project Phases Skeleton */}
+                <Card
+                  title={<Skeleton.Input active style={{ width: 180 }} />}
+                  className="shadow-md rounded-xl border-0"
+                >
+                  <Skeleton active paragraph={{ rows: 6 }} />
+                </Card>
+              </div>
+            </Col>
+
+            {/* Right Column Skeleton */}
+            <Col xs={24} lg={8}>
+              <div className="space-y-6">
+                {/* Budget Overview Card Skeleton */}
+                <Card
+                  title={<Skeleton.Input active style={{ width: 150 }} />}
+                  className="shadow-md rounded-xl border-0"
+                >
+                  <Skeleton active paragraph={{ rows: 4 }} />
+                  <div className="mt-4">
+                    <Skeleton.Input
+                      active
+                      size="small"
+                      style={{ width: 100, marginBottom: 8 }}
+                    />
+                    <Skeleton.Input
+                      active
+                      style={{ width: "100%", height: 15 }}
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <Skeleton.Input
+                      active
+                      size="small"
+                      style={{ width: 100, marginBottom: 8 }}
+                    />
+                    <Skeleton.Input
+                      active
+                      style={{ width: "100%", height: 15 }}
+                    />
+                  </div>
+                </Card>
+
+                {/* Documents Card Skeleton */}
+                <Card
+                  title={<Skeleton.Input active style={{ width: 150 }} />}
+                  className="shadow-md rounded-xl border-0"
+                >
+                  <Skeleton
+                    active
+                    avatar={{ shape: "square" }}
+                    paragraph={{ rows: 1 }}
+                  />
+                  <Skeleton
+                    active
+                    avatar={{ shape: "square" }}
+                    paragraph={{ rows: 1 }}
+                  />
+                  <Skeleton
+                    active
+                    avatar={{ shape: "square" }}
+                    paragraph={{ rows: 1 }}
+                  />
+                </Card>
+              </div>
+            </Col>
+          </Row>
+        </div>
       </div>
     );
   }
@@ -372,7 +526,8 @@ const FundDisbursementRequestDetails = () => {
                       onClick={showRejectModal}
                       loading={isRejectingMutation && isRejectModalVisible}
                       disabled={isApprovingMutation || isLoading}
-                      size="small"
+                      size="large"
+                      className="shadow-md"
                     >
                       Reject
                     </Button>
@@ -382,11 +537,8 @@ const FundDisbursementRequestDetails = () => {
                       onClick={showApproveModal}
                       loading={isApprovingMutation && isApproveModalVisible}
                       disabled={isRejectingMutation || isLoading}
-                      size="small"
-                      style={{
-                        backgroundColor: "#52c41a",
-                        borderColor: "#52c41a",
-                      }}
+                      size="large"
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-md"
                     >
                       Approve
                     </Button>
@@ -647,64 +799,63 @@ const FundDisbursementRequestDetails = () => {
           </Col>
         </Row>
 
+        {/* Approval Modal */}
         <Modal
-          title="Confirm Rejection"
-          visible={isRejectModalVisible}
-          onOk={handleRejectConfirm}
-          onCancel={handleRejectCancel}
-          confirmLoading={isRejectingMutation}
-          okText="Confirm Reject"
-          cancelText="Cancel"
-          okButtonProps={{ danger: true }}
-          destroyOnClose
-        >
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <p>Please provide a reason for rejecting this request:</p>
-            <TextArea
-              rows={3}
-              placeholder="Rejection reason..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-            <p className="mt-3">Attach supporting documents (optional):</p>
-            <Upload.Dragger
-              fileList={rejectFileList}
-              onChange={(info) => handleFileChange(info, setRejectFileList)}
-              beforeUpload={beforeUpload}
-              onRemove={(file) => {
-                setRejectFileList((current) =>
-                  current.filter((item) => item.uid !== file.uid)
-                );
-              }}
-              multiple
-              className="rounded-lg"
-            >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined className="text-[#F2722B]" />
-              </p>
-              <p className="ant-upload-text">Click or drag files to upload</p>
-              <p className="ant-upload-hint">
-                Support for single or multiple file uploads.
-              </p>
-            </Upload.Dragger>
-          </Space>
-        </Modal>
-
-        <Modal
-          title="Confirm Approval"
+          title={
+            <div className="flex items-center">
+              <CheckOutlined style={{ color: "#52c41a" }} className="mr-2" />
+              <span>Approve Disbursement Request</span>
+            </div>
+          }
           visible={isApproveModalVisible}
-          onOk={handleApproveConfirm}
           onCancel={handleApproveCancel}
-          confirmLoading={isApprovingMutation}
-          okText="Confirm Approve"
-          cancelText="Cancel"
-          okButtonProps={{
-            style: { backgroundColor: "#52c41a", borderColor: "#52c41a" },
-          }}
+          footer={[
+            <Button key="back" onClick={handleApproveCancel}>
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              loading={isApprovingMutation}
+              onClick={handleApproveConfirm}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Approve
+            </Button>,
+          ]}
+          width={550}
           destroyOnClose
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <p>Attach any relevant documents for approval (optional):</p>
+          <div>
+            {/* Disbursement Information */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+              <p className="font-medium text-gray-800">
+                Request Type: <Tag color="purple">Fund Disbursement</Tag>
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Project: {details?.projectName}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Amount:{" "}
+                <span className="font-medium">
+                  ₫{details?.fundRequest?.toLocaleString()}
+                </span>
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Phase:{" "}
+                <span className="font-medium">
+                  {details?.projectPhaseTitle}
+                </span>
+              </p>
+            </div>
+
+            <Divider />
+
+            {/* File Upload */}
+            <p className="text-sm font-medium mb-2">
+              Please upload approval documents:{" "}
+              <span className="text-red-500">*</span>
+            </p>
             <Upload.Dragger
               fileList={approveFileList}
               onChange={(info) => handleFileChange(info, setApproveFileList)}
@@ -715,17 +866,137 @@ const FundDisbursementRequestDetails = () => {
                 );
               }}
               multiple
-              className="rounded-lg"
+              className="mb-4"
             >
               <p className="ant-upload-drag-icon">
-                <InboxOutlined className="text-[#F2722B]" />
+                <InboxOutlined />
               </p>
-              <p className="ant-upload-text">Click or drag files to upload</p>
+              <p className="ant-upload-text">
+                Click or drag approval documents to this area
+              </p>
               <p className="ant-upload-hint">
-                Support for single or multiple file uploads.
+                Support for PDF, DOC, DOCX files.
               </p>
             </Upload.Dragger>
-          </Space>
+
+            {/* Additional confirmation information */}
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-4">
+              <div className="flex items-center text-sm text-gray-600">
+                <InfoCircleOutlined className="mr-2 text-blue-500" />
+                <span>
+                  By approving this request, you confirm that the funds can be
+                  disbursed for this project phase.
+                </span>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Rejection Modal */}
+        <Modal
+          title={
+            <div className="flex items-center">
+              <CloseOutlined style={{ color: "#f5222d" }} className="mr-2" />
+              <span>Reject Disbursement Request</span>
+            </div>
+          }
+          visible={isRejectModalVisible}
+          onCancel={handleRejectCancel}
+          footer={[
+            <Button key="back" onClick={handleRejectCancel}>
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              danger
+              loading={isRejectingMutation}
+              onClick={handleRejectConfirm}
+            >
+              Reject
+            </Button>,
+          ]}
+          width={550}
+          destroyOnClose
+        >
+          <div>
+            {/* Disbursement Information */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+              <p className="font-medium text-gray-800">
+                Request Type: <Tag color="purple">Fund Disbursement</Tag>
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Project: {details?.projectName}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Amount:{" "}
+                <span className="font-medium">
+                  ₫{details?.fundRequest?.toLocaleString()}
+                </span>
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Phase:{" "}
+                <span className="font-medium">
+                  {details?.projectPhaseTitle}
+                </span>
+              </p>
+            </div>
+
+            <Divider />
+
+            {/* Rejection Reason */}
+            <div className="mb-4">
+              <p className="text-sm font-medium mb-2">
+                Reason for Rejection: <span className="text-red-500">*</span>
+              </p>
+              <TextArea
+                rows={3}
+                placeholder="Please explain why this disbursement request is being rejected..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* File Upload */}
+            <p className="text-sm font-medium mb-2">
+              Please upload rejection documents:{" "}
+              <span className="text-red-500">*</span>
+            </p>
+            <Upload.Dragger
+              fileList={rejectFileList}
+              onChange={(info) => handleFileChange(info, setRejectFileList)}
+              beforeUpload={beforeUpload}
+              onRemove={(file) => {
+                setRejectFileList((current) =>
+                  current.filter((item) => item.uid !== file.uid)
+                );
+              }}
+              multiple
+              className="mb-4"
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">
+                Click or drag rejection documents to this area
+              </p>
+              <p className="ant-upload-hint">
+                Support for PDF, DOC, DOCX files.
+              </p>
+            </Upload.Dragger>
+
+            {/* Additional warning information */}
+            <div className="bg-red-50 p-3 rounded-lg border border-red-200 mt-4">
+              <div className="flex items-center text-sm text-red-600">
+                <ExclamationCircleOutlined className="mr-2" />
+                <span>
+                  Rejecting this request will require the team to resubmit with
+                  corrections.
+                </span>
+              </div>
+            </div>
+          </div>
         </Modal>
       </div>
     </div>

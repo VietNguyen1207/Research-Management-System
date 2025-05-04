@@ -23,6 +23,7 @@ import {
   Form,
   AutoComplete,
   Input,
+  Pagination,
 } from "antd";
 import {
   TeamOutlined,
@@ -46,9 +47,40 @@ import {
   useGetStudentsQuery,
 } from "../features/user/userApiSlice";
 import { selectCurrentUser } from "../features/auth/authSlice";
-import { useReInviteGroupMemberMutation } from "../features/group/groupApiSlice";
+import {
+  useReInviteGroupMemberMutation,
+  getGroupTypeName,
+} from "../features/group/groupApiSlice";
 
 const { Text } = Typography;
+
+// Add the GroupStatusEnum mapping
+const GROUP_STATUS = {
+  0: "Pending",
+  1: "Active",
+  2: "Inactive",
+};
+
+// Add status colors for group statuses
+const GROUP_STATUS_COLORS = {
+  0: "gold", // Pending - yellow/gold
+  1: "green", // Active - green
+  2: "default", // Inactive - gray
+};
+
+// Add status icons for group statuses
+const getGroupStatusIcon = (status) => {
+  switch (status) {
+    case 1: // Active
+      return <CheckCircleOutlined className="text-green-500" />;
+    case 0: // Pending
+      return <ClockCircleOutlined className="text-yellow-500" />;
+    case 2: // Inactive
+      return <StopOutlined className="text-gray-500" />;
+    default:
+      return null;
+  }
+};
 
 const ViewGroup = () => {
   const currentUser = useSelector(selectCurrentUser);
@@ -63,8 +95,24 @@ const ViewGroup = () => {
   const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
   const [selectedGroupForInvite, setSelectedGroupForInvite] = useState(null);
 
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
+
+  // Instead of using the query, we'll also use the groups from the current user (login response)
+  const userGroups = currentUser?.groups || [];
+
+  // Process the user groups data to match the expected format
+  const processedGroups = userGroups.map((group) => ({
+    ...group,
+    groupTypeString: getGroupTypeString(group.groupType),
+    // Add an empty members array if none present (will be populated by getUserGroups query)
+    members: group.members || [],
+  }));
+
+  // We'll still keep the original query for member details, but use it as a supplement
   const {
-    data: groups,
+    data: groupsWithMembers,
     isLoading,
     isError,
     error,
@@ -72,6 +120,39 @@ const ViewGroup = () => {
   } = useGetUserGroupsQuery(userId, {
     skip: !userId,
   });
+
+  // Combine data - use the groups from current user for the list,
+  // but enrich with member details from the query when available
+  const combinedGroups = processedGroups.map((group) => {
+    const detailedGroup = groupsWithMembers?.find(
+      (g) => g.groupId === group.groupId
+    );
+    return detailedGroup ? detailedGroup : group;
+  });
+
+  // Helper function to get groupType string
+  function getGroupTypeString(groupType) {
+    const groupTypeMap = {
+      0: "Student",
+      1: "Council",
+      2: "Research",
+    };
+    return groupTypeMap[groupType] || "Unknown";
+  }
+
+  // Paginate the groups
+  const paginatedGroups = combinedGroups.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Handle page change
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    if (size !== pageSize) {
+      setPageSize(size);
+    }
+  };
 
   const { data: lecturersData, isLoading: isLoadingLecturers } =
     useGetLecturersQuery();
@@ -116,7 +197,7 @@ const ViewGroup = () => {
   };
 
   const getGroupStats = () => {
-    if (!groups || !groups.length)
+    if (!combinedGroups || !combinedGroups.length)
       return {
         totalGroups: 0,
         totalMembers: 0,
@@ -124,21 +205,45 @@ const ViewGroup = () => {
         pendingMembers: 0,
       };
 
-    const totalGroups = groups.length;
-    const totalMembers = groups.reduce(
-      (acc, group) => acc + group.members.length,
-      0
-    );
-    const acceptedMembers = groups.reduce(
-      (acc, group) => acc + group.members.filter((m) => m.status === 1).length,
-      0
-    );
-    const pendingMembers = groups.reduce(
-      (acc, group) => acc + group.members.filter((m) => m.status === 0).length,
-      0
+    const totalGroups = combinedGroups.length;
+
+    // If members are available
+    const hasMembers = combinedGroups.some(
+      (group) => group.members && group.members.length > 0
     );
 
-    return { totalGroups, totalMembers, acceptedMembers, pendingMembers };
+    if (hasMembers) {
+      // Filter out stakeholders before counting
+      const nonStakeholderMembers = (group) =>
+        (group.members || []).filter((m) => m.role !== 6);
+
+      const totalMembers = combinedGroups.reduce(
+        (acc, group) => acc + nonStakeholderMembers(group).length,
+        0
+      );
+      const acceptedMembers = combinedGroups.reduce(
+        (acc, group) =>
+          acc +
+          nonStakeholderMembers(group).filter((m) => m.status === 1).length,
+        0
+      );
+      const pendingMembers = combinedGroups.reduce(
+        (acc, group) =>
+          acc +
+          nonStakeholderMembers(group).filter((m) => m.status === 0).length,
+        0
+      );
+
+      return { totalGroups, totalMembers, acceptedMembers, pendingMembers };
+    } else {
+      // If no member details are available yet
+      return {
+        totalGroups,
+        totalMembers: 0,
+        acceptedMembers: 0,
+        pendingMembers: 0,
+      };
+    }
   };
 
   const stats = getGroupStats();
@@ -308,6 +413,11 @@ const ViewGroup = () => {
         return;
       }
 
+      // Get the correct group type name using the helper
+      const groupTypeName = getGroupTypeName(
+        selectedGroupForInvite.groupType
+      ).toLowerCase();
+
       // Prepare the request body
       const reInviteData = {
         groupId: selectedGroupForInvite.groupId,
@@ -316,9 +426,7 @@ const ViewGroup = () => {
         role: selectedRole,
         message: `You have been invited to join the ${
           selectedGroupForInvite.groupName
-        } ${
-          selectedGroupForInvite.groupType === 1 ? "council" : "research group"
-        } as a ${
+        } ${groupTypeName} group as a ${
           selectedRole === 0
             ? "Leader"
             : selectedRole === 1
@@ -398,6 +506,7 @@ const ViewGroup = () => {
     const secretaries = members.filter((m) => m.role === 4);
     const supervisors = members.filter((m) => m.role === 2);
     const regularMembers = members.filter((m) => m.role === 1 || m.role === 5);
+    const stakeholders = members.filter((m) => m.role === 6); // Filter for stakeholders
 
     // Function to render a single member with appropriate styling
     const renderMember = (member) => {
@@ -425,6 +534,51 @@ const ViewGroup = () => {
         ? "This group already has a leader"
         : "This position has already been filled by another member";
 
+      // Special handling for Stakeholder
+      if (member.role === 6) {
+        return (
+          <List.Item key={member.groupMemberId}>
+            <List.Item.Meta
+              avatar={
+                <Avatar
+                  style={{
+                    backgroundColor: "#78716c", // Neutral color for stakeholder
+                    border:
+                      getStatusColor(member.status) === "success"
+                        ? "2px solid #52c41a"
+                        : getStatusColor(member.status) === "warning"
+                        ? "2px solid #faad14"
+                        : "2px solid #ff4d4f",
+                  }}
+                >
+                  S
+                </Avatar>
+              }
+              title={
+                <div className="flex justify-between items-center">
+                  <Space>
+                    {/* Display only email for stakeholder */}
+                    <Text strong>{member.memberEmail}</Text>
+                    <Tag color="gray">Stakeholder</Tag>
+                  </Space>
+                  <Tag
+                    icon={getStatusIcon(member.status)}
+                    color={getStatusColor(member.status)}
+                  >
+                    {member.statusString}
+                  </Tag>
+                </div>
+              }
+              description={
+                // No description or replace button needed for stakeholder
+                null
+              }
+            />
+          </List.Item>
+        );
+      }
+
+      // Existing rendering logic for other roles
       return (
         <List.Item key={member.groupMemberId}>
           <List.Item.Meta
@@ -586,6 +740,23 @@ const ViewGroup = () => {
               dataSource={regularMembers}
               renderItem={renderMember}
               className="bg-orange-50 rounded-lg p-2"
+            />
+          </div>
+        )}
+
+        {stakeholders.length > 0 && (
+          <div>
+            <div className="flex items-center mb-2">
+              <div className="w-4 h-4 rounded-full bg-gray-500 mr-2"></div>
+              <Text strong className="text-gray-500">
+                Stakeholders
+              </Text>
+            </div>
+            <List
+              itemLayout="horizontal"
+              dataSource={stakeholders}
+              renderItem={renderMember} // Use the updated renderMember function
+              className="bg-gray-100 rounded-lg p-2" // Use a neutral background
             />
           </div>
         )}
@@ -928,178 +1099,247 @@ const ViewGroup = () => {
           </Col>
         </Row>
 
-        {/* Groups List */}
-        {!groups || groups.length === 0 ? (
+        {/* Groups List with Pagination */}
+        {!combinedGroups || combinedGroups.length === 0 ? (
           <Empty
             description="No research groups found"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         ) : (
-          <List
-            grid={{
-              gutter: [16, 16],
-              xs: 1,
-              sm: 1,
-              md: 2,
-              lg: 2,
-              xl: 3,
-              xxl: 3,
-            }}
-            dataSource={groups}
-            renderItem={(group) => (
-              <List.Item>
-                <Card
-                  className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
-                  title={
-                    <div className="flex justify-between items-center">
-                      <Text strong className="text-lg">
-                        {group.groupName}
-                      </Text>
-                      <Tag color="orange" className="rounded-full px-3">
-                        {new Date(group.createdAt).toLocaleDateString()}
-                      </Tag>
-                    </div>
-                  }
-                  actions={[
-                    <Button
-                      type="primary"
-                      onClick={() => showGroupDetails(group)}
-                      className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-                    >
-                      View Details
-                    </Button>,
-                    group.groupType === 1 && (
-                      <Button
-                        type="primary"
-                        onClick={() => handleReviewProject(group)}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
-                        icon={<BookOutlined />}
-                      >
-                        Review Projects
-                      </Button>
-                    ),
-                  ].filter(Boolean)}
-                >
-                  <div className="space-y-4">
-                    <Text type="secondary" className="block">
-                      <CalendarOutlined className="mr-2" />
-                      Created: {new Date(group.createdAt).toLocaleDateString()}
-                    </Text>
+          <>
+            <List
+              grid={{
+                gutter: [16, 16],
+                xs: 1,
+                sm: 1,
+                md: 2,
+                lg: 2,
+                xl: 3,
+                xxl: 3,
+              }}
+              dataSource={paginatedGroups}
+              renderItem={(group) => {
+                // Filter out stakeholders and rejected members for progress calculation
+                const relevantMembers = group.members.filter(
+                  (m) => m.role !== 6 && m.status !== 3
+                );
+                const acceptedRelevantMembers = relevantMembers.filter(
+                  (m) => m.status === 1
+                );
+                const progressPercent =
+                  relevantMembers.length > 0
+                    ? Math.round(
+                        (acceptedRelevantMembers.length /
+                          relevantMembers.length) *
+                          100
+                      )
+                    : 0; // Handle division by zero if no relevant members
 
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <Text type="secondary">Member Acceptance</Text>
-                        <Text strong>{`${
-                          group.members.filter((m) => m.status === 1).length
-                        }/${
-                          group.members.filter((m) => m.status !== 3).length
-                        }`}</Text>
-                      </div>
-                      <Progress
-                        percent={Math.round(
-                          (group.members.filter((m) => m.status === 1).length /
-                            group.members.filter((m) => m.status !== 3)
-                              .length) *
-                            100
-                        )}
-                        size="small"
-                        status="active"
-                        strokeColor={{
-                          "0%": "#108ee9",
-                          "100%": "#87d068",
-                        }}
-                      />
-                    </div>
-
-                    {/* Role summary section */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex space-x-2">
-                        {group.members.some(
-                          (m) => m.role === 0 || m.role === 3
-                        ) && (
-                          <Tooltip
-                            title={
-                              group.members.some((m) => m.role === 3)
-                                ? "Chairman"
-                                : "Leader"
-                            }
-                          >
-                            <Avatar className="bg-blue-500">
-                              {group.members.some((m) => m.role === 3)
-                                ? "C"
-                                : "L"}
-                            </Avatar>
-                          </Tooltip>
-                        )}
-                        {group.members.some((m) => m.role === 4) && (
-                          <Tooltip title="Secretary">
-                            <Avatar className="bg-purple-500">S</Avatar>
-                          </Tooltip>
-                        )}
-                        {group.members.some((m) => m.role === 2) && (
-                          <Tooltip title="Supervisor">
-                            <Avatar className="bg-green-500">S</Avatar>
-                          </Tooltip>
-                        )}
-                        <Tooltip
-                          title={`${
-                            group.members.some((m) => m.role === 5)
-                              ? "Council "
-                              : ""
-                          }Members (${
-                            group.members.filter(
-                              (m) => m.role === 1 || m.role === 5
-                            ).length
-                          })`}
+                return (
+                  <List.Item>
+                    <Card
+                      className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
+                      title={
+                        <div className="flex justify-between items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <Text strong className="text-lg truncate block">
+                              {group.groupName}
+                            </Text>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <Tag
+                              color={
+                                group.groupType === 0
+                                  ? "blue"
+                                  : group.groupType === 1
+                                  ? "purple"
+                                  : group.groupType === 2
+                                  ? "cyan"
+                                  : "default"
+                              }
+                              className="hidden sm:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            >
+                              {group.groupTypeString || "Unknown Type"}
+                            </Tag>
+                            <Tag
+                              color={GROUP_STATUS_COLORS[group.status ?? 1]}
+                              icon={getGroupStatusIcon(group.status ?? 1)}
+                              className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            >
+                              {GROUP_STATUS[group.status ?? 1]}
+                            </Tag>
+                            <Tag
+                              color="orange"
+                              className="hidden md:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            >
+                              {new Date(group.createdAt).toLocaleDateString()}
+                            </Tag>
+                          </div>
+                        </div>
+                      }
+                      actions={[
+                        <Button
+                          type="primary"
+                          onClick={() => showGroupDetails(group)}
+                          className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
                         >
-                          <Avatar className="bg-orange-500">
+                          View Details
+                        </Button>,
+                        group.groupType === 1 && (
+                          <Button
+                            type="primary"
+                            onClick={() => handleReviewProject(group)}
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+                            icon={<BookOutlined />}
+                          >
+                            Review Projects
+                          </Button>
+                        ),
+                      ].filter(Boolean)}
+                    >
+                      <div className="space-y-4">
+                        <Text type="secondary" className="block">
+                          <CalendarOutlined className="mr-2" />
+                          Created:{" "}
+                          {new Date(group.createdAt).toLocaleDateString()}
+                        </Text>
+
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Text type="secondary">Member Acceptance</Text>
+                            <Text
+                              strong
+                            >{`${acceptedRelevantMembers.length}/${relevantMembers.length}`}</Text>
+                          </div>
+                          <Progress
+                            percent={progressPercent}
+                            size="small"
+                            status="active"
+                            strokeColor={{
+                              "0%": "#108ee9",
+                              "100%": "#87d068",
+                            }}
+                          />
+                        </div>
+
+                        {/* Role summary section */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex space-x-2">
+                            {group.members.some(
+                              (m) => m.role === 0 || m.role === 3
+                            ) && (
+                              <Tooltip
+                                title={
+                                  group.members.some((m) => m.role === 3)
+                                    ? "Chairman"
+                                    : "Leader"
+                                }
+                              >
+                                <Avatar className="bg-blue-500">
+                                  {group.members.some((m) => m.role === 3)
+                                    ? "C"
+                                    : "L"}
+                                </Avatar>
+                              </Tooltip>
+                            )}
+                            {group.members.some((m) => m.role === 4) && (
+                              <Tooltip title="Secretary">
+                                <Avatar className="bg-purple-500">S</Avatar>
+                              </Tooltip>
+                            )}
+                            {group.members.some((m) => m.role === 2) && (
+                              <Tooltip title="Supervisor">
+                                <Avatar className="bg-green-500">S</Avatar>
+                              </Tooltip>
+                            )}
+                            <Tooltip
+                              title={`${
+                                group.members.some((m) => m.role === 5)
+                                  ? "Council "
+                                  : ""
+                              }Members (${
+                                group.members.filter(
+                                  (m) => m.role === 1 || m.role === 5
+                                ).length
+                              })`}
+                            >
+                              <Avatar className="bg-orange-500">
+                                {
+                                  group.members.filter(
+                                    (m) => m.role === 1 || m.role === 5
+                                  ).length
+                                }
+                              </Avatar>
+                            </Tooltip>
+                          </div>
+
+                          <Space>
+                            <Badge
+                              status="success"
+                              text={
+                                <Text type="secondary">
+                                  {`${
+                                    group.members.filter(
+                                      (m) => m.status === 1 && m.role !== 6
+                                    ).length
+                                  } Accepted`}
+                                </Text>
+                              }
+                            />
+                          </Space>
+                        </div>
+
+                        {/* Status indicators */}
+                        <div className="flex flex-wrap gap-2">
+                          <Tag color="success" icon={<CheckCircleOutlined />}>
                             {
                               group.members.filter(
-                                (m) => m.role === 1 || m.role === 5
+                                (m) => m.status === 1 && m.role !== 6
                               ).length
-                            }
-                          </Avatar>
-                        </Tooltip>
+                            }{" "}
+                            Accepted
+                          </Tag>
+                          <Tag color="warning" icon={<ClockCircleOutlined />}>
+                            {
+                              group.members.filter(
+                                (m) => m.status === 0 && m.role !== 6
+                              ).length
+                            }{" "}
+                            Pending
+                          </Tag>
+                          {group.members.filter(
+                            (m) => m.status === 3 && m.role !== 6
+                          ).length > 0 && (
+                            <Tag color="error" icon={<CloseCircleOutlined />}>
+                              {
+                                group.members.filter(
+                                  (m) => m.status === 3 && m.role !== 6
+                                ).length
+                              }{" "}
+                              Rejected
+                            </Tag>
+                          )}
+                        </div>
                       </div>
+                    </Card>
+                  </List.Item>
+                );
+              }}
+            />
 
-                      <Space>
-                        <Badge
-                          status="success"
-                          text={
-                            <Text type="secondary">
-                              {`${
-                                group.members.filter((m) => m.status === 1)
-                                  .length
-                              } Accepted`}
-                            </Text>
-                          }
-                        />
-                      </Space>
-                    </div>
-
-                    {/* Status indicators */}
-                    <div className="flex flex-wrap gap-2">
-                      <Tag color="success" icon={<CheckCircleOutlined />}>
-                        {group.members.filter((m) => m.status === 1).length}{" "}
-                        Accepted
-                      </Tag>
-                      <Tag color="warning" icon={<ClockCircleOutlined />}>
-                        {group.members.filter((m) => m.status === 0).length}{" "}
-                        Pending
-                      </Tag>
-                      {group.members.filter((m) => m.status === 3).length >
-                        0 && (
-                        <Tag color="error" icon={<CloseCircleOutlined />}>
-                          {group.members.filter((m) => m.status === 3).length}{" "}
-                          Rejected
-                        </Tag>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </List.Item>
-            )}
-          />
+            {/* Pagination Component */}
+            <div className="flex justify-center mt-8">
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={combinedGroups.length}
+                onChange={handlePageChange}
+                showSizeChanger
+                pageSizeOptions={[6, 9, 12, 18]}
+                showTotal={(total) => `Total ${total} groups`}
+              />
+            </div>
+          </>
         )}
 
         {/* Group Details Modal */}
@@ -1109,6 +1349,14 @@ const ViewGroup = () => {
               <Text strong className="text-xl">
                 {selectedGroup ? selectedGroup.groupName : "Group Details"}
               </Text>
+              {selectedGroup && (
+                <Tag
+                  color={GROUP_STATUS_COLORS[selectedGroup.status ?? 1]}
+                  icon={getGroupStatusIcon(selectedGroup.status ?? 1)}
+                >
+                  {GROUP_STATUS[selectedGroup.status ?? 1]}
+                </Tag>
+              )}
             </div>
           }
           open={isModalVisible}
@@ -1140,6 +1388,14 @@ const ViewGroup = () => {
                       color={selectedGroup.groupType === 1 ? "purple" : "blue"}
                     >
                       {selectedGroup.groupTypeString}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label={<Text strong>Status</Text>}>
+                    <Tag
+                      color={GROUP_STATUS_COLORS[selectedGroup.status ?? 1]}
+                      icon={getGroupStatusIcon(selectedGroup.status ?? 1)}
+                    >
+                      {GROUP_STATUS[selectedGroup.status ?? 1]}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Members</Text>}>

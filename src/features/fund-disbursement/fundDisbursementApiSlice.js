@@ -3,13 +3,13 @@ import { apiSlice } from "../api/apiSlice";
 export const fundDisbursementApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getFundDisbursements: builder.query({
-      query: () => "/fund-disbursements",
+      query: () => "/fund-disbursement-requests",
       transformResponse: (response) => response.data,
       providesTags: (result = []) => [
         "FundDisbursements",
-        ...result.map(({ fundDisbursementId }) => ({
+        ...result.map(({ requestId }) => ({
           type: "FundDisbursements",
-          id: fundDisbursementId,
+          id: requestId,
         })),
       ],
     }),
@@ -41,26 +41,26 @@ export const fundDisbursementApiSlice = apiSlice.injectEndpoints({
       ],
     }),
     approveFundDisbursement: builder.mutation({
-      query: ({ disbursementId, formData }) => ({
-        url: `/fund-disbursements/${disbursementId}/office-approve`,
+      query: ({ requestId, formData }) => ({
+        url: `/fund-requests/${requestId}/approve`,
         method: "POST",
         body: formData,
         formData: true,
       }),
-      invalidatesTags: (result, error, { disbursementId }) => [
-        { type: "FundDisbursements", id: disbursementId },
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "FundDisbursements", id: requestId },
         "FundDisbursements",
       ],
     }),
     rejectFundDisbursement: builder.mutation({
-      query: ({ disbursementId, formData }) => ({
-        url: `/fund-disbursements/${disbursementId}/office-reject`,
+      query: ({ requestId, formData }) => ({
+        url: `/fund-requests/${requestId}/reject`,
         method: "POST",
         body: formData,
         formData: true,
       }),
-      invalidatesTags: (result, error, { disbursementId }) => [
-        { type: "FundDisbursements", id: disbursementId },
+      invalidatesTags: (result, error, { requestId }) => [
+        { type: "FundDisbursements", id: requestId },
         "FundDisbursements",
       ],
     }),

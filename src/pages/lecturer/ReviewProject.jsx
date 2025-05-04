@@ -39,6 +39,7 @@ import {
   InboxOutlined,
   UploadOutlined,
   CloseCircleOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -862,12 +863,21 @@ const ReviewProject = () => {
                     { value: "1", label: "Research Creation" },
                     { value: "3", label: "Project Completion" },
                     { value: "6", label: "Fund Disbursement" },
-                    // Other request types as needed
                   ]}
                   className="rounded-md"
                 />
               </div>
             </div>
+
+            {/* Request Record Button */}
+            <Button
+              type="primary"
+              icon={<HistoryOutlined />}
+              onClick={() => navigate("/council-request-records")}
+              className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F27D28] hover:to-[#F2922B] border-none ml-4 shadow-sm"
+            >
+              Request Records
+            </Button>
           </div>
         </div>
 
@@ -1356,7 +1366,7 @@ const ReviewProject = () => {
           title={
             <div className="flex items-center">
               <CheckOutlined style={{ color: "#52c41a" }} className="mr-2" />
-              <span>Approve Project</span>
+              <span>Approve Project Request</span>
             </div>
           }
           open={approvalModalVisible}
@@ -1368,11 +1378,7 @@ const ReviewProject = () => {
             <Button
               key="submit"
               type="primary"
-              loading={
-                currentProject?.requestType === 3
-                  ? isApprovingCompletion
-                  : isApproving
-              }
+              loading={isApproving}
               onClick={() => form.submit()}
               className="bg-green-600 hover:bg-green-700"
               disabled={!approvalConfirmed}
@@ -1383,136 +1389,137 @@ const ReviewProject = () => {
           width={550}
         >
           <Form form={form} onFinish={handleApprovalSubmit}>
-            {/* Show completion-specific info for completion requests */}
-            {currentProject && currentProject.requestType === 3 && (
-              <div className="mb-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h3 className="font-medium text-blue-800 mb-2">
-                  Project Completion Request
-                </h3>
-
-                <div className="mb-3">
-                  <div className="text-sm text-gray-600 mb-1">
-                    Project Outcomes:
-                  </div>
-                  <div className="bg-white p-2 rounded border border-gray-200 text-sm">
-                    {currentProject.completionSummary}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap mb-3">
-                  <div className="w-full md:w-1/2 mb-2 md:mb-0">
-                    <div className="text-sm text-gray-600 mb-1">
-                      Budget Status:
-                    </div>
-                    <Tag
-                      color={
-                        currentProject.budgetReconciled ? "success" : "error"
-                      }
-                      icon={
-                        currentProject.budgetReconciled ? (
-                          <CheckCircleOutlined />
-                        ) : (
-                          <CloseCircleOutlined />
-                        )
-                      }
-                    >
-                      {currentProject.budgetReconciled
-                        ? "Budget Reconciled"
-                        : "Budget Not Reconciled"}
-                    </Tag>
-                  </div>
-
-                  <div className="w-full md:w-1/2">
-                    <div className="text-sm text-gray-600 mb-1">
-                      Budget Summary:
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">Approved: </span>
-                      <span>
-                        ₫{currentProject.approvedBudget?.toLocaleString()}
-                      </span>
-                      <span className="mx-2">|</span>
-                      <span className="font-medium">Spent: </span>
-                      <span>
-                        ₫{currentProject.spentBudget?.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {currentProject.budgetVarianceExplanation && (
+            <div>
+              {/* Approver Information (matched with rejection modal) */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                <div className="flex items-start">
+                  <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
                   <div>
+                    <p className="font-medium text-gray-800">
+                      You are approving as:{" "}
+                      <Tag color="blue">
+                        {(() => {
+                          // Find council group where user is Chairman or Secretary
+                          const councilGroup = user?.groups?.find(
+                            (group) =>
+                              group.groupType === 1 &&
+                              (group.role === 3 || group.role === 4)
+                          );
+
+                          if (councilGroup) {
+                            // Map role ID to role name
+                            let roleName = "";
+                            switch (councilGroup.role) {
+                              case 3:
+                                roleName = "Council Chairman";
+                                break;
+                              case 4:
+                                roleName = "Secretary";
+                                break;
+                              default:
+                                roleName = "Council Member";
+                            }
+                            return `${roleName} from ${councilGroup.groupName}`;
+                          } else {
+                            return "Not Authorized";
+                          }
+                        })()}
+                      </Tag>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {user?.fullName || "User"} ({user?.email})
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Information (matched with rejection modal) */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+                <p className="font-medium text-gray-800">
+                  Request Type:{" "}
+                  <Tag color="purple">
+                    {REQUEST_TYPE[currentProject?.requestType]}
+                  </Tag>
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Project: {currentProject?.projectName}
+                </p>
+                {/* Add completion-specific info for consistency */}
+                {currentProject?.requestType === 3 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
                     <div className="text-sm text-gray-600 mb-1">
-                      Budget Explanation:
+                      Project Outcomes:
                     </div>
-                    <div className="bg-white p-2 rounded border border-gray-200 text-sm italic">
-                      "{currentProject.budgetVarianceExplanation}"
+                    <div className="bg-white p-2 rounded border border-gray-200 text-sm">
+                      {currentProject.completionSummary?.substring(0, 100)}
+                      {currentProject.completionSummary?.length > 100
+                        ? "..."
+                        : ""}
+                    </div>
+                    <div className="flex items-center mt-2">
+                      <Tag
+                        color={
+                          currentProject.budgetReconciled ? "success" : "error"
+                        }
+                        icon={
+                          currentProject.budgetReconciled ? (
+                            <CheckCircleOutlined />
+                          ) : (
+                            <CloseCircleOutlined />
+                          )
+                        }
+                      >
+                        {currentProject.budgetReconciled
+                          ? "Budget Reconciled"
+                          : "Budget Not Reconciled"}
+                      </Tag>
                     </div>
                   </div>
                 )}
-
-                <div className="mt-3 text-sm text-blue-600">
-                  <InfoCircleOutlined className="mr-1" />
-                  By approving this request, you confirm that the project has
-                  been successfully completed and all deliverables have been
-                  met.
-                </div>
               </div>
-            )}
 
-            {/* Standard info for other request types */}
-            {currentProject && currentProject.requestType !== 3 && (
-              <div className="mb-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex items-start">
-                  <InfoCircleOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      You are approving a{" "}
-                      {REQUEST_TYPE[currentProject.requestType]} request
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Project: {currentProject.projectName}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+              <Divider />
 
-            <p className="text-sm font-medium mb-2">
-              Please upload an approval document:
-            </p>
-            <Upload.Dragger
-              fileList={approvalFileList}
-              onChange={({ fileList }) => setApprovalFileList(fileList)}
-              beforeUpload={() => false}
-              maxCount={1}
-              onRemove={() => setApprovalFileList([])}
-            >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
+              {/* File Upload (consistent with rejection modal) */}
+              <p className="text-sm font-medium mb-2">
+                Please upload an approval document:{" "}
+                <span className="text-red-500">*</span>
               </p>
-              <p className="ant-upload-text">
-                Click or drag approval document to this area
-              </p>
-              <p className="ant-upload-hint">
-                Support for PDF, DOC, DOCX files.
-              </p>
-            </Upload.Dragger>
+              <Upload.Dragger
+                fileList={approvalFileList}
+                onChange={({ fileList }) => setApprovalFileList(fileList)}
+                beforeUpload={() => false}
+                maxCount={1}
+                onRemove={() => setApprovalFileList([])}
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">
+                  Click or drag approval document to this area
+                </p>
+                <p className="ant-upload-hint">
+                  Support for PDF, DOC, DOCX files.
+                </p>
+              </Upload.Dragger>
 
-            <Form.Item
-              name="confirmAction"
-              valuePropName="checked"
-              rules={[
-                { required: true, message: "Please confirm your action" },
-              ]}
-              className="mt-4"
-            >
-              <Checkbox onChange={handleApprovalCheckboxChange}>
-                I confirm that I have reviewed this{" "}
-                {currentProject?.requestType === 3 ? "completion" : ""} request
-                and approve it.
-              </Checkbox>
-            </Form.Item>
+              {/* Confirmation Checkbox */}
+              <Form.Item
+                name="confirmAction"
+                valuePropName="checked"
+                rules={[
+                  { required: true, message: "Please confirm your action" },
+                ]}
+                className="mt-4"
+              >
+                <Checkbox onChange={handleApprovalCheckboxChange}>
+                  I confirm that I have reviewed this{" "}
+                  {currentProject?.requestType === 3 ? "completion" : ""}{" "}
+                  request and approve it.{" "}
+                  <span className="text-red-500">*</span>
+                </Checkbox>
+              </Form.Item>
+            </div>
           </Form>
         </Modal>
 
@@ -1521,7 +1528,7 @@ const ReviewProject = () => {
           title={
             <div className="flex items-center">
               <CloseOutlined style={{ color: "#f5222d" }} className="mr-2" />
-              <span>Reject Project</span>
+              <span>Reject Project Request</span>
             </div>
           }
           open={rejectionModalVisible}
@@ -1534,11 +1541,7 @@ const ReviewProject = () => {
               key="submit"
               type="primary"
               danger
-              loading={
-                currentProject?.requestType === 3
-                  ? isRejectingCompletion
-                  : isRejecting
-              }
+              loading={isRejecting}
               onClick={() => rejectionForm.submit()}
               disabled={!rejectionConfirmed}
             >
@@ -1549,46 +1552,7 @@ const ReviewProject = () => {
         >
           {currentProject && (
             <Form form={rejectionForm} onFinish={handleRejectionSubmit}>
-              {/* Show completion-specific info for completion requests */}
-              {currentProject.requestType === 3 && (
-                <div className="mb-4 bg-red-50 p-4 rounded-lg border border-red-100">
-                  <h3 className="font-medium text-red-800 mb-2">
-                    Project Completion Request
-                  </h3>
-
-                  <div className="mb-3">
-                    <div className="text-sm text-gray-600 mb-1">
-                      Project Outcomes:
-                    </div>
-                    <div className="bg-white p-2 rounded border border-gray-200 text-sm">
-                      {currentProject.completionSummary?.substring(0, 100)}
-                      {currentProject.completionSummary?.length > 100
-                        ? "..."
-                        : ""}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center mb-2">
-                    <Tag
-                      color={
-                        currentProject.budgetReconciled ? "success" : "error"
-                      }
-                      icon={
-                        currentProject.budgetReconciled ? (
-                          <CheckCircleOutlined />
-                        ) : (
-                          <CloseCircleOutlined />
-                        )
-                      }
-                    >
-                      {currentProject.budgetReconciled
-                        ? "Budget Reconciled"
-                        : "Budget Not Reconciled"}
-                    </Tag>
-                  </div>
-                </div>
-              )}
-
+              {/* Rejecter Information (matched with approval modal) */}
               <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
                 <div className="flex items-start">
                   <UserOutlined className="text-red-500 mt-1 mr-3 text-lg" />
@@ -1630,14 +1594,58 @@ const ReviewProject = () => {
                   </div>
                 </div>
               </div>
-              <p>Are you sure you want to reject this project?</p>
-              <p className="text-sm text-gray-500 mb-4">
-                Project: <strong>{currentProject.projectName}</strong>
-              </p>
+
+              {/* Project Information (matched with approval modal) */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+                <p className="font-medium text-gray-800">
+                  Request Type:{" "}
+                  <Tag color="purple">
+                    {REQUEST_TYPE[currentProject.requestType]}
+                  </Tag>
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Project: {currentProject.projectName}
+                </p>
+                {/* Keep completion-specific info for consistency */}
+                {currentProject.requestType === 3 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="text-sm text-gray-600 mb-1">
+                      Project Outcomes:
+                    </div>
+                    <div className="bg-white p-2 rounded border border-gray-200 text-sm">
+                      {currentProject.completionSummary?.substring(0, 100)}
+                      {currentProject.completionSummary?.length > 100
+                        ? "..."
+                        : ""}
+                    </div>
+                    <div className="flex items-center mt-2">
+                      <Tag
+                        color={
+                          currentProject.budgetReconciled ? "success" : "error"
+                        }
+                        icon={
+                          currentProject.budgetReconciled ? (
+                            <CheckCircleOutlined />
+                          ) : (
+                            <CloseCircleOutlined />
+                          )
+                        }
+                      >
+                        {currentProject.budgetReconciled
+                          ? "Budget Reconciled"
+                          : "Budget Not Reconciled"}
+                      </Tag>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <Divider />
 
+              {/* File Upload (consistent with approval modal) */}
               <p className="text-sm font-medium mb-2">
-                Please upload a rejection document:
+                Please upload a rejection document:{" "}
+                <span className="text-red-500">*</span>
               </p>
               <Upload.Dragger
                 fileList={rejectionFileList}
@@ -1657,9 +1665,10 @@ const ReviewProject = () => {
                 </p>
               </Upload.Dragger>
 
+              {/* Rejection Reason  */}
               <Form.Item
                 name="rejectionReason"
-                label="Reason for Rejection"
+                label={<span>Reason for Rejection</span>}
                 rules={[
                   {
                     required: true,
@@ -1674,6 +1683,7 @@ const ReviewProject = () => {
                 />
               </Form.Item>
 
+              {/* Confirmation Checkbox */}
               <Form.Item
                 name="confirmAction"
                 valuePropName="checked"
@@ -1684,7 +1694,7 @@ const ReviewProject = () => {
                 <Checkbox onChange={handleRejectionCheckboxChange}>
                   I confirm that I have reviewed this{" "}
                   {currentProject.requestType === 3 ? "completion" : ""} request
-                  and reject it.
+                  and reject it. <span className="text-red-500">*</span>
                 </Checkbox>
               </Form.Item>
             </Form>

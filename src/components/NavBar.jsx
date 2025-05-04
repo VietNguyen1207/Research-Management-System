@@ -49,6 +49,7 @@ const ROUTE_MAPPINGS = {
   "Timeline Management": "/timeline-management",
   "User Management": "/admin/users",
   "Project Management": "/admin/projects",
+  "Academic Calendar": "/timeline-schedule",
 };
 
 // Define navItems outside of component
@@ -128,6 +129,11 @@ const navItems = [
       { icon: <DeleteOutlined />, label: "Trash" },
     ],
   },
+  {
+    key: "timeline-schedule",
+    icon: <FieldTimeOutlined />,
+    label: "Academic Calendar",
+  },
 ];
 
 // Update the adminSpecificNavItems to remove subItems
@@ -175,6 +181,7 @@ const NavBar = () => {
     // "Registration",
     "Research Project",
     // "Paper Project",
+    "Academic Calendar",
   ];
   const lecturerNavItems = [
     "Group",
@@ -182,6 +189,7 @@ const NavBar = () => {
     "Research Project",
     "Paper Project",
     "Request",
+    "Academic Calendar",
   ];
   const deptHeadNavItems = [
     "Research Project",

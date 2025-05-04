@@ -51,17 +51,17 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
     }),
 
-    getStudentGroups: builder.query({
-      query: (userId) => `/users/${userId}/groups?groupType=0`,
+    getUserResearchGroups: builder.query({
+      query: (userId) => `/users/${userId}/groups`,
       transformResponse: (response) => {
         if (!response.data) return [];
 
-        // Transform the response to include student groups only
+        // Transform the response to include both Student and Research groups
         return response.data
-          .filter((group) => group.groupType === 0) // Filter for Student groups (type 0)
+          .filter((group) => group.groupType === 0 || group.groupType === 2)
           .map((group) => ({
             ...group,
-            groupTypeString: "Student",
+            groupTypeString: getGroupTypeName(group.groupType),
             members: group.members.map((member) => ({
               ...member,
               roleString: getRoleName(member.role),
@@ -69,7 +69,7 @@ export const groupApiSlice = apiSlice.injectEndpoints({
             })),
           }));
       },
-      providesTags: ["StudentGroups", "UserGroups"],
+      providesTags: ["StudentGroups", "ResearchGroups", "UserGroups"],
     }),
   }),
 });
@@ -98,10 +98,45 @@ const getStatusName = (status) => {
   return statusMap[status] || "Unknown Status";
 };
 
+// Group status constants
+export const GROUP_STATUS = {
+  PENDING: 0,
+  ACTIVE: 1,
+  INACTIVE: 2,
+  COMPLETED: 3,
+};
+
+// Helper function to convert group status numbers to readable text
+export const getGroupStatusName = (status) => {
+  const groupStatusMap = {
+    [GROUP_STATUS.PENDING]: "Pending",
+    [GROUP_STATUS.ACTIVE]: "Active",
+    [GROUP_STATUS.INACTIVE]: "Inactive",
+    [GROUP_STATUS.COMPLETED]: "Completed",
+  };
+  return groupStatusMap[status] || "Unknown Status";
+};
+
+export const GROUP_TYPE = {
+  STUDENT: 0,
+  COUNCIL: 1,
+  RESEARCH: 2,
+};
+
+export const getGroupTypeName = (type) => {
+  const groupTypeMap = {
+    [GROUP_TYPE.STUDENT]: "Student",
+    [GROUP_TYPE.COUNCIL]: "Council",
+    [GROUP_TYPE.RESEARCH]: "Research",
+  };
+  return groupTypeMap[type] || "Unknown Group Type";
+};
+// -- END NEW --
+
 export const {
   useCreateResearchGroupMutation,
   useCreateCouncilGroupMutation,
   useGetCouncilGroupsQuery,
   useReInviteGroupMemberMutation,
-  useGetStudentGroupsQuery,
+  useGetUserResearchGroupsQuery,
 } = groupApiSlice;

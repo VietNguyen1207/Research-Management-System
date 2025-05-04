@@ -1040,8 +1040,10 @@ const ProjectRequestDetail = () => {
                     </Descriptions.Item>
                     <Descriptions.Item label="Group Type">
                       {projectRequest.group.groupType === 0
-                        ? "Research Group"
-                        : "Council Group"}
+                        ? "Student Group"
+                        : projectRequest.group.groupType === 1
+                        ? "Council Group"
+                        : "Research Group"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Department">
                       {projectRequest.department?.departmentName}
@@ -1236,23 +1238,100 @@ const ProjectRequestDetail = () => {
         >
           <Form form={form} onFinish={handleApprovalSubmit}>
             <div>
+              {/* Approver Information (matched with rejection modal) */}
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
                 <div className="flex items-start">
                   <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
                   <div>
                     <p className="font-medium text-gray-800">
-                      You are approving a{" "}
-                      {REQUEST_TYPE[projectRequest?.requestType]} request
+                      You are approving as:{" "}
+                      <Tag color="blue">
+                        {(() => {
+                          // Find council group where user is Chairman or Secretary
+                          const councilGroup = user?.groups?.find(
+                            (group) =>
+                              group.groupType === 1 &&
+                              (group.role === 3 || group.role === 4)
+                          );
+
+                          if (councilGroup) {
+                            // Map role ID to role name
+                            let roleName = "";
+                            switch (councilGroup.role) {
+                              case 3:
+                                roleName = "Council Chairman";
+                                break;
+                              case 4:
+                                roleName = "Secretary";
+                                break;
+                              default:
+                                roleName = "Council Member";
+                            }
+                            return `${roleName} from ${councilGroup.groupName}`;
+                          } else {
+                            return "Not Authorized";
+                          }
+                        })()}
+                      </Tag>
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Project: {projectRequest?.projectName}
+                      {user?.fullName || "User"} ({user?.email})
                     </p>
                   </div>
                 </div>
               </div>
 
+              {/* Project Information (matched with rejection modal) */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+                <p className="font-medium text-gray-800">
+                  Request Type:{" "}
+                  <Tag color="purple">
+                    {REQUEST_TYPE[projectRequest?.requestType]}
+                  </Tag>
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Project: {projectRequest?.projectName}
+                </p>
+                {/* Add completion-specific info for consistency */}
+                {projectRequest?.requestType === 3 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="text-sm text-gray-600 mb-1">
+                      Project Outcomes:
+                    </div>
+                    <div className="bg-white p-2 rounded border border-gray-200 text-sm">
+                      {projectRequest.completionSummary?.substring(0, 100)}
+                      {projectRequest.completionSummary?.length > 100
+                        ? "..."
+                        : ""}
+                    </div>
+                    <div className="flex items-center mt-2">
+                      <Tag
+                        color={
+                          projectRequest.budgetReconciled ? "success" : "error"
+                        }
+                        icon={
+                          projectRequest.budgetReconciled ? (
+                            <CheckCircleOutlined />
+                          ) : (
+                            <CloseCircleOutlined />
+                          )
+                        }
+                      >
+                        {projectRequest.budgetReconciled
+                          ? "Budget Reconciled"
+                          : "Budget Not Reconciled"}
+                      </Tag>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Divider />
+
+              {/* File Upload - add asterisk */}
               <p className="text-sm font-medium mb-2">
-                Please upload an approval document:
+                Please upload an approval document:{" "}
+                <span className="text-red-500">*</span>
               </p>
               <Upload.Dragger
                 fileList={approvalFileList}
@@ -1272,6 +1351,7 @@ const ProjectRequestDetail = () => {
                 </p>
               </Upload.Dragger>
 
+              {/* Confirmation Checkbox */}
               <Form.Item
                 name="confirmAction"
                 valuePropName="checked"
@@ -1281,8 +1361,10 @@ const ProjectRequestDetail = () => {
                 className="mt-4"
               >
                 <Checkbox onChange={handleApprovalCheckboxChange}>
-                  I confirm that I have reviewed this project request and
-                  approve it.
+                  I confirm that I have reviewed this{" "}
+                  {projectRequest?.requestType === 3 ? "completion" : ""}{" "}
+                  request and approve it.{" "}
+                  <span className="text-red-500">*</span>
                 </Checkbox>
               </Form.Item>
             </div>
@@ -1317,23 +1399,100 @@ const ProjectRequestDetail = () => {
           width={550}
         >
           <Form form={rejectionForm} onFinish={handleRejectionSubmit}>
+            {/* Rejecter Information (matched with approval modal) */}
             <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
               <div className="flex items-start">
-                <ExclamationCircleOutlined className="text-red-500 mt-1 mr-3 text-lg" />
+                <UserOutlined className="text-red-500 mt-1 mr-3 text-lg" />
                 <div>
                   <p className="font-medium text-gray-800">
-                    You are rejecting a{" "}
-                    {REQUEST_TYPE[projectRequest?.requestType]} request
+                    You are rejecting as:{" "}
+                    <Tag color="red">
+                      {(() => {
+                        // Find council group where user is Chairman or Secretary
+                        const councilGroup = user?.groups?.find(
+                          (group) =>
+                            group.groupType === 1 &&
+                            (group.role === 3 || group.role === 4)
+                        );
+
+                        if (councilGroup) {
+                          // Map role ID to role name
+                          let roleName = "";
+                          switch (councilGroup.role) {
+                            case 3:
+                              roleName = "Council Chairman";
+                              break;
+                            case 4:
+                              roleName = "Secretary";
+                              break;
+                            default:
+                              roleName = "Council Member";
+                          }
+                          return `${roleName} from ${councilGroup.groupName}`;
+                        } else {
+                          return "Not Authorized";
+                        }
+                      })()}
+                    </Tag>
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Project: {projectRequest?.projectName}
+                    {user?.fullName || "User"} ({user?.email})
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Project Information (matched with approval modal) */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+              <p className="font-medium text-gray-800">
+                Request Type:{" "}
+                <Tag color="purple">
+                  {REQUEST_TYPE[projectRequest?.requestType]}
+                </Tag>
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Project: {projectRequest?.projectName}
+              </p>
+              {/* Keep completion-specific info for consistency */}
+              {projectRequest?.requestType === 3 && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <div className="text-sm text-gray-600 mb-1">
+                    Project Outcomes:
+                  </div>
+                  <div className="bg-white p-2 rounded border border-gray-200 text-sm">
+                    {projectRequest.completionSummary?.substring(0, 100)}
+                    {projectRequest.completionSummary?.length > 100
+                      ? "..."
+                      : ""}
+                  </div>
+                  <div className="flex items-center mt-2">
+                    <Tag
+                      color={
+                        projectRequest.budgetReconciled ? "success" : "error"
+                      }
+                      icon={
+                        projectRequest.budgetReconciled ? (
+                          <CheckCircleOutlined />
+                        ) : (
+                          <CloseCircleOutlined />
+                        )
+                      }
+                    >
+                      {projectRequest.budgetReconciled
+                        ? "Budget Reconciled"
+                        : "Budget Not Reconciled"}
+                    </Tag>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Divider />
+
+            {/* File Upload - add asterisk */}
             <p className="text-sm font-medium mb-2">
-              Please upload a rejection document:
+              Please upload a rejection document:{" "}
+              <span className="text-red-500">*</span>
             </p>
             <Upload.Dragger
               fileList={rejectionFileList}
@@ -1353,9 +1512,10 @@ const ProjectRequestDetail = () => {
               </p>
             </Upload.Dragger>
 
+            {/* Rejection Reason already has required rule in Form.Item */}
             <Form.Item
               name="rejectionReason"
-              label="Reason for Rejection"
+              label={<span>Reason for Rejection</span>}
               rules={[
                 {
                   required: true,
@@ -1366,10 +1526,11 @@ const ProjectRequestDetail = () => {
             >
               <Input.TextArea
                 rows={3}
-                placeholder="Please explain why this request is being rejected..."
+                placeholder="Please explain why this project is being rejected..."
               />
             </Form.Item>
 
+            {/* Confirmation Checkbox */}
             <Form.Item
               name="confirmAction"
               valuePropName="checked"
@@ -1378,8 +1539,9 @@ const ProjectRequestDetail = () => {
               ]}
             >
               <Checkbox onChange={handleRejectionCheckboxChange}>
-                I confirm that I have reviewed this project request and reject
-                it.
+                I confirm that I have reviewed this{" "}
+                {projectRequest?.requestType === 3 ? "completion" : ""} request
+                and reject it. <span className="text-red-500">*</span>
               </Checkbox>
             </Form.Item>
           </Form>
