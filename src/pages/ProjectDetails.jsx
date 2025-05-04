@@ -85,7 +85,7 @@ const MEMBER_ROLE = {
   0: "Leader",
   1: "Member",
   2: "Supervisor",
-  3: "Member",
+  3: "Member", // Assuming 3 is also a member type, adjust if needed
 };
 
 // Define status mapping
@@ -117,9 +117,13 @@ const PROJECT_STATUS = {
 
 // Document Type enum mapping
 const DOCUMENT_TYPE = {
-  0: "Project Document",
-  1: "Research Publication",
-  2: "Council Document",
+  0: "Project Proposal",
+  1: "Disbursement",
+  2: "Council Decision",
+  3: "Conference Proposal",
+  4: "Journal Paper",
+  5: "Disbursement Confirmation",
+  6: "Project Completion",
 };
 
 // Project Phase Status enum mapping
@@ -128,6 +132,68 @@ const PHASE_STATUS = {
   1: "Pending",
   2: "Completed",
   3: "Overdue",
+};
+
+// Helper function to get document icon and color based on type
+const getDocumentTypeVisuals = (type) => {
+  switch (type) {
+    case 0: // Project Proposal
+      return {
+        icon: <FileTextOutlined />,
+        color: "blue",
+        bgColor: "bg-blue-100",
+        textColor: "text-blue-600",
+      };
+    case 1: // Disbursement
+      return {
+        icon: <DollarOutlined />,
+        color: "green",
+        bgColor: "bg-green-100",
+        textColor: "text-green-600",
+      };
+    case 2: // Council Decision
+      return {
+        icon: <BankOutlined />,
+        color: "purple",
+        bgColor: "bg-purple-100",
+        textColor: "text-purple-600",
+      };
+    case 3: // Conference Proposal
+      return {
+        icon: <ProjectOutlined />,
+        color: "orange",
+        bgColor: "bg-orange-100",
+        textColor: "text-orange-600",
+      };
+    case 4: // Journal Paper
+      return {
+        icon: <FileOutlined />,
+        color: "cyan",
+        bgColor: "bg-cyan-100",
+        textColor: "text-cyan-600",
+      };
+    case 5: // Disbursement Confirmation
+      return {
+        icon: <CheckCircleOutlined />,
+        color: "lime",
+        bgColor: "bg-lime-100",
+        textColor: "text-lime-600",
+      };
+    case 6: // Project Completion
+      return {
+        icon: <CheckOutlined />,
+        color: "gold",
+        bgColor: "bg-yellow-100",
+        textColor: "text-yellow-600",
+      };
+    default:
+      return {
+        icon: <PaperClipOutlined />,
+        color: "default",
+        bgColor: "bg-gray-100",
+        textColor: "text-gray-600",
+      };
+  }
 };
 
 const formatDate = (dateString) => {
@@ -398,6 +464,16 @@ const ProjectDetails = () => {
       );
     }
   };
+
+  // Group documents by type when rendering
+  const groupedDocuments = projectDetails?.documents?.reduce((acc, doc) => {
+    const type = doc.documentType;
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(doc);
+    return acc;
+  }, {});
 
   if (!currentProjectId) {
     return (
@@ -1500,82 +1576,100 @@ const ProjectDetails = () => {
                   type="primary"
                   icon={<UploadOutlined />}
                   className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
+                  // onClick={handleUploadClick} // Add upload handler if needed
                 >
                   Upload New Document
                 </Button>
               }
             >
-              {projectDetails.documents &&
-              projectDetails.documents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {projectDetails.documents.map((doc, index) => (
-                    <motion.div
-                      key={doc.documentId}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                    >
-                      <Card
-                        className="border border-gray-100 shadow-sm hover:shadow-md transition-all rounded-xl"
-                        bodyStyle={{ padding: "16px" }}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            <div
-                              className={`
-                              flex items-center justify-center w-12 h-12 rounded-lg
-                              ${
-                                doc.documentType === 0
-                                  ? "bg-blue-100 text-blue-600"
-                                  : doc.documentType === 1
-                                  ? "bg-green-100 text-green-600"
-                                  : "bg-orange-100 text-[#F2722B]"
-                              }
-                            `}
-                            >
-                              <FileOutlined />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <h3
-                              className="font-medium text-gray-800 mb-1 line-clamp-1"
-                              title={doc.fileName}
-                            >
-                              {doc.fileName}
-                            </h3>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                              <Tag
-                                color={
-                                  doc.documentType === 0
-                                    ? "blue"
-                                    : doc.documentType === 1
-                                    ? "green"
-                                    : "orange"
-                                }
-                                className="rounded-full px-2"
+              {groupedDocuments && Object.keys(groupedDocuments).length > 0 ? (
+                <Collapse
+                  defaultActiveKey={Object.keys(groupedDocuments)}
+                  accordion
+                  className="border-0 bg-transparent"
+                >
+                  {Object.entries(groupedDocuments).map(([docType, docs]) => {
+                    const {
+                      icon: DocIcon,
+                      color: docColor,
+                      bgColor,
+                      textColor,
+                    } = getDocumentTypeVisuals(parseInt(docType));
+
+                    return (
+                      <Panel
+                        key={docType}
+                        header={
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <div
+                                className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center mr-3`}
                               >
-                                {DOCUMENT_TYPE[doc.documentType]}
-                              </Tag>
-                              <div className="text-xs text-gray-500">
-                                Uploaded: {formatDate(doc.uploadAt)}
+                                {DocIcon}
                               </div>
+                              <span className={`font-medium ${textColor}`}>
+                                {DOCUMENT_TYPE[docType] ||
+                                  `Type ${docType} Documents`}
+                              </span>
                             </div>
-                            <Button
-                              type="primary"
-                              icon={<DownloadOutlined />}
-                              onClick={() =>
-                                handleDownloadDocument(doc.documentUrl)
-                              }
-                              className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
-                            >
-                              View Document
-                            </Button>
+                            <Badge
+                              count={docs.length}
+                              style={{
+                                backgroundColor: `var(--ant-${docColor})`,
+                              }}
+                            />
                           </div>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
+                        }
+                        className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                      >
+                        <List
+                          itemLayout="horizontal"
+                          dataSource={docs}
+                          renderItem={(doc) => (
+                            <List.Item
+                              actions={[
+                                <Button
+                                  type="primary"
+                                  icon={<DownloadOutlined />}
+                                  onClick={() =>
+                                    handleDownloadDocument(doc.documentUrl)
+                                  }
+                                  className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
+                                >
+                                  View
+                                </Button>,
+                                // Add delete button if needed
+                                // <Button type="text" danger icon={<DeleteOutlined />} />
+                              ]}
+                            >
+                              <List.Item.Meta
+                                avatar={
+                                  <div
+                                    className={`flex items-center justify-center w-10 h-10 rounded-lg ${bgColor} ${textColor}`}
+                                  >
+                                    {DocIcon}
+                                  </div>
+                                }
+                                title={
+                                  <Tooltip title={doc.fileName}>
+                                    <div className="font-medium text-gray-800 truncate max-w-md">
+                                      {doc.fileName}
+                                    </div>
+                                  </Tooltip>
+                                }
+                                description={
+                                  <div className="text-xs text-gray-500">
+                                    Uploaded: {formatDate(doc.uploadAt)}
+                                  </div>
+                                }
+                              />
+                            </List.Item>
+                          )}
+                        />
+                      </Panel>
+                    );
+                  })}
+                </Collapse>
               ) : (
                 <Empty
                   description={
@@ -1587,6 +1681,7 @@ const ProjectDetails = () => {
                     type="primary"
                     icon={<UploadOutlined />}
                     className="mt-4 bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
+                    // onClick={handleUploadClick} // Add upload handler if needed
                   >
                     Upload Document
                   </Button>
@@ -2309,10 +2404,10 @@ const ProjectDetails = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
-                              <FileOutlined />
+                              <FileTextOutlined />
                             </div>
                             <span className="font-medium">
-                              Project Documents
+                              Project Proposals
                             </span>
                           </div>
                           <Badge
@@ -2332,7 +2427,7 @@ const ProjectDetails = () => {
                         dataSource={completionSummary.documents.filter(
                           (d) => d.documentType === 0
                         )}
-                        locale={{ emptyText: "No project documents" }}
+                        locale={{ emptyText: "No project proposals" }}
                         renderItem={(doc) => (
                           <List.Item
                             actions={[
@@ -2351,7 +2446,7 @@ const ProjectDetails = () => {
                             <List.Item.Meta
                               avatar={
                                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-600">
-                                  <FileOutlined />
+                                  <FileTextOutlined />
                                 </div>
                               }
                               title={
@@ -2372,16 +2467,16 @@ const ProjectDetails = () => {
                       />
                     </Panel>
 
-                    {/* Research Publications */}
+                    {/* Disbursement Documents */}
                     <Panel
                       header={
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-3">
-                              <FileOutlined />
+                              <DollarOutlined />
                             </div>
                             <span className="font-medium">
-                              Research Publications
+                              Disbursement Documents
                             </span>
                           </div>
                           <Badge
@@ -2401,7 +2496,7 @@ const ProjectDetails = () => {
                         dataSource={completionSummary.documents.filter(
                           (d) => d.documentType === 1
                         )}
-                        locale={{ emptyText: "No research publications" }}
+                        locale={{ emptyText: "No disbursement documents" }}
                         renderItem={(doc) => (
                           <List.Item
                             actions={[
@@ -2420,7 +2515,7 @@ const ProjectDetails = () => {
                             <List.Item.Meta
                               avatar={
                                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600">
-                                  <FileOutlined />
+                                  <DollarOutlined />
                                 </div>
                               }
                               title={
@@ -2441,16 +2536,16 @@ const ProjectDetails = () => {
                       />
                     </Panel>
 
-                    {/* Council Documents */}
+                    {/* Council Decision Documents */}
                     <Panel
                       header={
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#F2722B] flex items-center justify-center mr-3">
-                              <FileOutlined />
+                            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mr-3">
+                              <BankOutlined />
                             </div>
                             <span className="font-medium">
-                              Council Documents
+                              Council Decisions
                             </span>
                           </div>
                           <Badge
@@ -2459,7 +2554,7 @@ const ProjectDetails = () => {
                                 (d) => d.documentType === 2
                               ).length
                             }
-                            style={{ backgroundColor: "#F2722B" }}
+                            style={{ backgroundColor: "#8b5cf6" }}
                           />
                         </div>
                       }
@@ -2470,7 +2565,7 @@ const ProjectDetails = () => {
                         dataSource={completionSummary.documents.filter(
                           (d) => d.documentType === 2
                         )}
-                        locale={{ emptyText: "No council documents" }}
+                        locale={{ emptyText: "No council decision documents" }}
                         renderItem={(doc) => (
                           <List.Item
                             actions={[
@@ -2488,8 +2583,8 @@ const ProjectDetails = () => {
                           >
                             <List.Item.Meta
                               avatar={
-                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 text-[#F2722B]">
-                                  <FileOutlined />
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 text-purple-600">
+                                  <BankOutlined />
                                 </div>
                               }
                               title={
@@ -2507,6 +2602,90 @@ const ProjectDetails = () => {
                             />
                           </List.Item>
                         )}
+                      />
+                    </Panel>
+
+                    {/* Academic Publication Documents */}
+                    <Panel
+                      header={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center mr-3">
+                              <FileOutlined />
+                            </div>
+                            <span className="font-medium">
+                              Academic Publications
+                            </span>
+                          </div>
+                          <Badge
+                            count={
+                              completionSummary.documents.filter(
+                                (d) =>
+                                  d.documentType === 3 || d.documentType === 4
+                              ).length
+                            }
+                            style={{ backgroundColor: "#06b6d4" }}
+                          />
+                        </div>
+                      }
+                      key="academic"
+                    >
+                      <List
+                        size="small"
+                        dataSource={completionSummary.documents.filter(
+                          (d) => d.documentType === 3 || d.documentType === 4
+                        )}
+                        locale={{ emptyText: "No academic publications" }}
+                        renderItem={(doc) => {
+                          const {
+                            icon: DocIcon,
+                            bgColor,
+                            textColor,
+                          } = getDocumentTypeVisuals(doc.documentType);
+                          return (
+                            <List.Item
+                              actions={[
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  icon={<DownloadOutlined />}
+                                  onClick={() =>
+                                    handleDownloadDocument(doc.documentUrl)
+                                  }
+                                >
+                                  View
+                                </Button>,
+                              ]}
+                            >
+                              <List.Item.Meta
+                                avatar={
+                                  <div
+                                    className={`flex items-center justify-center w-8 h-8 rounded-lg ${bgColor} ${textColor}`}
+                                  >
+                                    {DocIcon}
+                                  </div>
+                                }
+                                title={
+                                  <Tooltip title={doc.fileName}>
+                                    <div className="truncate max-w-xs">
+                                      {doc.fileName}
+                                    </div>
+                                  </Tooltip>
+                                }
+                                description={
+                                  <div>
+                                    <div className="text-xs text-gray-500">
+                                      Type: {DOCUMENT_TYPE[doc.documentType]}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Uploaded: {formatDate(doc.uploadAt)}
+                                    </div>
+                                  </div>
+                                }
+                              />
+                            </List.Item>
+                          );
+                        }}
                       />
                     </Panel>
                   </Collapse>

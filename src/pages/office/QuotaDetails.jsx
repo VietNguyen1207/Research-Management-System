@@ -23,6 +23,7 @@ import {
   Input,
   InputNumber,
   Select,
+  Skeleton,
 } from "antd";
 import {
   SearchOutlined,
@@ -89,6 +90,11 @@ const QuotaDetails = () => {
     }
   };
 
+  // Function to handle navigation to the disbursement details page
+  const handleViewDisbursementDetails = (record) => {
+    navigate(`/fund-disbursement-details/${record.fundDisbursementId}`);
+  };
+
   // Status color mapping
   const getStatusColor = (status) => {
     switch (status) {
@@ -106,8 +112,141 @@ const QuotaDetails = () => {
   // Show loading or error states
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spin size="large" tip="Loading quota details..." />
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Navigation Skeleton */}
+          <div className="mb-6">
+            <Skeleton.Button active style={{ width: 300, marginBottom: 8 }} />
+          </div>
+
+          {/* Header Section Skeleton */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton.Button
+                  active
+                  style={{ width: 120, marginBottom: 16 }}
+                />
+                <div>
+                  <Skeleton.Input
+                    active
+                    size="large"
+                    style={{ width: 400, marginBottom: 8 }}
+                  />
+                  <Skeleton.Input active style={{ width: 250 }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics Cards Skeleton */}
+          <Row gutter={[16, 16]} className="mb-12">
+            {[...Array(4)].map((_, index) => (
+              <Col xs={24} sm={12} md={6} key={index}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Skeleton active paragraph={false} title={{ width: "60%" }} />
+                  <Skeleton.Input
+                    active
+                    size="large"
+                    style={{ width: "100%", marginTop: 8 }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          {/* Project Information Skeleton */}
+          <Card
+            className="shadow-md rounded-xl border-0 mb-8"
+            title={
+              <div className="flex items-center">
+                <Skeleton.Avatar
+                  active
+                  size="small"
+                  style={{ marginRight: 8 }}
+                />
+                <Skeleton.Input active style={{ width: 180 }} />
+              </div>
+            }
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <Skeleton active paragraph={{ rows: 4 }} />
+              </Col>
+              <Col xs={24} md={12}>
+                <Skeleton active paragraph={{ rows: 4 }} />
+              </Col>
+            </Row>
+
+            <Divider />
+
+            <div className="mt-4">
+              <Skeleton.Input active style={{ width: 150, marginBottom: 16 }} />
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={12}>
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-1">
+                      <Skeleton.Input
+                        active
+                        size="small"
+                        style={{ width: 80 }}
+                      />
+                      <Skeleton.Input
+                        active
+                        size="small"
+                        style={{ width: 30 }}
+                      />
+                    </div>
+                    <Skeleton.Input
+                      active
+                      style={{ width: "100%", height: 16 }}
+                    />
+                  </div>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-1">
+                      <Skeleton.Input
+                        active
+                        size="small"
+                        style={{ width: 100 }}
+                      />
+                      <Skeleton.Input
+                        active
+                        size="small"
+                        style={{ width: 30 }}
+                      />
+                    </div>
+                    <Skeleton.Input
+                      active
+                      style={{ width: "100%", height: 16 }}
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </Card>
+
+          {/* Disbursement Requests Skeleton */}
+          <Card
+            className="shadow-md rounded-xl border-0"
+            title={
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Skeleton.Avatar
+                    active
+                    size="small"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Skeleton.Input active style={{ width: 200 }} />
+                </div>
+                <Skeleton.Avatar active size="small" shape="circle" />
+              </div>
+            }
+          >
+            <Skeleton active paragraph={{ rows: 8 }} />
+          </Card>
+        </div>
       </div>
     );
   }
@@ -215,34 +354,15 @@ const QuotaDetails = () => {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
-        <Space>
-          {record.status === 0 && (
-            <>
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckCircleOutlined />}
-                className="bg-green-500 hover:bg-green-600 border-none"
-                onClick={() => handleDisbursementApproval(record)}
-              >
-                Approve
-              </Button>
-              <Button
-                danger
-                size="small"
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleDisbursementApproval(record)}
-              >
-                Reject
-              </Button>
-            </>
-          )}
-          {record.status !== 0 && (
-            <Button type="default" size="small" icon={<EyeOutlined />}>
-              Details
-            </Button>
-          )}
-        </Space>
+        <Button
+          type="primary"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewDisbursementDetails(record)}
+          className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none shadow-md transition-all duration-300 flex items-center"
+          style={{ padding: "0 16px", height: "32px" }}
+        >
+          <span>View Details</span>
+        </Button>
       ),
     },
   ];

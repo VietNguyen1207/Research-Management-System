@@ -32,6 +32,8 @@ import { useSelector } from "react-redux";
 import UserManagement from "../pages/admin/UserManagement";
 import AssignTimeline from "../pages/office/AssignTimeline";
 import ProjectRequestDetail from "../pages/lecturer/ProjectRequestDetail";
+import TimelineSchedule from "../pages/TimelineSchedule";
+import CouncilRequestRecord from "../pages/lecturer/CouncilRequestRecord";
 
 export const routes = [
   {
@@ -91,6 +93,10 @@ export const routes = [
             element: <ActivePaperDetails />,
           },
           { path: "request-record", element: <RequestRecord /> },
+          {
+            path: "council-request-records",
+            element: <CouncilRequestRecord />,
+          },
         ],
       },
       {
@@ -128,6 +134,7 @@ export const routes = [
             path: "project-request/:requestId",
             element: <ProjectRequestDetail />,
           },
+          { path: "timeline-schedule", element: <TimelineSchedule /> },
         ],
       },
       //Department + Office

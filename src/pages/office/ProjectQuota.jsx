@@ -21,6 +21,7 @@ import {
   message,
   Spin,
   Breadcrumb,
+  Skeleton,
 } from "antd";
 import {
   SearchOutlined,
@@ -325,8 +326,73 @@ const ProjectQuota = () => {
   // Show loading or error states
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spin size="large" tip="Loading quota data..." />
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Navigation Skeleton */}
+          <div className="mb-6">
+            <Skeleton.Button active style={{ width: 250, marginBottom: 8 }} />
+          </div>
+
+          {/* Header Section Skeleton */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton.Button
+                  active
+                  style={{ width: 150, marginBottom: 16 }}
+                />
+                <div>
+                  <Skeleton.Input
+                    active
+                    size="large"
+                    style={{ width: 350, marginBottom: 8 }}
+                  />
+                  <Skeleton.Input active style={{ width: 250 }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics Cards Skeleton */}
+          <Row gutter={[16, 16]} className="mb-12">
+            {[...Array(4)].map((_, index) => (
+              <Col xs={24} sm={12} md={6} key={index}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Skeleton active paragraph={false} title={{ width: "60%" }} />
+                  <Skeleton.Input
+                    active
+                    size="large"
+                    style={{ width: "100%", marginTop: 8 }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          {/* Filters Section Skeleton */}
+          <Card className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, index) => (
+                <div key={index}>
+                  <Skeleton.Input
+                    active
+                    size="small"
+                    style={{ width: 120, marginBottom: 8 }}
+                  />
+                  <Skeleton.Input
+                    active
+                    style={{ width: "100%", height: 32 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Main Table Skeleton */}
+          <Card className="shadow-lg rounded-xl border-0">
+            <Skeleton active paragraph={{ rows: 10 }} />
+          </Card>
+        </div>
       </div>
     );
   }

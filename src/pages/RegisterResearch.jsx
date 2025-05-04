@@ -27,7 +27,10 @@ import {
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
-import { useGetStudentGroupsQuery } from "../features/group/groupApiSlice";
+import {
+  GROUP_STATUS,
+  useGetUserResearchGroupsQuery,
+} from "../features/group/groupApiSlice";
 import { useGetDepartmentsQuery } from "../features/department/departmentApiSlice";
 import {
   useRegisterResearchProjectMutation,
@@ -54,9 +57,7 @@ const RegisterResearch = () => {
     data: userGroups,
     isLoading: isLoadingGroups,
     error: groupsError,
-  } = useGetStudentGroupsQuery(userId, {
-    skip: !userId, // Skip the query if userId is not available
-  });
+  } = useGetUserResearchGroupsQuery(userId);
 
   // Register research project mutation
   const [registerProject, { isLoading: isSubmitting }] =
@@ -428,36 +429,41 @@ const RegisterResearch = () => {
                 notFoundContent={
                   isLoadingGroups ? (
                     <Spin size="small" />
-                  ) : userGroups?.length === 0 ? (
+                  ) : userGroups?.filter(
+                      (group) => group.status === GROUP_STATUS.ACTIVE
+                    )?.length === 0 ? (
                     <div className="py-2 px-3 text-gray-500">
-                      No research groups available. Please create a group first.
+                      No active research groups available. Please create a group
+                      first.
                     </div>
                   ) : null
                 }
               >
-                {userGroups?.map((group) => {
-                  const leader = getGroupLeader(group.members);
-                  return (
-                    <Select.Option
-                      key={group.groupId}
-                      value={group.groupId}
-                      label={group.groupName}
-                    >
-                      <div className="w-full">
-                        <div className="font-medium truncate">
-                          {group.groupName}
+                {userGroups
+                  ?.filter((group) => group.status === GROUP_STATUS.ACTIVE)
+                  ?.map((group) => {
+                    const leader = getGroupLeader(group.members);
+                    return (
+                      <Select.Option
+                        key={group.groupId}
+                        value={group.groupId}
+                        label={group.groupName}
+                      >
+                        <div className="w-full">
+                          <div className="font-medium truncate">
+                            {group.groupName}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {leader
+                              ? `Leader: ${leader.memberName}`
+                              : "No active leader"}{" "}
+                            •
+                            {` ${group.currentMember}/${group.maxMember} members`}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {leader
-                            ? `Leader: ${leader.memberName}`
-                            : "No active leader"}{" "}
-                          •
-                          {` ${group.currentMember}/${group.maxMember} members`}
-                        </div>
-                      </div>
-                    </Select.Option>
-                  );
-                })}
+                      </Select.Option>
+                    );
+                  })}
               </Select>
             </Form.Item>
           </Card>

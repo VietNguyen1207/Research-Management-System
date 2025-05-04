@@ -160,6 +160,7 @@ const getGroupTypeString = (groupType) => {
   const groupTypeMap = {
     0: "Student",
     1: "Council",
+    2: "Research",
   };
   return groupTypeMap[groupType] || "Unknown";
 };
@@ -172,6 +173,7 @@ const getMemberRoleString = (role) => {
     3: "Council Chairman",
     4: "Secretary",
     5: "Council Member",
+    6: "Stakeholder",
   };
   return roleMap[role] || "Unknown";
 };
