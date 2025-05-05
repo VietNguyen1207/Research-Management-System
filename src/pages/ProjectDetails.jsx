@@ -73,6 +73,7 @@ import {
   useRequestFundDisbursementMutation,
   useUploadDisbursementDocumentMutation,
 } from "../features/fund-disbursement/fundDisbursementApiSlice";
+import { useCreateConferenceFromResearchMutation } from "../features/project/conference/conferenceApiSlice";
 import dayjs from "dayjs";
 
 const { Text, Title, Paragraph } = Typography;
@@ -231,6 +232,10 @@ const ProjectDetails = () => {
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [completionStep, setCompletionStep] = useState("preview"); // 'preview' or 'form'
   const [completionForm] = Form.useForm();
+  const [createPaperModalVisible, setCreatePaperModalVisible] = useState(false);
+  const [createPaperForm] = Form.useForm();
+  const [createConferenceFromResearch, { isLoading: isCreatingConference }] =
+    useCreateConferenceFromResearchMutation();
 
   const {
     data: projectDetailsData,
@@ -475,6 +480,41 @@ const ProjectDetails = () => {
     return acc;
   }, {});
 
+  const handleCreatePaperClick = () => {
+    setCreatePaperModalVisible(true);
+    createPaperForm.resetFields();
+  };
+
+  const handleCreatePaperSubmit = async () => {
+    try {
+      const values = await createPaperForm.validateFields();
+
+      // Send the API request
+      await createConferenceFromResearch({
+        projectId: currentProjectId,
+        conferenceData: {
+          conferenceName: values.conferenceName,
+          conferenceRanking: parseInt(values.conferenceRanking),
+          presentationType: parseInt(values.presentationType),
+        },
+      }).unwrap();
+
+      message.success("Conference paper created successfully!");
+      setCreatePaperModalVisible(false);
+
+      // Optionally navigate to a new page or refresh the current one
+      // navigate(`/conference-projects`);
+    } catch (error) {
+      if (error.name !== "ValidationError") {
+        console.error("Failed to create conference paper:", error);
+        message.error(
+          error.data?.message ||
+            "Failed to create conference paper. Please try again."
+        );
+      }
+    }
+  };
+
   if (!currentProjectId) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -685,7 +725,7 @@ const ProjectDetails = () => {
                       {PROJECT_STATUS[projectDetails.status]}
                     </Tag>
 
-                    {/* Add completion button when all phases completed */}
+                    {/* Existing completion button when all phases completed */}
                     {allPhasesCompleted && projectDetails.status === 1 && (
                       <Button
                         type="primary"
@@ -966,11 +1006,28 @@ const ProjectDetails = () => {
               <Card
                 className="shadow-md rounded-xl border-0 overflow-hidden"
                 title={
-                  <div className="flex items-center">
-                    <InfoCircleOutlined className="text-[#F2722B] mr-2" />
-                    <span className="text-lg font-medium">
-                      Project Information
-                    </span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <InfoCircleOutlined className="text-[#F2722B] mr-2" />
+                      <span className="text-lg font-medium">
+                        Project Information
+                      </span>
+                    </div>
+
+                    {/* Add Paper Project button - moved from header */}
+                    {projectDetails.projectPhases?.some(
+                      (phase) => phase.status === 2
+                    ) &&
+                      projectDetails.status === 1 && (
+                        <Button
+                          type="primary"
+                          icon={<FileTextOutlined />}
+                          onClick={handleCreatePaperClick}
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none shadow-md"
+                        >
+                          Create Paper
+                        </Button>
+                      )}
                   </div>
                 }
               >
@@ -2873,6 +2930,106 @@ const ProjectDetails = () => {
             </div>
           </Form>
         )}
+      </Modal>
+
+      {/* Create Paper Modal */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <FileTextOutlined className="text-blue-500 mr-2" />
+            <span>Create Conference Paper</span>
+          </div>
+        }
+        open={createPaperModalVisible}
+        onCancel={() => setCreatePaperModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-200">
+          <div className="flex items-start">
+            <InfoCircleOutlined className="text-blue-500 text-lg mt-1 mr-3" />
+            <div>
+              <Text strong className="text-blue-700">
+                Create Conference Paper from Project
+              </Text>
+              <Text className="text-blue-600 block">
+                Creating a conference paper will generate a new project from
+                this research. You will be able to upload your paper and manage
+                the submission process.
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        <Form
+          form={createPaperForm}
+          layout="vertical"
+          onFinish={handleCreatePaperSubmit}
+        >
+          <Form.Item
+            name="conferenceName"
+            label="Conference Name"
+            rules={[
+              { required: true, message: "Please enter the conference name" },
+            ]}
+          >
+            <Input placeholder="Enter the name of the conference" />
+          </Form.Item>
+
+          <Form.Item
+            name="conferenceRanking"
+            label="Conference Ranking"
+            rules={[
+              {
+                required: true,
+                message: "Please select the conference ranking",
+              },
+            ]}
+          >
+            <Select placeholder="Select conference ranking">
+              <Select.Option value="0">Not Ranked</Select.Option>
+              <Select.Option value="1">C</Select.Option>
+              <Select.Option value="2">B</Select.Option>
+              <Select.Option value="3">A</Select.Option>
+              <Select.Option value="4">A*</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="presentationType"
+            label="Presentation Type"
+            rules={[
+              {
+                required: true,
+                message: "Please select the presentation type",
+              },
+            ]}
+          >
+            <Select placeholder="Select presentation type">
+              <Select.Option value="0">Oral Presentation</Select.Option>
+              <Select.Option value="1">Poster Presentation</Select.Option>
+              <Select.Option value="2">Workshop Presentation</Select.Option>
+              <Select.Option value="3">Panel Presentation</Select.Option>
+              <Select.Option value="4">Virtual Presentation</Select.Option>
+              <Select.Option value="5">Demonstration</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button onClick={() => setCreatePaperModalVisible(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={isCreatingConference}
+              disabled={isCreatingConference}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+            >
+              {isCreatingConference ? "Creating..." : "Create Conference Paper"}
+            </Button>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

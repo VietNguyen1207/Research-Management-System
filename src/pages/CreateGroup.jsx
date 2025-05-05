@@ -61,6 +61,9 @@ const CreateGroup = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [createdGroupName, setCreatedGroupName] = useState("");
+  const [stakeholders, setStakeholders] = useState([]);
+  const [stakeholderEmail, setStakeholderEmail] = useState("");
+  const [stakeholderName, setStakeholderName] = useState("");
 
   // Check if user is a lecturer
   const isLecturer = user?.role === "lecturer";
@@ -578,6 +581,25 @@ const CreateGroup = () => {
         allMembers.push(...supervisors);
       }
 
+      // Add stakeholders if there are any
+      if (stakeholders.length > 0) {
+        const stakeholderMembers = stakeholders.map((stakeholder) => {
+          const stakeholderObj = {
+            memberEmail: stakeholder.email,
+            role: 6, // Stakeholder role
+          };
+
+          // Only include memberName if provided
+          if (stakeholder.name) {
+            stakeholderObj.memberName = stakeholder.name;
+          }
+
+          return stakeholderObj;
+        });
+
+        allMembers.push(...stakeholderMembers);
+      }
+
       // Prepare the request payload
       const requestPayload = {
         groupName: values.group_name,
@@ -593,9 +615,10 @@ const CreateGroup = () => {
       // Show the success modal instead of the message
       setIsSuccessModalVisible(true);
 
-      // Reset form and state (but don't navigate yet)
+      // Reset form and state
       form.resetFields();
       setMembers([]);
+      setStakeholders([]);
     } catch (error) {
       console.error("Failed to create group:", error);
       setError(error);
@@ -626,6 +649,50 @@ const CreateGroup = () => {
         </div>
       </div>
     );
+  };
+
+  const handleAddStakeholder = () => {
+    if (!stakeholderEmail) {
+      message.error("Stakeholder email is required");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(stakeholderEmail)) {
+      message.error("Please enter a valid email address");
+      return;
+    }
+
+    // Check if stakeholder already exists
+    if (stakeholders.some((s) => s.email === stakeholderEmail)) {
+      message.error("This stakeholder is already added");
+      return;
+    }
+
+    // Check if email is already used as a member
+    if (members.some((m) => m.email === stakeholderEmail)) {
+      message.error("This email is already added as a group member");
+      return;
+    }
+
+    setStakeholders([
+      ...stakeholders,
+      {
+        email: stakeholderEmail,
+        name: stakeholderName || null,
+      },
+    ]);
+
+    // Reset the inputs
+    setStakeholderEmail("");
+    setStakeholderName("");
+
+    message.success("Stakeholder added successfully");
+  };
+
+  const handleRemoveStakeholder = (email) => {
+    setStakeholders(stakeholders.filter((s) => s.email !== email));
   };
 
   return (
@@ -1203,6 +1270,122 @@ const CreateGroup = () => {
             )}
           </div>
 
+          {/* After the member section, add a new stakeholder section */}
+          <Divider className="my-6">
+            <div className="flex items-center space-x-2">
+              <SolutionOutlined className="text-[#F2722B]" />
+              <span className="font-medium">Stakeholders</span>
+            </div>
+          </Divider>
+
+          <div className="mb-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+            <div className="flex justify-between items-center mb-3">
+              <label className="flex items-center text-base font-medium text-gray-700">
+                <UserAddOutlined className="mr-2 text-[#D2691E]" />
+                Add Stakeholders
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Input
+                placeholder="Stakeholder Email"
+                prefix={<MailOutlined className="text-gray-400" />}
+                value={stakeholderEmail}
+                onChange={(e) => setStakeholderEmail(e.target.value)}
+                className="rounded-lg py-2"
+              />
+              <Input
+                placeholder="Stakeholder Name (Optional)"
+                prefix={<UserOutlined className="text-gray-400" />}
+                value={stakeholderName}
+                onChange={(e) => setStakeholderName(e.target.value)}
+                className="rounded-lg py-2"
+              />
+            </div>
+
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddStakeholder}
+              className="rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+            >
+              Add Stakeholder
+            </Button>
+
+            {/* Stakeholder list */}
+            <div className="mt-4">
+              {stakeholders.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-1 lg:grid-cols-2">
+                  {stakeholders.map((stakeholder, index) => (
+                    <div
+                      key={stakeholder.email}
+                      className="rounded-lg border border-blue-200 shadow-sm bg-gradient-to-r from-blue-50 to-blue-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="flex items-center w-full">
+                        <div className="py-3 px-4 flex items-center w-full">
+                          <div className="flex-shrink-0 mr-3">
+                            <Badge
+                              count={index + 1}
+                              overflowCount={99}
+                              style={{ backgroundColor: "#1890ff" }}
+                            >
+                              <Avatar
+                                icon={<UserOutlined />}
+                                size="default"
+                                className="bg-[#1890ff]"
+                              />
+                            </Badge>
+                          </div>
+                          <div className="flex-grow min-w-0 mr-3">
+                            {stakeholder.name ? (
+                              <>
+                                <Tooltip title={stakeholder.name}>
+                                  <div className="flex items-center">
+                                    <span className="font-medium text-gray-800 truncate block max-w-[140px]">
+                                      {stakeholder.name}
+                                    </span>
+                                    <Tag
+                                      color="cyan"
+                                      className="ml-2 text-xs px-1.5 py-0 flex-shrink-0"
+                                    >
+                                      Stakeholder
+                                    </Tag>
+                                  </div>
+                                </Tooltip>
+                              </>
+                            ) : null}
+                            <Tooltip title={stakeholder.email}>
+                              <span className="text-xs text-gray-500 truncate block">
+                                {stakeholder.email}
+                              </span>
+                            </Tooltip>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <Tooltip title="Remove stakeholder">
+                              <Button
+                                type="text"
+                                icon={<DeleteOutlined />}
+                                onClick={() =>
+                                  handleRemoveStakeholder(stakeholder.email)
+                                }
+                                className="text-gray-400 hover:text-red-500 hover:bg-transparent"
+                              />
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-5 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                  <TeamOutlined className="text-gray-300 text-3xl mb-2" />
+                  <div className="text-gray-500">No stakeholders added yet</div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-100">
             <div>
@@ -1219,6 +1402,7 @@ const CreateGroup = () => {
                       onOk: () => {
                         form.resetFields();
                         setMembers([]);
+                        setStakeholders([]);
                         setError(null);
                         setFormErrors({});
                       },

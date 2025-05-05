@@ -34,6 +34,7 @@ import AssignTimeline from "../pages/office/AssignTimeline";
 import ProjectRequestDetail from "../pages/lecturer/ProjectRequestDetail";
 import TimelineSchedule from "../pages/TimelineSchedule";
 import CouncilRequestRecord from "../pages/lecturer/CouncilRequestRecord";
+import ProjectPaper from "../pages/lecturer/ProjectPaper";
 
 export const routes = [
   {
@@ -89,9 +90,10 @@ export const routes = [
             element: <ActivePaper />,
           },
           {
-            path: "active-paper-details",
+            path: "active-paper-details/:conferenceId",
             element: <ActivePaperDetails />,
           },
+          { path: "project-papers/:projectId", element: <ProjectPaper /> },
           { path: "request-record", element: <RequestRecord /> },
           {
             path: "council-request-records",
