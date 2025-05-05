@@ -51,6 +51,7 @@ import {
   useCreateTimelineSequenceMutation,
   useCreateTimelineMutation,
   useUpdateTimelineMutation,
+  useDeleteTimelineMutation,
 } from "../../features/timeline/timelineApiSlice";
 import viVN from "antd/lib/locale/vi_VN";
 
@@ -103,6 +104,8 @@ const TimelineManagement = () => {
   const [createTimeline] = useCreateTimelineMutation();
   const [updateTimeline, { isLoading: isUpdating }] =
     useUpdateTimelineMutation();
+  const [deleteTimeline, { isLoading: isDeleting }] =
+    useDeleteTimelineMutation();
 
   // Map timelineType to display values
   const getTimelineTypeLabel = (type) => {
@@ -253,14 +256,20 @@ const TimelineManagement = () => {
     }
   };
 
-  const handleDeleteTimeline = (id) => {
-    // Here you would typically make an API call to delete the timeline
-    // For now, just display a success message
-    message.success("Timeline deleted successfully");
+  const handleDeleteTimeline = async (id) => {
+    try {
+      await deleteTimeline(id).unwrap();
+      message.success("Timeline deleted successfully");
 
-    // Refetch the timelines to get the updated data
-    if (selectedGroup) {
-      refetchTimelines();
+      // Refetch the timelines to get the updated data
+      if (selectedGroup) {
+        refetchTimelines();
+      }
+    } catch (error) {
+      console.error("Failed to delete timeline:", error);
+      message.error(
+        "Failed to delete timeline: " + (error.data?.message || error.message)
+      );
     }
   };
 

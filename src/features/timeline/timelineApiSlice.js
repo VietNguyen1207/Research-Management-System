@@ -43,11 +43,13 @@ export const timelineApiSlice = apiSlice.injectEndpoints({
     }),
 
     deleteTimeline: builder.mutation({
-      query: (id) => ({
-        url: `/timelines/${id}`,
+      query: (timelineId) => ({
+        url: `/timelines/${timelineId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Timelines"],
+      invalidatesTags: (result, error, timelineId) => [
+        { type: "Timelines", id: "LIST" },
+      ],
     }),
 
     getAllTimelines: builder.query({

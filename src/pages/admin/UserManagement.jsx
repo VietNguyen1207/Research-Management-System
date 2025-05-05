@@ -9,6 +9,15 @@ import {
   Typography,
   message,
   Tooltip,
+  Card,
+  Badge,
+  Avatar,
+  Divider,
+  Statistic,
+  Row,
+  Col,
+  Breadcrumb,
+  Skeleton,
 } from "antd";
 import {
   SearchOutlined,
@@ -16,9 +25,16 @@ import {
   DeleteOutlined,
   UserAddOutlined,
   ReloadOutlined,
+  TeamOutlined,
+  UserOutlined,
+  FilterOutlined,
+  DashboardOutlined,
+  HomeOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import { useGetAllUsersQuery } from "../../features/user/userApiSlice";
 import { useSelector } from "react-redux";
+import { useGetDepartmentsQuery } from "../../features/department/departmentApiSlice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -27,7 +43,10 @@ const UserManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filterRole, setFilterRole] = useState(null);
   const [filterDepartment, setFilterDepartment] = useState(null);
-  const [isNavOpen] = useState(true); // We'll assume navbar is open by default
+  const [showFilters, setShowFilters] = useState(false);
+
+  const { data: departmentsData, isLoading: isDepartmentsLoading } =
+    useGetDepartmentsQuery();
 
   const {
     data: users,
@@ -41,17 +60,38 @@ const UserManagement = () => {
     message.error(`Failed to load users: ${error?.message || "Unknown error"}`);
   }
 
-  // Generate departments list for filters
+  // Create a mapping from department ID to department name
+  const departmentMap = useMemo(() => {
+    if (!departmentsData) return {};
+    return departmentsData.reduce((map, dept) => {
+      map[dept.departmentId] = dept.departmentName;
+      return map;
+    }, {});
+  }, [departmentsData]);
+
+  // Generate departments list for filters using the API data
   const departments = useMemo(() => {
-    if (!users) return [];
-    return [...new Set(users.map((user) => user.departmentId))]
-      .map((deptId) => {
-        const userInDept = users.find((u) => u.departmentId === deptId);
-        const deptName =
-          userInDept?.department?.departmentName || `Department ${deptId}`;
-        return { id: deptId, name: deptName };
-      })
+    if (!departmentsData) return [];
+    return departmentsData
+      .map((dept) => ({
+        id: dept.departmentId,
+        name: dept.departmentName,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }, [departmentsData]);
+
+  // User statistics
+  const userStats = useMemo(() => {
+    if (!users) return { total: 0, active: 0, departments: 0 };
+
+    const activeUsers = users.filter((user) => user.status === 1).length;
+    const uniqueDepts = new Set(users.map((user) => user.departmentId)).size;
+
+    return {
+      total: users.length,
+      active: activeUsers,
+      departments: uniqueDepts,
+    };
   }, [users]);
 
   // Define columns inside the component
@@ -62,7 +102,8 @@ const UserManagement = () => {
         dataIndex: "userId",
         key: "userId",
         sorter: (a, b) => a.userId - b.userId,
-        width: 60,
+        width: 70,
+        fixed: "left",
       },
       {
         title: "Name",
@@ -70,15 +111,26 @@ const UserManagement = () => {
         key: "fullName",
         sorter: (a, b) => (a.fullName || "").localeCompare(b.fullName || ""),
         render: (text, record) => (
-          <div>
-            <div>{text}</div>
-            <Text type="secondary" style={{ fontSize: "12px" }}>
-              {record.username}
-            </Text>
+          <div className="flex items-center space-x-3">
+            <Avatar
+              style={{
+                backgroundColor: record.level ? "#1890ff" : "#87d068",
+                verticalAlign: "middle",
+              }}
+            >
+              {text?.charAt(0)?.toUpperCase() || <UserOutlined />}
+            </Avatar>
+            <div>
+              <div className="font-medium">{text}</div>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                {record.username}
+              </Text>
+            </div>
           </div>
         ),
-        width: 180,
+        width: 220,
         ellipsis: true,
+        fixed: "left",
       },
       {
         title: "Email",
@@ -89,11 +141,16 @@ const UserManagement = () => {
       },
       {
         title: "Department",
-        dataIndex: ["department", "departmentName"],
+        dataIndex: "departmentId",
         key: "department",
-        render: (departmentName, record) => (
-          <Tag color="blue" style={{ whiteSpace: "nowrap" }}>
-            {departmentName || `Dept ${record.departmentId}`}
+        render: (departmentId) => (
+          <Tag
+            color="blue"
+            className="rounded-lg px-2 py-1"
+            style={{ whiteSpace: "nowrap" }}
+          >
+            <BankOutlined className="mr-1" />
+            {departmentMap[departmentId] || `Dept ${departmentId}`}
           </Tag>
         ),
         filters: departments.map((dept) => ({
@@ -101,7 +158,7 @@ const UserManagement = () => {
           value: dept.id,
         })),
         onFilter: (value, record) => record.departmentId === value,
-        width: 140,
+        width: 150,
       },
       {
         title: "Role",
@@ -109,36 +166,53 @@ const UserManagement = () => {
         key: "level",
         render: (levelText, record) => {
           let color = "default";
-          if (record.level === "0") color = "gold";
-          else if (record.level === "1") color = "lime";
-          else if (record.level === "2") color = "green";
-          else if (record.level === "3") color = "cyan";
-          else if (record.level === "4") color = "blue";
+          if (record.level === "1") color = "gold";
+          else if (record.level === "2") color = "lime";
+          else if (record.level === "3") color = "green";
+          else if (record.level === "4") color = "cyan";
+          else if (record.level === "5") color = "blue";
+
           return (
-            <Tag color={color} style={{ whiteSpace: "nowrap" }}>
+            <Tag
+              color={color}
+              className="rounded-lg px-2 py-1"
+              style={{ whiteSpace: "nowrap" }}
+            >
               {levelText || "Student/Staff"}
             </Tag>
           );
         },
         filters: [
-          { text: "Professor", value: "0" },
-          { text: "Associate Professor", value: "1" },
-          { text: "PhD", value: "2" },
-          { text: "Master", value: "3" },
-          { text: "Bachelor", value: "4" },
+          { text: "No Level", value: "0" },
+          { text: "Professor", value: "1" },
+          { text: "Associate Professor", value: "2" },
+          { text: "PhD", value: "3" },
+          { text: "Master", value: "4" },
+          { text: "Bachelor", value: "5" },
           { text: "Student/Staff", value: null },
         ],
         onFilter: (value, record) =>
           value === null ? record.level == null : record.level === value,
-        width: 140,
+        width: 150,
       },
       {
         title: "Status",
         dataIndex: "statusText",
         key: "status",
         render: (statusText, record) => {
-          let color = record.status === 1 ? "success" : "error";
-          return <Tag color={color}>{statusText}</Tag>;
+          const color =
+            record.status === 1
+              ? "success"
+              : record.status === 2
+              ? "warning"
+              : "error";
+
+          return (
+            <Badge
+              status={color}
+              text={<span className="font-medium">{statusText}</span>}
+            />
+          );
         },
         filters: [
           { text: "Active", value: 1 },
@@ -146,35 +220,40 @@ const UserManagement = () => {
           { text: "Suspended", value: 2 },
         ],
         onFilter: (value, record) => record.status === value,
-        width: 90,
+        width: 100,
       },
       {
         title: "Phone",
         dataIndex: "phone",
         key: "phone",
-        width: 120,
+        width: 130,
         ellipsis: true,
       },
       {
         title: "Actions",
         key: "actions",
-        width: 80,
+        width: 100,
+        fixed: "right",
         render: (_, record) => (
           <Space size="small">
             <Tooltip title="Edit User">
               <Button
-                type="text"
-                icon={<EditOutlined style={{ color: "#1890ff" }} />}
+                type="primary"
+                icon={<EditOutlined />}
                 size="small"
+                className="rounded-full"
+                ghost
                 onClick={() => message.info(`Edit user: ${record.fullName}`)}
               />
             </Tooltip>
             <Tooltip title="Delete User">
               <Button
-                type="text"
+                type="primary"
                 danger
-                icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+                icon={<DeleteOutlined />}
                 size="small"
+                className="rounded-full"
+                ghost
                 onClick={() => message.info(`Delete user: ${record.fullName}`)}
               />
             </Tooltip>
@@ -182,7 +261,7 @@ const UserManagement = () => {
         ),
       },
     ],
-    [departments]
+    [departments, departmentMap]
   );
 
   const filteredUsers = useMemo(() => {
@@ -194,9 +273,7 @@ const UserManagement = () => {
         user.fullName?.toLowerCase().includes(searchLower) ||
         user.email?.toLowerCase().includes(searchLower) ||
         user.username?.toLowerCase().includes(searchLower);
-      const matchesRole =
-        (filterRole === null && user.level == null) ||
-        user.level === filterRole;
+      const matchesRole = filterRole === null || user.level === filterRole;
       const matchesDepartment =
         !filterDepartment || user.departmentId === filterDepartment;
       return matchesSearch && matchesRole && matchesDepartment;
@@ -210,80 +287,212 @@ const UserManagement = () => {
   };
 
   return (
-    // Use a more balanced approach with less margin
-    <div className="ml-16 px-4">
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-6">
-        <Title level={3} className="m-0">
-          User Management
-        </Title>
-        <Button
-          type="primary"
-          icon={<UserAddOutlined />}
-          onClick={() => message.info("Add new user")}
-        >
-          Add User
-        </Button>
+    <div className="p-6 bg-gray-50 min-h-screen ml-16 md:ml-16 lg:ml-16">
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-4">
+        <Breadcrumb.Item href="#">
+          <HomeOutlined />
+          <span className="ml-1">Home</span>
+        </Breadcrumb.Item>
+        <Breadcrumb.Item href="#">
+          <DashboardOutlined />
+          <span className="ml-1">Admin</span>
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <TeamOutlined />
+          <span className="ml-1">User Management</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
+      {/* Page Header with Stats */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <Title level={2} className="m-0 text-gray-800">
+              User Management
+            </Title>
+            <Text type="secondary">
+              Manage and monitor all users in the system
+            </Text>
+          </div>
+          <Button
+            type="primary"
+            icon={<UserAddOutlined />}
+            size="large"
+            className="rounded-lg shadow-md"
+            onClick={() => message.info("Add new user")}
+          >
+            Add User
+          </Button>
+        </div>
+
+        {/* Statistics Cards */}
+        <Row gutter={16} className="mt-4">
+          <Col xs={24} sm={8}>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Statistic
+                title="Total Users"
+                value={userStats.total}
+                prefix={<TeamOutlined className="text-blue-500" />}
+                loading={isLoading}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Statistic
+                title="Active Users"
+                value={userStats.active}
+                prefix={<UserOutlined className="text-green-500" />}
+                loading={isLoading}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Statistic
+                title="Departments"
+                value={userStats.departments}
+                prefix={<BankOutlined className="text-amber-500" />}
+                loading={isLoading}
+              />
+            </Card>
+          </Col>
+        </Row>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <Input
-          placeholder="Search by name, email or username"
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 300 }}
-          allowClear
-        />
-        <Select
-          placeholder="Filter by role"
-          style={{ width: 200 }}
-          value={filterRole}
-          onChange={(value) => setFilterRole(value)}
-          allowClear
-        >
-          <Option value="0">Professor</Option>
-          <Option value="1">Associate Professor</Option>
-          <Option value="2">PhD</Option>
-          <Option value="3">Master</Option>
-          <Option value="4">Bachelor</Option>
-          <Option value={null}>Student/Staff</Option>
-        </Select>
-        <Select
-          placeholder="Filter by department"
-          style={{ width: 200 }}
-          value={filterDepartment}
-          onChange={(value) => setFilterDepartment(value)}
-          allowClear
-        >
-          {departments.map((dept) => (
-            <Option key={dept.id} value={dept.id}>
-              {dept.name}
-            </Option>
-          ))}
-        </Select>
-        <Button icon={<ReloadOutlined />} onClick={handleReset}>
-          Reset Filters
-        </Button>
-      </div>
+      {/* Main Content Card */}
+      <Card className="shadow-md rounded-lg border-0">
+        {/* Filters Bar */}
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <Input
+              placeholder="Search by name, email or username"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 300 }}
+              className="rounded-lg"
+              allowClear
+            />
 
-      {/* Users Table with proper margin */}
-      <Table
-        columns={columns}
-        dataSource={filteredUsers}
-        rowKey="userId"
-        loading={isLoading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} users`,
-          pageSizeOptions: ["10", "20", "50"],
-        }}
-        scroll={{ x: 1020 }}
-        size="middle"
-      />
+            <Button
+              icon={<FilterOutlined />}
+              onClick={() => setShowFilters(!showFilters)}
+              className={
+                showFilters ? "bg-blue-50 text-blue-500 border-blue-200" : ""
+              }
+            >
+              Filters
+            </Button>
+
+            {searchText || filterRole !== null || filterDepartment !== null ? (
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+                type="primary"
+                ghost
+              >
+                Reset
+              </Button>
+            ) : null}
+
+            <Badge
+              count={filteredUsers.length}
+              className="ml-2"
+              style={{ backgroundColor: "#1890ff" }}
+            >
+              <Text className="text-gray-600">
+                {filteredUsers.length === 1 ? "User" : "Users"}
+              </Text>
+            </Badge>
+          </div>
+
+          {/* Expandable Filters */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-fadeIn">
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <div className="mb-2">
+                    <Text strong>Role</Text>
+                  </div>
+                  <Select
+                    placeholder="Filter by role"
+                    style={{ width: "100%" }}
+                    value={filterRole}
+                    onChange={(value) => setFilterRole(value)}
+                    allowClear
+                    className="rounded-lg"
+                  >
+                    <Option value="0">No Level</Option>
+                    <Option value="1">Professor</Option>
+                    <Option value="2">Associate Professor</Option>
+                    <Option value="3">PhD</Option>
+                    <Option value="4">Master</Option>
+                    <Option value="5">Bachelor</Option>
+                    <Option value={null}>Student/Staff</Option>
+                  </Select>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div className="mb-2">
+                    <Text strong>Department</Text>
+                  </div>
+                  <Select
+                    placeholder="Filter by department"
+                    style={{ width: "100%" }}
+                    value={filterDepartment}
+                    onChange={(value) => setFilterDepartment(value)}
+                    allowClear
+                    className="rounded-lg"
+                  >
+                    {departments.map((dept) => (
+                      <Option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </div>
+
+        <Divider className="my-4" />
+
+        {/* Users Table */}
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton active />
+            <Skeleton active />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table
+              columns={columns}
+              dataSource={filteredUsers}
+              rowKey="userId"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} of ${total} users`,
+                pageSizeOptions: ["10", "20", "50"],
+                className: "rounded-lg",
+                showQuickJumper: true,
+              }}
+              scroll={{ x: 1100 }}
+              size="middle"
+              className="rounded-lg"
+              rowClassName="hover:bg-blue-50 transition-colors"
+              footer={() => (
+                <div className="text-right text-gray-500 text-sm">
+                  © 2024 Research Management System. All rights reserved.
+                </div>
+              )}
+            />
+          </div>
+        )}
+      </Card>
     </div>
   );
 };

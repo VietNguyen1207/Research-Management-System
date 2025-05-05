@@ -152,6 +152,24 @@ export const userApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["Users"],
     }),
+
+    // Add this new endpoint to your userApiSlice.js file
+    getUserBasicGroups: builder.query({
+      query: () => "/users/me/groups/basic",
+      transformResponse: (response) => {
+        if (!response.data) return [];
+
+        // Transform the enum values to readable strings and add default dates if missing
+        return response.data.map((group) => ({
+          ...group,
+          groupTypeString: getGroupTypeString(group.groupType),
+          statusString: getMemberStatusString(group.status),
+          // Add a default date if missing
+          createdAt: group.createdAt || null,
+        }));
+      },
+      providesTags: ["UserGroups", "Groups"],
+    }),
   }),
 });
 
@@ -193,5 +211,6 @@ export const {
   useGetStudentsQuery,
   useGetAcademicUsersQuery,
   useGetUserGroupsQuery,
+  useGetUserBasicGroupsQuery,
   useGetAllUsersQuery,
 } = userApiSlice;

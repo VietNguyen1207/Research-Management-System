@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Tag,
@@ -18,6 +18,12 @@ import {
   Divider,
   Table,
   Tabs,
+  Spin,
+  message,
+  Dropdown,
+  Menu,
+  Skeleton,
+  List,
 } from "antd";
 import {
   SearchOutlined,
@@ -36,9 +42,16 @@ import {
   DownloadOutlined,
   EyeOutlined,
   DollarOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  MoreOutlined,
+  ReloadOutlined,
+  EnvironmentOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useGetUserConferencesQuery } from "../../features/project/conference/conferenceApiSlice";
 
 const { Search } = Input;
 const { Title, Text, Paragraph } = Typography;
@@ -51,271 +64,204 @@ const ActivePaper = () => {
   const [filterType, setFilterType] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
 
-  // Updated mock data for active papers
-  const papers = [
-    {
-      id: 1,
-      type: "Conference",
-      title: "Machine Learning Applications in Education",
-      abstract:
-        "This paper explores innovative applications of machine learning in educational technology, focusing on personalized learning systems and student performance prediction.",
-      publisher: "IEEE Transactions on Education",
-      department: {
-        id: 1,
-        name: "Computer Science",
-      },
-      category: {
-        id: 1,
-        name: "AI & Machine Learning",
-      },
-      status: "accepted",
-      submissionDate: "2024-02-15",
-      publicationDate: "2024-05-20",
-      authors: [
-        {
-          name: "Dr. Emily Smith",
-          role: "Main Author",
-          email: "emily.smith@university.edu",
-        },
-        {
-          name: "Dr. Michael Chen",
-          role: "Co-Author",
-          email: "michael.chen@university.edu",
-        },
-      ],
-      progress: 75,
-      royalties: {
-        total: 15000000,
-        received: 5000000,
-        pendingPayment: true,
-      },
-      milestones: [
-        {
-          title: "Paper Draft Completion",
-          deadline: "2024-03-15",
-          status: "completed",
-        },
-        {
-          title: "Internal Review",
-          deadline: "2024-04-01",
-          status: "completed",
-        },
-        {
-          title: "Final Paper Submission",
-          deadline: "2024-05-30",
-          status: "in_progress",
-        },
-      ],
-    },
-    {
-      id: 2,
-      type: "Journal",
-      title: "Digital Transformation in Manufacturing",
-      abstract:
-        "A comprehensive analysis of Industry 4.0 implementation challenges and solutions in Vietnamese manufacturing sector.",
-      publisher: "Journal of Manufacturing Technology Management",
-      department: {
-        id: 2,
-        name: "Information Technology",
-      },
-      category: {
-        id: 5,
-        name: "Digital Technology",
-      },
-      status: "published",
-      submissionDate: "2024-01-10",
-      publicationDate: "2024-04-15",
-      authors: [
-        {
-          name: "Prof. Sarah Johnson",
-          role: "Main Author",
-          email: "sarah.johnson@university.edu",
-        },
-        {
-          name: "Dr. Lisa Nguyen",
-          role: "Co-Author",
-          email: "lisa.nguyen@university.edu",
-        },
-      ],
-      progress: 100,
-      royalties: {
-        total: 25000000,
-        received: 25000000,
-        pendingPayment: false,
-      },
-      milestones: [
-        {
-          title: "Research Design and Planning",
-          deadline: "2024-01-15",
-          status: "completed",
-        },
-        {
-          title: "Data Analysis",
-          deadline: "2024-02-28",
-          status: "completed",
-        },
-        {
-          title: "Final Report",
-          deadline: "2024-03-30",
-          status: "completed",
-        },
-      ],
-    },
-    {
-      id: 3,
-      type: "Conference",
-      title: "Blockchain for Supply Chain Transparency",
-      abstract:
-        "Exploring how blockchain technology can enhance transparency and traceability in global supply chains.",
-      publisher: "International Conference on Supply Chain Management",
-      department: {
-        id: 1,
-        name: "Computer Science",
-      },
-      category: {
-        id: 3,
-        name: "Blockchain",
-      },
-      status: "in_review",
-      submissionDate: "2024-03-05",
-      publicationDate: null,
-      authors: [
-        {
-          name: "Dr. Emily Smith",
-          role: "Main Author",
-          email: "emily.smith@university.edu",
-        },
-        {
-          name: "Dr. James Wilson",
-          role: "Co-Author",
-          email: "james.wilson@university.edu",
-        },
-      ],
-      progress: 40,
-      royalties: {
-        total: 18000000,
-        received: 0,
-        pendingPayment: false,
-      },
-      milestones: [
-        {
-          title: "Initial Draft",
-          deadline: "2024-03-20",
-          status: "completed",
-        },
-        {
-          title: "Peer Review",
-          deadline: "2024-04-15",
-          status: "in_progress",
-        },
-        {
-          title: "Final Submission",
-          deadline: "2024-05-10",
-          status: "pending",
-        },
-      ],
-    },
-  ];
+  // Fetch real data from API
+  const {
+    data: conferencesResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetUserConferencesQuery();
 
-  const departments = [
-    { label: "All Departments", value: "all" },
-    { label: "Computer Science", value: "cs" },
-    { label: "Information Technology", value: "it" },
-    { label: "Software Engineering", value: "se" },
-  ];
+  // Extract conference data
+  const conferencesList = conferencesResponse?.data || [];
 
-  const statusOptions = [
-    { label: "All Status", value: "all" },
-    { label: "In Review", value: "in_review" },
-    { label: "Accepted", value: "accepted" },
-    { label: "Published", value: "published" },
-    { label: "Rejected", value: "rejected" },
-  ];
+  // Add this useEffect for grouping conferences by project
+  useEffect(() => {
+    if (conferencesList && conferencesList.length > 0) {
+      // Group conferences by project
+      const projectMap = new Map();
 
-  const typeOptions = [
-    { label: "All Types", value: "all" },
-    { label: "Conference", value: "Conference" },
-    { label: "Journal", value: "Journal" },
-  ];
+      conferencesList.forEach((conference) => {
+        if (!projectMap.has(conference.projectId)) {
+          projectMap.set(conference.projectId, {
+            projectId: conference.projectId,
+            projectName: conference.projectName,
+            conferences: [],
+            totalCount: 0,
+            pendingCount: 0,
+            approvedCount: 0,
+            rejectedCount: 0,
+          });
+        }
+
+        const project = projectMap.get(conference.projectId);
+        project.conferences.push(conference);
+        project.totalCount += 1;
+
+        if (conference.conferenceSubmissionStatus === 0) {
+          project.pendingCount += 1;
+        } else if (conference.conferenceSubmissionStatus === 1) {
+          project.approvedCount += 1;
+        } else if (conference.conferenceSubmissionStatus === 2) {
+          project.rejectedCount += 1;
+        }
+      });
+
+      setProjectsData(Array.from(projectMap.values()));
+    }
+  }, [conferencesList]);
+
+  // Add state for projects data
+  const [projectsData, setProjectsData] = useState([]);
+
+  if (isError) {
+    message.error(
+      `Failed to load conferences: ${error?.data?.message || "Unknown error"}`
+    );
+  }
 
   const getStatusTag = (status) => {
     switch (status) {
-      case "published":
-        return <Tag color="success">Published</Tag>;
-      case "accepted":
-        return <Tag color="processing">Accepted</Tag>;
-      case "in_review":
-        return <Tag color="warning">In Review</Tag>;
-      case "rejected":
+      case 0: // Pending
+        return <Tag color="warning">Pending</Tag>;
+      case 1: // Approved
+        return <Tag color="success">Approved</Tag>;
+      case 2: // Rejected
         return <Tag color="error">Rejected</Tag>;
       default:
         return <Tag color="default">Unknown</Tag>;
     }
   };
 
-  const filteredPapers = papers.filter((paper) => {
+  // Modify your filtering logic to work with projects
+  const filteredProjects = projectsData.filter((project) => {
     const matchesSearch =
-      paper.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      paper.abstract.toLowerCase().includes(searchText.toLowerCase());
+      searchText === "" ||
+      project.projectName.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.conferences.some((conference) =>
+        conference.conferenceName
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
+      );
+
     const matchesStatus =
-      filterStatus === "all" || paper.status === filterStatus;
-    const matchesType = filterType === "all" || paper.type === filterType;
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "conference" && paper.type === "Conference") ||
-      (activeTab === "journal" && paper.type === "Journal");
+      filterStatus === "all" ||
+      (filterStatus === "in_review" && project.pendingCount > 0) ||
+      (filterStatus === "accepted" && project.approvedCount > 0) ||
+      (filterStatus === "rejected" && project.rejectedCount > 0);
+
+    const matchesType =
+      filterType === "all" ||
+      project.conferences.some((conf) => filterType === "Conference");
+
+    const matchesTab = activeTab === "all" || activeTab === "conference";
 
     return matchesSearch && matchesStatus && matchesType && matchesTab;
   });
 
   // Calculate statistics
   const stats = {
-    totalPapers: papers.length,
-    publishedPapers: papers.filter((p) => p.status === "published").length,
-    conferenceCount: papers.filter((p) => p.type === "Conference").length,
-    journalCount: papers.filter((p) => p.type === "Journal").length,
-    totalRoyalties: papers.reduce(
-      (sum, paper) => sum + paper.royalties.received,
-      0
-    ),
+    totalPapers: conferencesList.length,
+    publishedPapers: conferencesList.filter(
+      (p) => p.conferenceSubmissionStatus === 1
+    ).length,
+    conferenceCount: conferencesList.length,
+    journalCount: 0, // We don't have journal data yet
+    totalRoyalties: 0, // We don't have royalties data yet
   };
 
-  const handleViewPaperDetails = (paper) => {
-    // Navigate to paper details page
-    // navigate(`/active-paper-details/${paper.id}`);
-    navigate(`/active-paper-details`);
+  const handleViewPaperDetails = (conference) => {
+    navigate(`/active-paper-details/${conference.conferenceId}`);
   };
+
+  // Show loading state with skeleton
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="text-center mb-16">
+            <Skeleton.Input style={{ width: 300, height: 40 }} active />
+            <Skeleton.Input
+              style={{ width: 500, height: 20, marginTop: 16 }}
+              active
+            />
+          </div>
+
+          {/* Stats Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} active paragraph={{ rows: 1 }} />
+            ))}
+          </div>
+
+          {/* Filters Skeleton */}
+          <Skeleton active paragraph={{ rows: 2 }} className="mb-8" />
+
+          {/* Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} active paragraph={{ rows: 4 }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
+        {/* Enhanced Header Section */}
         <div className="text-center mb-16">
-          <div className="inline-block">
-            <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
-              Active Papers
-            </h2>
-            <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
-          </div>
-          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Manage and track your conference and journal papers
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="inline-block mb-3">
+              <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
+                Academic Publications
+              </h2>
+              <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
+            </div>
+            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+              Manage and track your conference and journal papers
+            </p>
+          </motion.div>
         </div>
 
-        {/* Statistics Section */}
+        {/* Enhanced Statistics Section with animations */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
           >
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden">
+            <Card
+              className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden"
+              bodyStyle={{ padding: "20px" }}
+            >
               <Statistic
-                title={<span className="text-gray-600">Total Papers</span>}
+                title={
+                  <span className="text-gray-600 font-medium">
+                    Total Papers
+                  </span>
+                }
                 value={stats.totalPapers}
-                prefix={<FileTextOutlined className="text-[#F2722B]" />}
+                prefix={<FileTextOutlined className="text-[#F2722B] mr-2" />}
                 className="text-center"
               />
+              <div className="mt-3 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-gradient-to-r from-[#F2722B] to-[#FFA500]"
+                />
+              </div>
             </Card>
           </motion.div>
 
@@ -323,14 +269,34 @@ const ActivePaper = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
           >
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden">
+            <Card
+              className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden"
+              bodyStyle={{ padding: "20px" }}
+            >
               <Statistic
-                title={<span className="text-gray-600">Published Papers</span>}
+                title={
+                  <span className="text-gray-600 font-medium">
+                    Approved Papers
+                  </span>
+                }
                 value={stats.publishedPapers}
-                prefix={<CheckCircleOutlined className="text-green-500" />}
+                prefix={<CheckCircleOutlined className="text-green-500 mr-2" />}
                 className="text-center"
               />
+              <div className="mt-3 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: stats.totalPapers
+                      ? `${(stats.publishedPapers / stats.totalPapers) * 100}%`
+                      : "0%",
+                  }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-green-500"
+                />
+              </div>
             </Card>
           </motion.div>
 
@@ -338,14 +304,34 @@ const ActivePaper = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
           >
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden">
+            <Card
+              className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden"
+              bodyStyle={{ padding: "20px" }}
+            >
               <Statistic
-                title={<span className="text-gray-600">Conference Papers</span>}
+                title={
+                  <span className="text-gray-600 font-medium">
+                    Conference Papers
+                  </span>
+                }
                 value={stats.conferenceCount}
-                prefix={<GlobalOutlined className="text-blue-500" />}
+                prefix={<GlobalOutlined className="text-blue-500 mr-2" />}
                 className="text-center"
               />
+              <div className="mt-3 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: stats.totalPapers
+                      ? `${(stats.conferenceCount / stats.totalPapers) * 100}%`
+                      : "0%",
+                  }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-blue-500"
+                />
+              </div>
             </Card>
           </motion.div>
 
@@ -353,14 +339,34 @@ const ActivePaper = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
           >
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden">
+            <Card
+              className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden"
+              bodyStyle={{ padding: "20px" }}
+            >
               <Statistic
-                title={<span className="text-gray-600">Journal Papers</span>}
+                title={
+                  <span className="text-gray-600 font-medium">
+                    Journal Papers
+                  </span>
+                }
                 value={stats.journalCount}
-                prefix={<BookOutlined className="text-purple-500" />}
+                prefix={<BookOutlined className="text-purple-500 mr-2" />}
                 className="text-center"
               />
+              <div className="mt-3 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: stats.totalPapers
+                      ? `${(stats.journalCount / stats.totalPapers) * 100}%`
+                      : "0%",
+                  }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-purple-500"
+                />
+              </div>
             </Card>
           </motion.div>
 
@@ -368,248 +374,375 @@ const ActivePaper = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.4 }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
           >
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden">
+            <Card
+              className="shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 rounded-xl overflow-hidden"
+              bodyStyle={{ padding: "20px" }}
+            >
               <Statistic
-                title={<span className="text-gray-600">Total Royalties</span>}
-                value={stats.totalRoyalties}
-                prefix={<DollarOutlined className="text-green-600" />}
+                title={
+                  <span className="text-gray-600 font-medium">
+                    Total Expenses
+                  </span>
+                }
+                value={0}
+                prefix={<DollarOutlined className="text-green-600 mr-2" />}
                 suffix="₫"
                 className="text-center"
                 formatter={(value) => `${value.toLocaleString()}`}
               />
+              <div className="mt-3 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-green-600"
+                />
+              </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Filters Section */}
-        <Card className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search Papers
-              </label>
-              <Search
-                placeholder="Search by title or abstract..."
-                allowClear
-                onChange={(e) => setSearchText(e.target.value)}
-                className="w-full"
-                prefix={<SearchOutlined className="text-gray-400" />}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paper Type
-              </label>
-              <Select
-                placeholder="Filter by type"
-                options={typeOptions}
-                onChange={setFilterType}
-                value={filterType}
-                className="w-full"
-                suffixIcon={<FilterOutlined className="text-gray-400" />}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <Select
-                placeholder="Filter by status"
-                options={statusOptions}
-                onChange={setFilterStatus}
-                value={filterStatus}
-                className="w-full"
-                suffixIcon={<FilterOutlined className="text-gray-400" />}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department
-              </label>
-              <Select
-                placeholder="Filter by department"
-                options={departments}
-                className="w-full"
-                suffixIcon={<FilterOutlined className="text-gray-400" />}
-              />
-            </div>
-          </div>
-        </Card>
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center mb-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Button
+              type="primary"
+              size="large"
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              className="mr-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 border-none shadow-md"
+            >
+              Refresh
+            </Button>
+          </motion.div>
 
-        {/* Tabs for paper types */}
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          className="mb-6"
-          type="card"
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Button
+              type="primary"
+              size="large"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/register-paper")}
+              className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none shadow-md"
+            >
+              Create New Paper
+            </Button>
+          </motion.div>
+        </div>
+
+        {/* Enhanced Filters Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <TabPane
-            tab={
-              <span>
-                <ProjectOutlined /> All Papers
-              </span>
-            }
-            key="all"
-          />
-          <TabPane
-            tab={
-              <span>
-                <GlobalOutlined /> Conference Papers
-              </span>
-            }
-            key="conference"
-          />
-          <TabPane
-            tab={
-              <span>
-                <BookOutlined /> Journal Papers
-              </span>
-            }
-            key="journal"
-          />
-        </Tabs>
+          <Card className="mb-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-md border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Papers
+                </label>
+                <Search
+                  placeholder="Search by conference or project name..."
+                  allowClear
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="w-full"
+                  size="large"
+                  prefix={<SearchOutlined className="text-gray-400" />}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Paper Type
+                </label>
+                <Select
+                  placeholder="Filter by type"
+                  options={[
+                    { label: "All Types", value: "all" },
+                    { label: "Conference", value: "Conference" },
+                    { label: "Journal", value: "Journal" },
+                  ]}
+                  onChange={setFilterType}
+                  value={filterType}
+                  className="w-full"
+                  size="large"
+                  suffixIcon={<FilterOutlined className="text-gray-400" />}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <Select
+                  placeholder="Filter by status"
+                  options={[
+                    { label: "All Status", value: "all" },
+                    { label: "Pending", value: "in_review" },
+                    { label: "Approved", value: "accepted" },
+                    { label: "Rejected", value: "rejected" },
+                  ]}
+                  onChange={setFilterStatus}
+                  value={filterStatus}
+                  className="w-full"
+                  size="large"
+                  suffixIcon={<FilterOutlined className="text-gray-400" />}
+                />
+              </div>
 
-        {/* Papers Grid */}
+              <div className="flex items-end">
+                <Button
+                  type="default"
+                  size="large"
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    setSearchText("");
+                    setFilterStatus("all");
+                    setFilterType("all");
+                  }}
+                  className="w-full"
+                >
+                  Reset Filters
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Enhanced Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            className="mb-6 paper-tabs"
+            type="card"
+            size="large"
+            tabBarStyle={{
+              marginBottom: 24,
+              backgroundColor: "white",
+              padding: "8px",
+              borderRadius: "12px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}
+          >
+            <TabPane
+              tab={
+                <span className="px-4 py-2">
+                  <ProjectOutlined /> All Papers
+                </span>
+              }
+              key="all"
+            />
+            <TabPane
+              tab={
+                <span className="px-4 py-2">
+                  <GlobalOutlined /> Conference Papers
+                </span>
+              }
+              key="conference"
+            />
+            <TabPane
+              tab={
+                <span className="px-4 py-2">
+                  <BookOutlined /> Journal Papers
+                </span>
+              }
+              key="journal"
+            />
+          </Tabs>
+        </motion.div>
+
+        {/* Status Summary */}
+        {filteredProjects.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="mb-6"
+          >
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4 justify-center sm:justify-start">
+              <div className="flex items-center">
+                <span className="text-sm font-medium mr-2">
+                  Status Summary:
+                </span>
+              </div>
+              <Tag color="default" className="rounded-full px-3 py-1">
+                <span className="font-medium">
+                  Total: {filteredProjects.length}
+                </span>
+              </Tag>
+              <Tag color="warning" className="rounded-full px-3 py-1">
+                <span className="font-medium">
+                  Pending:{" "}
+                  {filteredProjects.filter((p) => p.pendingCount > 0).length}
+                </span>
+              </Tag>
+              <Tag color="success" className="rounded-full px-3 py-1">
+                <span className="font-medium">
+                  Approved:{" "}
+                  {filteredProjects.filter((p) => p.approvedCount > 0).length}
+                </span>
+              </Tag>
+              <Tag color="error" className="rounded-full px-3 py-1">
+                <span className="font-medium">
+                  Rejected:{" "}
+                  {filteredProjects.filter((p) => p.rejectedCount > 0).length}
+                </span>
+              </Tag>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Enhanced Papers Grid with staggered animation */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPapers.length > 0 ? (
-            filteredPapers.map((paper) => (
+          {filteredProjects.length > 0 ? (
+            filteredProjects.map((project, index) => (
               <motion.div
-                key={paper.id}
+                key={project.projectId}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
                 className="h-full"
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
               >
                 <Card
                   className="h-full hover:shadow-xl transition-all duration-300 rounded-xl border border-gray-200 overflow-hidden bg-white relative"
                   bodyStyle={{ padding: 0 }}
-                  style={{
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-                  }}
+                  style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)" }}
+                  cover={
+                    <div className="h-4 bg-gradient-to-r from-[#F2722B] to-[#FFA500] opacity-90"></div>
+                  }
                 >
                   <div className="absolute inset-0 border border-gray-200 rounded-xl pointer-events-none"></div>
                   <div className="p-6">
-                    {/* Card Header */}
+                    {/* Project Header */}
                     <div className="flex justify-between items-start mb-4">
-                      <Tag
-                        color={paper.type === "Conference" ? "blue" : "purple"}
-                        className="text-xs"
-                      >
-                        {paper.type}
-                      </Tag>
-                      {getStatusTag(paper.status)}
+                      <div className="flex items-center">
+                        <Avatar
+                          icon={<ProjectOutlined />}
+                          className="bg-orange-100 text-orange-600 mr-2"
+                        />
+                        <Tag color="orange" className="text-xs">
+                          Project
+                        </Tag>
+                      </div>
+                      <div className="flex gap-1">
+                        {project.pendingCount > 0 && (
+                          <Tag color="warning" className="text-xs">
+                            {project.pendingCount} Pending
+                          </Tag>
+                        )}
+                        {project.approvedCount > 0 && (
+                          <Tag color="success" className="text-xs">
+                            {project.approvedCount} Approved
+                          </Tag>
+                        )}
+                        {project.rejectedCount > 0 && (
+                          <Tag color="error" className="text-xs">
+                            {project.rejectedCount} Rejected
+                          </Tag>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Paper Title */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {paper.title}
+                    {/* Project Name */}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
+                      {project.projectName}
                     </h3>
 
-                    {/* Publisher */}
-                    <div className="flex items-center text-sm text-gray-500 mb-4">
-                      <BookOutlined className="mr-2" />
-                      <span className="line-clamp-1">{paper.publisher}</span>
-                    </div>
-
-                    {/* Abstract */}
-                    <Paragraph
-                      ellipsis={{ rows: 3 }}
-                      className="text-sm text-gray-600 mb-4"
-                    >
-                      {paper.abstract}
-                    </Paragraph>
-
-                    {/* Project Progress */}
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <Text className="text-sm text-gray-500">Progress</Text>
-                        <Text className="text-sm font-medium">
-                          {paper.progress}%
-                        </Text>
+                    {/* Papers Overview - Compact Version */}
+                    <div className="grid grid-cols-1 gap-2 mb-4">
+                      <div className="flex items-center">
+                        <GlobalOutlined className="text-teal-500 mr-2" />
+                        <span className="text-gray-600 font-medium">
+                          Papers Overview:
+                        </span>
                       </div>
-                      <Progress
-                        percent={paper.progress}
-                        size="small"
-                        strokeColor={{
-                          "0%": "#F2722B",
-                          "100%": "#FFA500",
-                        }}
-                      />
-                    </div>
-
-                    {/* Royalties Section - Replacing Budget */}
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <Text className="text-sm text-gray-500">Royalties</Text>
-                        <Text className="text-sm font-medium">
-                          ₫{paper.royalties.received.toLocaleString()} / ₫
-                          {paper.royalties.total.toLocaleString()}
-                        </Text>
-                      </div>
-                      <Progress
-                        percent={
-                          (paper.royalties.received / paper.royalties.total) *
-                          100
-                        }
-                        size="small"
-                        status="success"
-                        strokeColor={{
-                          "0%": "#52c41a",
-                          "100%": "#1890ff",
-                        }}
-                      />
-                      {paper.royalties.pendingPayment && (
-                        <Tag color="gold" className="mt-2 text-xs">
-                          <ClockCircleOutlined className="mr-1" /> Payment
-                          Pending
+                      <div className="grid grid-cols-2 gap-2 pl-2">
+                        <Tag color="teal" className="text-center">
+                          <span className="font-medium">Conference:</span>{" "}
+                          {project.totalCount}
                         </Tag>
-                      )}
-                    </div>
-
-                    {/* Paper Details */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <CalendarOutlined className="mr-2" />
-                          <span>Submitted: {paper.submissionDate}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Avatar.Group maxCount={2} size="small">
-                            {paper.authors.map((author, index) => (
-                              <Tooltip title={author.name} key={index}>
-                                <Avatar icon={<UserOutlined />} />
-                              </Tooltip>
-                            ))}
-                          </Avatar.Group>
-                        </div>
+                        <Tag color="purple" className="text-center">
+                          <span className="font-medium">Journal:</span> 0
+                        </Tag>
                       </div>
                     </div>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
                     <Button
                       type="primary"
                       icon={<EyeOutlined />}
-                      onClick={() => handleViewPaperDetails(paper)}
-                      className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                      onClick={() =>
+                        navigate(`/project-details/${project.projectId}`)
+                      }
+                      className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
                     >
-                      View Details
+                      View Project
+                    </Button>
+
+                    <Button
+                      type="default"
+                      icon={<GlobalOutlined />}
+                      onClick={() => {
+                        if (project.conferences.length === 1) {
+                          handleViewPaperDetails(project.conferences[0]);
+                        } else {
+                          navigate(`/project-papers/${project.projectId}`);
+                        }
+                      }}
+                      className="border-teal-500 text-teal-500 hover:bg-teal-50"
+                    >
+                      View Papers
                     </Button>
                   </div>
                 </Card>
               </motion.div>
             ))
           ) : (
-            <div className="col-span-full">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="col-span-full"
+            >
               <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <span className="text-gray-500">No papers found</span>
+                  <div className="mt-4">
+                    <p className="text-gray-500 mb-4">
+                      No projects found matching your filters
+                    </p>
+                    <Button
+                      type="primary"
+                      onClick={() => {
+                        setSearchText("");
+                        setFilterStatus("all");
+                        setFilterType("all");
+                      }}
+                      className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
                 }
-                className="my-8"
+                className="my-16 bg-white p-12 rounded-2xl shadow-sm border border-gray-100"
               />
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

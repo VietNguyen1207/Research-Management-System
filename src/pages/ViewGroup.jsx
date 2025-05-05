@@ -45,12 +45,14 @@ import {
   useGetUserGroupsQuery,
   useGetLecturersQuery,
   useGetStudentsQuery,
+  useGetUserBasicGroupsQuery,
 } from "../features/user/userApiSlice";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
   useReInviteGroupMemberMutation,
   getGroupTypeName,
 } from "../features/group/groupApiSlice";
+import { useLocation } from "react-router-dom";
 
 const { Text } = Typography;
 
@@ -83,6 +85,7 @@ const getGroupStatusIcon = (status) => {
 };
 
 const ViewGroup = () => {
+  const location = useLocation();
   const currentUser = useSelector(selectCurrentUser);
   const userId = currentUser?.id;
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -99,21 +102,14 @@ const ViewGroup = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
 
-  // Instead of using the query, we'll also use the groups from the current user (login response)
-  const userGroups = currentUser?.groups || [];
+  // Fetch basic group data
+  const { data: basicGroups, isLoading: isLoadingBasicGroups } =
+    useGetUserBasicGroupsQuery();
 
-  // Process the user groups data to match the expected format
-  const processedGroups = userGroups.map((group) => ({
-    ...group,
-    groupTypeString: getGroupTypeString(group.groupType),
-    // Add an empty members array if none present (will be populated by getUserGroups query)
-    members: group.members || [],
-  }));
-
-  // We'll still keep the original query for member details, but use it as a supplement
+  // Still keep the detailed query for member info
   const {
     data: groupsWithMembers,
-    isLoading,
+    isLoading: isLoadingDetails,
     isError,
     error,
     refetch,
@@ -121,24 +117,35 @@ const ViewGroup = () => {
     skip: !userId,
   });
 
-  // Combine data - use the groups from current user for the list,
-  // but enrich with member details from the query when available
-  const combinedGroups = processedGroups.map((group) => {
-    const detailedGroup = groupsWithMembers?.find(
-      (g) => g.groupId === group.groupId
-    );
-    return detailedGroup ? detailedGroup : group;
-  });
+  // Determine overall loading state
+  const isLoading = isLoadingBasicGroups || isLoadingDetails;
 
-  // Helper function to get groupType string
-  function getGroupTypeString(groupType) {
-    const groupTypeMap = {
-      0: "Student",
-      1: "Council",
-      2: "Research",
-    };
-    return groupTypeMap[groupType] || "Unknown";
-  }
+  // Add effect to refetch data when navigating to this page
+  useEffect(() => {
+    if (userId) {
+      refetch();
+    }
+  }, [userId, location.pathname, refetch]);
+
+  // Combine the data - use basicGroups as the base and enhance with detailed info
+  const combinedGroups = React.useMemo(() => {
+    if (!basicGroups) return [];
+
+    return basicGroups.map((group) => {
+      const detailedGroup = groupsWithMembers?.find(
+        (g) => g.groupId === group.groupId
+      );
+      return detailedGroup
+        ? {
+            ...group,
+            members: detailedGroup.members || [],
+          }
+        : {
+            ...group,
+            members: [],
+          };
+    });
+  }, [basicGroups, groupsWithMembers]);
 
   // Paginate the groups
   const paginatedGroups = combinedGroups.slice(
@@ -985,6 +992,14 @@ const ViewGroup = () => {
     </div>
   );
 
+  // 1. First add a utility function to safely format dates
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString();
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
@@ -1168,12 +1183,6 @@ const ViewGroup = () => {
                             >
                               {GROUP_STATUS[group.status ?? 1]}
                             </Tag>
-                            <Tag
-                              color="orange"
-                              className="hidden md:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                            >
-                              {new Date(group.createdAt).toLocaleDateString()}
-                            </Tag>
                           </div>
                         </div>
                       }
@@ -1198,12 +1207,6 @@ const ViewGroup = () => {
                       ].filter(Boolean)}
                     >
                       <div className="space-y-4">
-                        <Text type="secondary" className="block">
-                          <CalendarOutlined className="mr-2" />
-                          Created:{" "}
-                          {new Date(group.createdAt).toLocaleDateString()}
-                        </Text>
-
                         <div>
                           <div className="flex justify-between mb-2">
                             <Text type="secondary">Member Acceptance</Text>

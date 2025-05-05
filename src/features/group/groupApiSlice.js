@@ -83,6 +83,7 @@ const getRoleName = (role) => {
     3: "Council Chairman",
     4: "Secretary",
     5: "Council Member",
+    6: "Stakeholder",
   };
   return roleMap[role] || "Unknown";
 };
