@@ -42,6 +42,7 @@ import {
   InboxOutlined,
   InfoCircleOutlined,
   ExclamationCircleOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import {
@@ -49,6 +50,14 @@ import {
   useApproveFundDisbursementMutation,
   useRejectFundDisbursementMutation,
 } from "../../features/fund-disbursement/fundDisbursementApiSlice";
+import {
+  useApproveConferenceExpenseRequestMutation,
+  useRejectConferenceExpenseRequestMutation,
+} from "../../features/project/conference/conferenceApiSlice";
+import {
+  useApproveJournalFundingRequestMutation,
+  useRejectJournalFundingRequestMutation,
+} from "../../features/project/journal/journalApiSlice";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -66,6 +75,14 @@ const PHASE_STATUS = {
   1: "Pending",
   2: "Completed",
   3: "Overdue",
+};
+
+// Add Fund Disbursement Type enum mapping
+const FUND_DISBURSEMENT_TYPE = {
+  0: "Project Phase",
+  1: "Conference Expense",
+  2: "Conference Funding",
+  3: "Journal Funding",
 };
 
 const formatDate = (dateString) => {
@@ -106,6 +123,18 @@ const FundDisbursementRequestDetails = () => {
     useApproveFundDisbursementMutation();
   const [rejectRequest, { isLoading: isRejectingMutation }] =
     useRejectFundDisbursementMutation();
+
+  const [
+    approveConferenceExpense,
+    { isLoading: isApprovingConferenceExpense },
+  ] = useApproveConferenceExpenseRequestMutation();
+  const [rejectConferenceExpense, { isLoading: isRejectingConferenceExpense }] =
+    useRejectConferenceExpenseRequestMutation();
+
+  const [approveJournalFunding, { isLoading: isApprovingJournalFunding }] =
+    useApproveJournalFundingRequestMutation();
+  const [rejectJournalFunding, { isLoading: isRejectingJournalFunding }] =
+    useRejectJournalFundingRequestMutation();
 
   const handleFileChange = (info, setFileList) => {
     setFileList(info.fileList);
@@ -151,11 +180,29 @@ const FundDisbursementRequestDetails = () => {
         }
       });
 
-      // Make the API call
-      await approveRequest({
-        requestId: details.requestId,
-        formData,
-      }).unwrap();
+      // Check if this is a conference expense (type 1), conference funding (type 2), or journal funding (type 3)
+      if (details.fundDisbursementType === 3) {
+        // Journal funding - use journal funding approve mutation
+        await approveJournalFunding({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      } else if (
+        details.fundDisbursementType === 1 ||
+        details.fundDisbursementType === 2
+      ) {
+        // Conference expense or funding - use conference expense approve mutation
+        await approveConferenceExpense({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      } else {
+        // Use standard fund disbursement approve mutation
+        await approveRequest({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      }
 
       message.success("Request approved successfully!");
       setIsApproveModalVisible(false);
@@ -218,11 +265,29 @@ const FundDisbursementRequestDetails = () => {
         }
       });
 
-      // Make the API call
-      await rejectRequest({
-        requestId: details.requestId,
-        formData,
-      }).unwrap();
+      // Check if this is a conference expense (type 1), conference funding (type 2), or journal funding (type 3)
+      if (details.fundDisbursementType === 3) {
+        // Journal funding - use journal funding reject mutation
+        await rejectJournalFunding({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      } else if (
+        details.fundDisbursementType === 1 ||
+        details.fundDisbursementType === 2
+      ) {
+        // Conference expense or funding - use conference expense reject mutation
+        await rejectConferenceExpense({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      } else {
+        // Use standard fund disbursement reject mutation
+        await rejectRequest({
+          requestId: details.requestId,
+          formData,
+        }).unwrap();
+      }
 
       message.success("Request rejected successfully!");
       setIsRejectModalVisible(false);
@@ -483,7 +548,11 @@ const FundDisbursementRequestDetails = () => {
                 </div>
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">
-                    {details.projectPhaseTitle}
+                    {/* Display appropriate title based on available data */}
+                    {details.projectPhaseTitle ||
+                      details.conferenceName ||
+                      details.journalName ||
+                      "Fund Disbursement Request"}
                   </h1>
                   <Space wrap size={[8, 8]} className="mt-2">
                     <Tag
@@ -501,6 +570,15 @@ const FundDisbursementRequestDetails = () => {
                     >
                       {details.statusName}
                     </Tag>
+
+                    {/* Add Fund Disbursement Type tag */}
+                    <Tag
+                      color="purple"
+                      className="px-2.5 py-0.5 text-xs rounded-full border-0"
+                    >
+                      {FUND_DISBURSEMENT_TYPE[details.fundDisbursementType]}
+                    </Tag>
+
                     <Tag
                       color="cyan"
                       className="px-2.5 py-0.5 text-xs rounded-full border-0"
@@ -511,8 +589,36 @@ const FundDisbursementRequestDetails = () => {
                       color="geekblue"
                       className="px-2.5 py-0.5 text-xs rounded-full border-0"
                     >
-                      ID: {details.fundDisbursementId}
+                      Fundisbursement ID: {details.fundDisbursementId}
                     </Tag>
+
+                    {details.requestId && (
+                      <Tag
+                        color="blue"
+                        className="px-2.5 py-0.5 text-xs rounded-full border-0"
+                      >
+                        Request ID: {details.requestId}
+                      </Tag>
+                    )}
+
+                    {details.fundDisbursementType === 1 &&
+                      details.conferenceExpenseDetail && (
+                        <Tag
+                          color={
+                            details.conferenceExpenseDetail.expenseStatus === 0
+                              ? "gold"
+                              : details.conferenceExpenseDetail
+                                  .expenseStatus === 1
+                              ? "green"
+                              : "red"
+                          }
+                          icon={<DollarOutlined />}
+                          className="px-2.5 py-0.5 text-xs rounded-full border-0"
+                        >
+                          Conference Expense:{" "}
+                          {details.conferenceExpenseDetail.expenseStatusName}
+                        </Tag>
+                      )}
                   </Space>
                 </div>
               </div>
@@ -535,7 +641,14 @@ const FundDisbursementRequestDetails = () => {
                       type="primary"
                       icon={<CheckOutlined />}
                       onClick={showApproveModal}
-                      loading={isApprovingMutation && isApproveModalVisible}
+                      loading={
+                        details.fundDisbursementType === 3
+                          ? isApprovingJournalFunding
+                          : details.fundDisbursementType === 1 ||
+                            details.fundDisbursementType === 2
+                          ? isApprovingConferenceExpense
+                          : isApprovingMutation
+                      }
                       disabled={isRejectingMutation || isLoading}
                       size="large"
                       className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-md"
@@ -577,9 +690,32 @@ const FundDisbursementRequestDetails = () => {
                   <Descriptions.Item label="Requester">
                     <UserOutlined className="mr-1" /> {details.requesterName}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Project Phase">
-                    {details.projectPhaseTitle}
+                  <Descriptions.Item label="Disbursement Type">
+                    <Tag color="blue">
+                      {FUND_DISBURSEMENT_TYPE[details.fundDisbursementType]}
+                    </Tag>
                   </Descriptions.Item>
+                  {details.projectPhaseTitle && (
+                    <Descriptions.Item label="Project Phase">
+                      {details.projectPhaseTitle}
+                    </Descriptions.Item>
+                  )}
+                  {details.conferenceName && (
+                    <Descriptions.Item label="Conference">
+                      {/* <div className="flex items-center"> */}
+                      <BankOutlined className="mr-1 text-blue-500" />
+                      <span>{details.conferenceName}</span>
+                      {/* </div> */}
+                    </Descriptions.Item>
+                  )}
+                  {details.journalName && (
+                    <Descriptions.Item label="Journal">
+                      {/* <div className="flex items-center"> */}
+                      <FileTextOutlined className="mr-1 text-purple-500" />
+                      {details.journalName}
+                      {/* </div> */}
+                    </Descriptions.Item>
+                  )}
                   <Descriptions.Item label="Description" span={1}>
                     <Paragraph className="whitespace-pre-line mb-0">
                       {details.description || (
@@ -587,7 +723,151 @@ const FundDisbursementRequestDetails = () => {
                       )}
                     </Paragraph>
                   </Descriptions.Item>
+                  {details.rejectionReason && (
+                    <Descriptions.Item label="Rejection Reason" span={1}>
+                      <Paragraph className="whitespace-pre-line mb-0 text-red-500">
+                        {details.rejectionReason}
+                      </Paragraph>
+                    </Descriptions.Item>
+                  )}
                 </Descriptions>
+
+                {/* Add Conference Expense Details section when it's a conference expense request */}
+                {details.fundDisbursementType === 1 &&
+                  details.conferenceExpenseDetail && (
+                    <>
+                      <Divider orientation="left">
+                        <Text strong>Conference Expense Details</Text>
+                      </Divider>
+                      <Descriptions bordered column={1} size="small">
+                        <Descriptions.Item label="Accommodation">
+                          {details.conferenceExpenseDetail.accommodation}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Accommodation Expense">
+                          <span className="font-semibold text-green-600">
+                            ₫
+                            {details.conferenceExpenseDetail.accommodationExpense.toLocaleString()}
+                          </span>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Travel">
+                          {details.conferenceExpenseDetail.travel}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Travel Expense">
+                          <span className="font-semibold text-green-600">
+                            ₫
+                            {details.conferenceExpenseDetail.travelExpense.toLocaleString()}
+                          </span>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Expense Status">
+                          <Tag
+                            color={
+                              details.conferenceExpenseDetail.expenseStatus ===
+                              0
+                                ? "gold"
+                                : details.conferenceExpenseDetail
+                                    .expenseStatus === 1
+                                ? "green"
+                                : "red"
+                            }
+                          >
+                            {details.conferenceExpenseDetail.expenseStatusName}
+                          </Tag>
+                        </Descriptions.Item>
+                        {details.conferenceExpenseDetail.rejectionReason && (
+                          <Descriptions.Item label="Rejection Reason">
+                            <Text type="danger">
+                              {details.conferenceExpenseDetail.rejectionReason}
+                            </Text>
+                          </Descriptions.Item>
+                        )}
+                      </Descriptions>
+                    </>
+                  )}
+
+                {/* Add Conference Funding Details section when it's a conference funding request */}
+                {details.fundDisbursementType === 2 &&
+                  details.conferenceFundingDetail && (
+                    <>
+                      <Divider orientation="left">
+                        <Text strong>Conference Funding Details</Text>
+                      </Divider>
+                      <Descriptions bordered column={1} size="small">
+                        <Descriptions.Item label="Conference Location">
+                          {/* <div className="flex items-center"> */}
+                          <EnvironmentOutlined className="mr-1 text-blue-500" />
+                          {details.conferenceFundingDetail.location}
+                          {/* </div> */}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Acceptance Date">
+                          {/* <div className="flex items-center"> */}
+                          <CheckCircleOutlined className="mr-1 text-green-500" />
+                          {formatDate(
+                            details.conferenceFundingDetail.acceptanceDate
+                          )}
+                          {/* </div> */}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Presentation Date">
+                          {/* <div className="flex items-center"> */}
+                          <CalendarOutlined className="mr-1 text-blue-500" />
+                          {formatDate(
+                            details.conferenceFundingDetail.presentationDate
+                          )}
+                          {/* </div> */}
+                        </Descriptions.Item>
+                        {/* <Descriptions.Item label="Conference Funding">
+                          <span className="font-semibold text-green-600">
+                            ₫
+                            {details.conferenceFundingDetail.conferenceFunding.toLocaleString()}
+                          </span>
+                        </Descriptions.Item> */}
+                      </Descriptions>
+                    </>
+                  )}
+
+                {/* Add Journal Funding Details section when it's a journal funding request */}
+                {details.fundDisbursementType === 3 &&
+                  details.journalFundingDetail && (
+                    <>
+                      <Divider orientation="left">
+                        <Text strong>Journal Funding Details</Text>
+                      </Divider>
+                      <Descriptions bordered column={1} size="small">
+                        <Descriptions.Item label="DOI Number">
+                          {details.journalFundingDetail.doiNumber ? (
+                            <a
+                              href={`https://doi.org/${details.journalFundingDetail.doiNumber}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-600 hover:text-purple-800 underline"
+                            >
+                              <FileTextOutlined className="mr-1" />
+                              {details.journalFundingDetail.doiNumber}
+                            </a>
+                          ) : (
+                            <Text type="secondary">Not provided</Text>
+                          )}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Acceptance Date">
+                          <CheckCircleOutlined className="mr-1 text-green-500" />
+                          {formatDate(
+                            details.journalFundingDetail.acceptanceDate
+                          )}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Publication Date">
+                          <CalendarOutlined className="mr-1 text-blue-500" />
+                          {formatDate(
+                            details.journalFundingDetail.publicationDate
+                          )}
+                        </Descriptions.Item>
+                        {/* <Descriptions.Item label="Journal Funding">
+                          <span className="font-semibold text-green-600">
+                            ₫
+                            {details.journalFundingDetail.journalFunding.toLocaleString()}
+                          </span>
+                        </Descriptions.Item> */}
+                      </Descriptions>
+                    </>
+                  )}
               </Card>
 
               {/* Project Info Card */}
@@ -648,13 +928,15 @@ const FundDisbursementRequestDetails = () => {
                       >
                         <p
                           className={`font-medium ${
+                            details.projectPhaseId &&
                             phase.projectPhaseId === details.projectPhaseId
                               ? "text-[#F2722B]"
                               : ""
                           }`}
                         >
                           {phase.title}{" "}
-                          {phase.projectPhaseId === details.projectPhaseId
+                          {details.projectPhaseId &&
+                          phase.projectPhaseId === details.projectPhaseId
                             ? "(Current Request Phase)"
                             : ""}
                         </p>
@@ -721,20 +1003,6 @@ const FundDisbursementRequestDetails = () => {
                   />
                   <Divider className="my-1" />
                   <div>
-                    <Text strong>Disbursed %</Text>
-                    <Progress
-                      percent={
-                        details.projectApprovedBudget > 0
-                          ? (details.projectDisbursedAmount /
-                              details.projectApprovedBudget) *
-                            100
-                          : 0
-                      }
-                      strokeColor={{ from: "#108ee9", to: "#87d068" }}
-                      format={(percent) => `${percent?.toFixed(1)}%`}
-                    />
-                  </div>
-                  <div>
                     <Text strong>Spent %</Text>
                     <Progress
                       percent={
@@ -745,7 +1013,7 @@ const FundDisbursementRequestDetails = () => {
                           : 0
                       }
                       strokeColor="#faad14"
-                      format={(percent) => `${percent?.toFixed(1)}%`}
+                      format={(percent) => `${Math.round(percent)}%`}
                     />
                   </div>
                 </Space>
@@ -816,7 +1084,14 @@ const FundDisbursementRequestDetails = () => {
             <Button
               key="submit"
               type="primary"
-              loading={isApprovingMutation}
+              loading={
+                details.fundDisbursementType === 3
+                  ? isApprovingJournalFunding
+                  : details.fundDisbursementType === 1 ||
+                    details.fundDisbursementType === 2
+                  ? isApprovingConferenceExpense
+                  : isApprovingMutation
+              }
               onClick={handleApproveConfirm}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -830,7 +1105,10 @@ const FundDisbursementRequestDetails = () => {
             {/* Disbursement Information */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
               <p className="font-medium text-gray-800">
-                Request Type: <Tag color="purple">Fund Disbursement</Tag>
+                Request Type:{" "}
+                <Tag color="purple">
+                  {FUND_DISBURSEMENT_TYPE[details.fundDisbursementType]}
+                </Tag>
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 Project: {details?.projectName}
@@ -841,12 +1119,139 @@ const FundDisbursementRequestDetails = () => {
                   ₫{details?.fundRequest?.toLocaleString()}
                 </span>
               </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Phase:{" "}
-                <span className="font-medium">
-                  {details?.projectPhaseTitle}
-                </span>
-              </p>
+              {details.projectPhaseTitle && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Phase:{" "}
+                  <span className="font-medium">
+                    {details?.projectPhaseTitle}
+                  </span>
+                </p>
+              )}
+              {details.conferenceName && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Conference:{" "}
+                  <span className="font-medium">{details?.conferenceName}</span>
+                </p>
+              )}
+              {details.fundDisbursementType === 1 &&
+                details.conferenceExpenseDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Conference Expense Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        Accommodation:{" "}
+                        <span className="font-medium">
+                          {details.conferenceExpenseDetail.accommodation}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Accommodation Expense:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceExpenseDetail.accommodationExpense.toLocaleString()}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Travel:{" "}
+                        <span className="font-medium">
+                          {details.conferenceExpenseDetail.travel}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Travel Expense:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceExpenseDetail.travelExpense.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {/* Update Approval Modal to include Conference Funding details */}
+              {details.fundDisbursementType === 2 &&
+                details.conferenceFundingDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Conference Funding Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        Location:{" "}
+                        <span className="font-medium">
+                          {details.conferenceFundingDetail.location}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Acceptance Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.conferenceFundingDetail.acceptanceDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Presentation Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.conferenceFundingDetail.presentationDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Funding Amount:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceFundingDetail.conferenceFunding.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {/* Update Approval Modal to include Journal Funding details */}
+              {details.fundDisbursementType === 3 &&
+                details.journalFundingDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Journal Funding Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        DOI Number:{" "}
+                        <span className="font-medium">
+                          {details.journalFundingDetail.doiNumber ||
+                            "Not provided"}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Acceptance Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.journalFundingDetail.acceptanceDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Publication Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.journalFundingDetail.publicationDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Funding Amount:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.journalFundingDetail.journalFunding.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
             </div>
 
             <Divider />
@@ -910,7 +1315,14 @@ const FundDisbursementRequestDetails = () => {
               key="submit"
               type="primary"
               danger
-              loading={isRejectingMutation}
+              loading={
+                details.fundDisbursementType === 3
+                  ? isRejectingJournalFunding
+                  : details.fundDisbursementType === 1 ||
+                    details.fundDisbursementType === 2
+                  ? isRejectingConferenceExpense
+                  : isRejectingMutation
+              }
               onClick={handleRejectConfirm}
             >
               Reject
@@ -923,7 +1335,10 @@ const FundDisbursementRequestDetails = () => {
             {/* Disbursement Information */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
               <p className="font-medium text-gray-800">
-                Request Type: <Tag color="purple">Fund Disbursement</Tag>
+                Request Type:{" "}
+                <Tag color="purple">
+                  {FUND_DISBURSEMENT_TYPE[details.fundDisbursementType]}
+                </Tag>
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 Project: {details?.projectName}
@@ -934,12 +1349,139 @@ const FundDisbursementRequestDetails = () => {
                   ₫{details?.fundRequest?.toLocaleString()}
                 </span>
               </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Phase:{" "}
-                <span className="font-medium">
-                  {details?.projectPhaseTitle}
-                </span>
-              </p>
+              {details.projectPhaseTitle && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Phase:{" "}
+                  <span className="font-medium">
+                    {details?.projectPhaseTitle}
+                  </span>
+                </p>
+              )}
+              {details.conferenceName && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Conference:{" "}
+                  <span className="font-medium">{details?.conferenceName}</span>
+                </p>
+              )}
+              {details.fundDisbursementType === 1 &&
+                details.conferenceExpenseDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Conference Expense Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        Accommodation:{" "}
+                        <span className="font-medium">
+                          {details.conferenceExpenseDetail.accommodation}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Accommodation Expense:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceExpenseDetail.accommodationExpense.toLocaleString()}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Travel:{" "}
+                        <span className="font-medium">
+                          {details.conferenceExpenseDetail.travel}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Travel Expense:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceExpenseDetail.travelExpense.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {/* Update Rejection Modal to include Conference Funding details */}
+              {details.fundDisbursementType === 2 &&
+                details.conferenceFundingDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Conference Funding Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        Location:{" "}
+                        <span className="font-medium">
+                          {details.conferenceFundingDetail.location}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Acceptance Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.conferenceFundingDetail.acceptanceDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Presentation Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.conferenceFundingDetail.presentationDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Funding Amount:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.conferenceFundingDetail.conferenceFunding.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {/* Update Rejection Modal to include Journal Funding details */}
+              {details.fundDisbursementType === 3 &&
+                details.journalFundingDetail && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium text-gray-700">
+                      Journal Funding Details:
+                    </p>
+                    <div className="pl-3 mt-1">
+                      <p className="text-xs text-gray-500">
+                        DOI Number:{" "}
+                        <span className="font-medium">
+                          {details.journalFundingDetail.doiNumber ||
+                            "Not provided"}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Acceptance Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.journalFundingDetail.acceptanceDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Publication Date:{" "}
+                        <span className="font-medium">
+                          {formatDate(
+                            details.journalFundingDetail.publicationDate
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Funding Amount:{" "}
+                        <span className="font-medium">
+                          ₫
+                          {details.journalFundingDetail.journalFunding.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
             </div>
 
             <Divider />

@@ -51,7 +51,10 @@ import {
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useGetUserConferencesQuery } from "../../features/project/conference/conferenceApiSlice";
+import {
+  useGetUserConferencesQuery,
+  useGetUserJournalsQuery,
+} from "../../features/project/conference/conferenceApiSlice";
 
 const { Search } = Input;
 const { Title, Text, Paragraph } = Typography;
@@ -67,27 +70,51 @@ const ActivePaper = () => {
   // Fetch real data from API
   const {
     data: conferencesResponse,
-    isLoading,
-    isError,
-    error,
-    refetch,
+    isLoading: isLoadingConferences,
+    isError: isErrorConferences,
+    error: errorConferences,
+    refetch: refetchConferences,
   } = useGetUserConferencesQuery();
+
+  // Fetch journal data from API
+  const {
+    data: journalsResponse,
+    isLoading: isLoadingJournals,
+    isError: isErrorJournals,
+    error: errorJournals,
+    refetch: refetchJournals,
+  } = useGetUserJournalsQuery();
 
   // Extract conference data
   const conferencesList = conferencesResponse?.data || [];
 
-  // Add this useEffect for grouping conferences by project
+  // Extract journal data
+  const journalsList = journalsResponse?.data || [];
+
+  // Add useEffect to refetch data when component mounts
   useEffect(() => {
-    if (conferencesList && conferencesList.length > 0) {
-      // Group conferences by project
+    // Refetch data when component mounts to ensure we have the newest data
+    refetchConferences();
+    refetchJournals();
+  }, [refetchConferences, refetchJournals]);
+
+  // Add this useEffect for grouping projects
+  useEffect(() => {
+    if (
+      (conferencesList && conferencesList.length > 0) ||
+      (journalsList && journalsList.length > 0)
+    ) {
+      // Group papers by project
       const projectMap = new Map();
 
+      // Add conferences
       conferencesList.forEach((conference) => {
         if (!projectMap.has(conference.projectId)) {
           projectMap.set(conference.projectId, {
             projectId: conference.projectId,
             projectName: conference.projectName,
             conferences: [],
+            journals: [],
             totalCount: 0,
             pendingCount: 0,
             approvedCount: 0,
@@ -108,16 +135,48 @@ const ActivePaper = () => {
         }
       });
 
+      // Add journals
+      journalsList.forEach((journal) => {
+        if (!projectMap.has(journal.projectId)) {
+          projectMap.set(journal.projectId, {
+            projectId: journal.projectId,
+            projectName: journal.projectName,
+            conferences: [],
+            journals: [],
+            totalCount: 0,
+            pendingCount: 0,
+            approvedCount: 0,
+            rejectedCount: 0,
+          });
+        }
+
+        const project = projectMap.get(journal.projectId);
+        project.journals.push(journal);
+        project.totalCount += 1;
+
+        if (journal.publisherStatus === 0) {
+          project.pendingCount += 1;
+        } else if (journal.publisherStatus === 2) {
+          project.approvedCount += 1; // Status 2 is Approved
+        } else if (journal.publisherStatus === 1) {
+          project.rejectedCount += 1; // Status 1 is Rejected
+        }
+      });
+
       setProjectsData(Array.from(projectMap.values()));
     }
-  }, [conferencesList]);
+  }, [conferencesList, journalsList]);
 
   // Add state for projects data
   const [projectsData, setProjectsData] = useState([]);
 
-  if (isError) {
+  if (isErrorConferences || isErrorJournals) {
     message.error(
-      `Failed to load conferences: ${error?.data?.message || "Unknown error"}`
+      `Failed to load conferences or journals: ${
+        errorConferences?.data?.message ||
+        errorJournals?.data?.message ||
+        "Unknown error"
+      }`
     );
   }
 
@@ -143,6 +202,13 @@ const ActivePaper = () => {
         conference.conferenceName
           .toLowerCase()
           .includes(searchText.toLowerCase())
+      ) ||
+      project.journals.some(
+        (journal) =>
+          journal.journalName
+            .toLowerCase()
+            .includes(searchText.toLowerCase()) ||
+          journal.publisherName.toLowerCase().includes(searchText.toLowerCase())
       );
 
     const matchesStatus =
@@ -153,30 +219,46 @@ const ActivePaper = () => {
 
     const matchesType =
       filterType === "all" ||
-      project.conferences.some((conf) => filterType === "Conference");
+      (filterType === "Conference" && project.conferences.length > 0) ||
+      (filterType === "Journal" && project.journals.length > 0);
 
-    const matchesTab = activeTab === "all" || activeTab === "conference";
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "conference" && project.conferences.length > 0) ||
+      (activeTab === "journal" && project.journals.length > 0);
 
     return matchesSearch && matchesStatus && matchesType && matchesTab;
   });
 
   // Calculate statistics
   const stats = {
-    totalPapers: conferencesList.length,
-    publishedPapers: conferencesList.filter(
-      (p) => p.conferenceSubmissionStatus === 1
-    ).length,
+    totalPapers: conferencesList.length + journalsList.length,
+    publishedPapers:
+      conferencesList.filter((p) => p.conferenceSubmissionStatus === 1).length +
+      journalsList.filter(
+        (j) => j.publisherStatus === 2 // Only status 2 is Approved
+      ).length,
     conferenceCount: conferencesList.length,
-    journalCount: 0, // We don't have journal data yet
+    journalCount: journalsList.length,
     totalRoyalties: 0, // We don't have royalties data yet
   };
 
   const handleViewPaperDetails = (conference) => {
-    navigate(`/active-paper-details/${conference.conferenceId}`);
+    // First refetch the latest data
+    refetchConferences().then(() => {
+      navigate(`/active-paper-details/${conference.conferenceId}`);
+    });
+  };
+
+  const handleViewJournalDetails = (journal) => {
+    // First refetch the latest data
+    refetchJournals().then(() => {
+      navigate(`/journal-details/${journal.journalId}`);
+    });
   };
 
   // Show loading state with skeleton
-  if (isLoading) {
+  if (isLoadingConferences || isLoadingJournals) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -415,7 +497,7 @@ const ActivePaper = () => {
               type="primary"
               size="large"
               icon={<ReloadOutlined />}
-              onClick={() => refetch()}
+              onClick={() => refetchConferences()}
               className="mr-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 border-none shadow-md"
             >
               Refresh
@@ -557,6 +639,13 @@ const ActivePaper = () => {
               tab={
                 <span className="px-4 py-2">
                   <BookOutlined /> Journal Papers
+                  {stats.journalCount > 0 && (
+                    <Badge
+                      count={stats.journalCount}
+                      style={{ marginLeft: 8 }}
+                      color="purple"
+                    />
+                  )}
                 </span>
               }
               key="journal"
@@ -673,10 +762,11 @@ const ActivePaper = () => {
                       <div className="grid grid-cols-2 gap-2 pl-2">
                         <Tag color="teal" className="text-center">
                           <span className="font-medium">Conference:</span>{" "}
-                          {project.totalCount}
+                          {project.conferences.length}
                         </Tag>
                         <Tag color="purple" className="text-center">
-                          <span className="font-medium">Journal:</span> 0
+                          <span className="font-medium">Journal:</span>{" "}
+                          {project.journals.length}
                         </Tag>
                       </div>
                     </div>
@@ -687,9 +777,12 @@ const ActivePaper = () => {
                     <Button
                       type="primary"
                       icon={<EyeOutlined />}
-                      onClick={() =>
-                        navigate(`/project-details/${project.projectId}`)
-                      }
+                      onClick={() => {
+                        // First refetch the latest data
+                        refetchConferences().then(() => {
+                          navigate(`/project-details/${project.projectId}`);
+                        });
+                      }}
                       className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
                     >
                       View Project
@@ -699,11 +792,11 @@ const ActivePaper = () => {
                       type="default"
                       icon={<GlobalOutlined />}
                       onClick={() => {
-                        if (project.conferences.length === 1) {
-                          handleViewPaperDetails(project.conferences[0]);
-                        } else {
+                        // First refetch the latest data
+                        refetchConferences().then(() => {
+                          // Always navigate to ProjectPaper page regardless of paper count
                           navigate(`/project-papers/${project.projectId}`);
-                        }
+                        });
                       }}
                       className="border-teal-500 text-teal-500 hover:bg-teal-50"
                     >

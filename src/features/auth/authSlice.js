@@ -19,7 +19,7 @@ export const loginUser = createAsyncThunk(
         0: "admin",
         1: "lecturer",
         2: "student",
-        3: "department", // Accounting_Department
+        3: "department",
         4: "office",
       };
 

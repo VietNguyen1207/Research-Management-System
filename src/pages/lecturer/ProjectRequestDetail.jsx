@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Typography,
@@ -64,6 +64,12 @@ const DOCUMENT_TYPE = {
   4: "Journal Paper",
   5: "Disbursement Confirmation",
   6: "Project Completion",
+  7: "Conference Paper",
+  8: "Conference Expense",
+  9: "Conference Expense Decision",
+  10: "Conference Funding",
+  11: "Journal Funding",
+  12: "Funding Confirmation",
 };
 
 // Constants for request types
@@ -98,6 +104,7 @@ const GROUP_MEMBER_ROLE = {
   3: "Council Chairman",
   4: "Secretary",
   5: "Council Member",
+  6: "Stakeholder",
 };
 
 // Constants for project phase status
@@ -114,6 +121,14 @@ const PHASE_STATUS_COLORS = {
   1: "gold", // Pending
   2: "green", // Completed
   3: "red", // Overdue
+};
+
+// Add the Fund Disbursement Type enum mapping
+const FUND_DISBURSEMENT_TYPE = {
+  0: "Project Phase",
+  1: "Conference Expense",
+  2: "Conference Funding",
+  3: "Journal Funding",
 };
 
 // Format date helper
@@ -145,6 +160,16 @@ const formatCurrency = (amount) => {
     currency: "VND",
     minimumFractionDigits: 0,
   }).format(amount);
+};
+
+// Add a helper function to check if user is authorized to approve/reject
+const isUserInCouncil = (user) => {
+  // Find council group where user is Chairman or Secretary
+  const councilGroup = user?.groups?.find(
+    (group) => group.groupType === 1 && (group.role === 3 || group.role === 4)
+  );
+
+  return !!councilGroup;
 };
 
 const ProjectRequestDetail = () => {
@@ -219,6 +244,16 @@ const ProjectRequestDetail = () => {
   // Handle approve submission
   const handleApprovalSubmit = async (values) => {
     try {
+      // Check if user has permission
+      if (
+        projectRequest.requestType !== 6 &&
+        (user?.role === "lecturer" || user?.role === "department") &&
+        !isUserInCouncil(user)
+      ) {
+        message.error("You don't have permission to approve this request");
+        return;
+      }
+
       // Check if we have files
       if (approvalFileList.length === 0) {
         message.error("Please upload an approval document");
@@ -267,6 +302,16 @@ const ProjectRequestDetail = () => {
   // Handle reject submission
   const handleRejectionSubmit = async (values) => {
     try {
+      // Check if user has permission
+      if (
+        projectRequest.requestType !== 6 &&
+        (user?.role === "lecturer" || user?.role === "department") &&
+        !isUserInCouncil(user)
+      ) {
+        message.error("You don't have permission to reject this request");
+        return;
+      }
+
       // Check if we have files
       if (rejectionFileList.length === 0) {
         message.error("Please upload a rejection document");
@@ -312,6 +357,18 @@ const ProjectRequestDetail = () => {
       );
     }
   };
+
+  // Add a useEffect for debug logging
+  useEffect(() => {
+    if (projectRequest && user) {
+      console.log("Permission debug info:");
+      console.log("User role:", user.role);
+      console.log("User groups:", user.groups);
+      console.log("Is user in council:", isUserInCouncil(user));
+      console.log("Request type:", projectRequest.requestType);
+      console.log("Request status:", projectRequest.approvalStatus);
+    }
+  }, [projectRequest, user]);
 
   if (isLoading) {
     return (
@@ -611,12 +668,42 @@ const ProjectRequestDetail = () => {
                 >
                   {APPROVAL_STATUS[projectRequest.approvalStatus]}
                 </Tag>
+
+                {/* Add Fund Disbursement Type tag if present */}
+                {projectRequest.fundDisbursementType !== null && (
+                  <Tag color="cyan" className="px-3 py-1 text-sm">
+                    {
+                      FUND_DISBURSEMENT_TYPE[
+                        projectRequest.fundDisbursementType
+                      ]
+                    }
+                  </Tag>
+                )}
+
+                {/* Add Conference tag if present */}
+                {projectRequest.conferenceName && (
+                  <Tag color="geekblue" className="px-3 py-1 text-sm">
+                    Conference: {projectRequest.conferenceName}
+                  </Tag>
+                )}
+
+                {/* Add Journal tag if present */}
+                {projectRequest.journalName && (
+                  <Tag color="magenta" className="px-3 py-1 text-sm">
+                    Journal: {projectRequest.journalName}
+                  </Tag>
+                )}
               </div>
             </div>
 
-            {projectRequest.approvalStatus === 0 &&
-              // Check user role before showing approval/rejection buttons
-              (user?.role === "lecturer" || user?.role === "department" ? (
+            {projectRequest.approvalStatus === 0 ? (
+              // For fund disbursement requests, only show buttons to office/admin
+              // For other request types, show to lecturer/department who are in appropriate council
+              (projectRequest.requestType === 6 &&
+                (user?.role === "office" || user?.role === "admin")) ||
+              (projectRequest.requestType !== 6 &&
+                (user?.role === "lecturer" || user?.role === "department") &&
+                isUserInCouncil(user)) ? (
                 <div className="mt-4 md:mt-0 flex gap-3">
                   <Button
                     type="primary"
@@ -638,7 +725,20 @@ const ProjectRequestDetail = () => {
                     Reject
                   </Button>
                 </div>
-              ) : null)}
+              ) : // Show informational message for lecturers/department who aren't in council
+              (user?.role === "lecturer" || user?.role === "department") &&
+                !isUserInCouncil(user) &&
+                projectRequest.requestType !== 6 ? (
+                <div className="mt-4 md:mt-0">
+                  {/* <Alert
+                    type="info"
+                    showIcon
+                    message="You need to be a Council Chairman or Secretary to approve or reject this request."
+                    className="border-blue-300 text-blue-700"
+                  /> */}
+                </div>
+              ) : null
+            ) : null}
           </div>
 
           <Divider className="my-4" />
@@ -849,6 +949,30 @@ const ProjectRequestDetail = () => {
                     )}
                   </div>
                 </Descriptions.Item>
+                {/* Add Fund Disbursement Type if present */}
+                {projectRequest.fundDisbursementType !== null && (
+                  <Descriptions.Item label="Fund Disbursement Type">
+                    <Tag color="cyan">
+                      {
+                        FUND_DISBURSEMENT_TYPE[
+                          projectRequest.fundDisbursementType
+                        ]
+                      }
+                    </Tag>
+                  </Descriptions.Item>
+                )}
+                {/* Add Conference information if present */}
+                {projectRequest.conferenceName && (
+                  <Descriptions.Item label="Conference">
+                    {projectRequest.conferenceName}
+                  </Descriptions.Item>
+                )}
+                {/* Add Journal information if present */}
+                {projectRequest.journalName && (
+                  <Descriptions.Item label="Journal">
+                    {projectRequest.journalName}
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Requested By">
                   {projectRequest.requestedBy?.fullName} (
                   {projectRequest.requestedBy?.email})

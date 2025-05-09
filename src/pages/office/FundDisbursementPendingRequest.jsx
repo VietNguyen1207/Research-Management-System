@@ -6,8 +6,6 @@ import {
   Input,
   Select,
   Tag,
-  Modal,
-  Form,
   Space,
   Typography,
   Row,
@@ -18,51 +16,31 @@ import {
   Spin,
   Badge,
   Divider,
-  List,
-  Avatar,
-  Progress,
-  Descriptions,
   Skeleton,
-  Upload,
+  Tooltip,
 } from "antd";
 import {
   SearchOutlined,
   DollarOutlined,
   CalendarOutlined,
   FileTextOutlined,
-  FilePdfOutlined,
   EyeOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
+  ClockCircleOutlined,
   TeamOutlined,
   BankOutlined,
-  ClockCircleOutlined,
-  DownloadOutlined,
   UserOutlined,
-  ExclamationCircleOutlined,
-  InfoCircleOutlined,
-  InboxOutlined,
+  DatabaseOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  useGetFundDisbursementsQuery,
-  useApproveFundDisbursementMutation,
-  useRejectFundDisbursementMutation,
-} from "../../features/fund-disbursement/fundDisbursementApiSlice";
+import { useGetPendingFundDisbursementsQuery } from "../../features/fund-disbursement/fundDisbursementApiSlice";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
-const { TextArea } = Input;
 
-// Project Type enum mapping (assuming similar structure elsewhere)
-const PROJECT_TYPE = {
-  0: "Research",
-  1: "Conference",
-  2: "Journal",
-};
-
-// Add Fund Disbursement Type enum mapping
+// Fund Disbursement Type enum mapping
 const FUND_DISBURSEMENT_TYPE = {
   0: "Project Phase",
   1: "Conference Expense",
@@ -70,26 +48,19 @@ const FUND_DISBURSEMENT_TYPE = {
   3: "Journal Funding",
 };
 
-const FundDisbursementRequest = () => {
+const FundDisbursementPendingRequest = () => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
 
-  // API queries and mutations
+  // API query for pending disbursements
   const {
-    data: disbursements,
+    data: pendingDisbursements,
     isLoading,
     isError,
     error,
-  } = useGetFundDisbursementsQuery();
-
-  const [approveFundDisbursement, { isLoading: isApproving }] =
-    useApproveFundDisbursementMutation();
-
-  const [rejectFundDisbursement, { isLoading: isRejecting }] =
-    useRejectFundDisbursementMutation();
+    refetch,
+  } = useGetPendingFundDisbursementsQuery();
 
   // Handle view request details
   const handleViewDetails = (record) => {
@@ -104,6 +75,11 @@ const FundDisbursementRequest = () => {
       month: "short",
       day: "numeric",
     });
+  };
+
+  // Navigate to all disbursement records
+  const handleViewAllRecords = () => {
+    navigate("/fund-disbursement");
   };
 
   // Table columns
@@ -178,7 +154,7 @@ const FundDisbursementRequest = () => {
           {/* Display Fund Disbursement Type */}
           {record.fundDisbursementType !== null && (
             <Tag color="cyan">
-              {FUND_DISBURSEMENT_TYPE[record.fundDisbursementType]}
+              {FUND_DISBURSEMENT_TYPE[record.fundDisbursementType] || "N/A"}
             </Tag>
           )}
 
@@ -213,49 +189,9 @@ const FundDisbursementRequest = () => {
       title: "Status",
       dataIndex: "statusName",
       key: "statusName",
-      render: (status, record) => {
-        let color = "default";
-        let icon = <ClockCircleOutlined />;
-
-        if (status === "Pending") {
-          color = "processing";
-          icon = <ClockCircleOutlined />;
-        } else if (status === "Approved") {
-          color = "success";
-          icon = <CheckCircleOutlined />;
-        } else if (status === "Rejected") {
-          color = "error";
-          icon = <CloseCircleOutlined />;
-        }
-
-        return (
-          <div>
-            <Badge status={color} text={status} />
-
-            {/* Show approver info if available */}
-            {record.approverName && record.approvedAt && (
-              <div className="text-xs mt-1 text-gray-500">
-                by {record.approverName}
-                <br />
-                on {formatDate(record.approvedAt)}
-              </div>
-            )}
-
-            {/* Show rejection reason if rejected */}
-            {record.rejectionReason && (
-              <div className="mt-1 text-xs text-red-500">
-                Reason: {record.rejectionReason}
-              </div>
-            )}
-          </div>
-        );
-      },
-      filters: [
-        { text: "Pending", value: "Pending" },
-        { text: "Approved", value: "Approved" },
-        { text: "Rejected", value: "Rejected" },
-      ],
-      onFilter: (value, record) => record.statusName === value,
+      render: (status) => (
+        <Badge status="processing" text="Pending" className="text-blue-500" />
+      ),
     },
     {
       title: "Actions",
@@ -275,9 +211,9 @@ const FundDisbursementRequest = () => {
     },
   ];
 
-  // Filter data based on search, status, and date
-  const filteredData = disbursements
-    ? disbursements
+  // Filter data based on search and date
+  const filteredData = pendingDisbursements
+    ? pendingDisbursements
         .filter((item) => {
           const matchesSearch =
             !searchText ||
@@ -299,15 +235,6 @@ const FundDisbursementRequest = () => {
             (item.groupName &&
               item.groupName.toLowerCase().includes(searchText.toLowerCase()));
 
-          const matchesStatus =
-            !statusFilter || item.statusName === statusFilter;
-
-          // Add filter for disbursement type
-          const matchesType =
-            typeFilter === "all" ||
-            (item.fundDisbursementType !== null &&
-              item.fundDisbursementType.toString() === typeFilter);
-
           // Filter by date
           let matchesDate = true;
           if (dateFilter) {
@@ -327,7 +254,7 @@ const FundDisbursementRequest = () => {
             }
           }
 
-          return matchesSearch && matchesStatus && matchesDate && matchesType;
+          return matchesSearch && matchesDate;
         })
         // Sort by requestedAt in descending order (newest first)
         .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt))
@@ -355,8 +282,8 @@ const FundDisbursementRequest = () => {
 
           {/* Statistics Cards Skeleton */}
           <Row gutter={[16, 16]} className="mb-8">
-            {[1, 2, 3].map((i) => (
-              <Col xs={24} sm={8} key={i}>
+            {[1, 2].map((i) => (
+              <Col xs={24} sm={12} key={i}>
                 <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
                   <Skeleton.Input
                     active
@@ -376,7 +303,7 @@ const FundDisbursementRequest = () => {
                 <Skeleton.Input active style={{ width: "100%", height: 40 }} />
               </div>
               <Skeleton.Input active style={{ width: 150, height: 40 }} />
-              <Skeleton.Input active style={{ width: 150, height: 40 }} />
+              <Skeleton.Button active style={{ width: 150, height: 40 }} />
             </div>
           </Card>
 
@@ -410,19 +337,11 @@ const FundDisbursementRequest = () => {
                       <Skeleton.Button
                         active
                         style={{ width: 100, height: 35 }}
-                        className="mr-2"
-                      />
-                      <Skeleton.Button
-                        active
-                        style={{ width: 100, height: 35 }}
                       />
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="flex justify-center mt-4">
-              <Skeleton.Input active style={{ width: 300, height: 32 }} />
             </div>
           </Card>
         </div>
@@ -434,31 +353,34 @@ const FundDisbursementRequest = () => {
     return (
       <div className="min-h-screen pt-24 px-4 sm:px-6 lg:px-8">
         <Alert
-          message="Error loading fund disbursement requests"
+          message="Error loading pending fund disbursement requests"
           description={
             error?.data?.message ||
-            "Failed to load fund disbursement requests. Please try again later."
+            "Failed to load pending fund disbursement requests. Please try again later."
           }
           type="error"
           showIcon
+          action={
+            <Button size="small" type="primary" onClick={refetch}>
+              Retry
+            </Button>
+          }
         />
       </div>
     );
   }
 
   // Calculate statistics
-  const pendingRequests =
-    disbursements?.filter((r) => r.statusName === "Pending") || [];
-  const pendingAmount = pendingRequests.reduce(
-    (sum, item) => sum + item.fundRequestAmount,
-    0
-  );
-  const processedRequests =
-    disbursements?.filter((r) => r.statusName !== "Pending") || [];
+  const pendingAmount = pendingDisbursements
+    ? pendingDisbursements.reduce(
+        (sum, item) => sum + item.fundRequestAmount,
+        0
+      )
+    : 0;
 
   // Filter options
   const filterOptions = (
-    <div className="flex flex-col md:flex-row gap-4">
+    <div className="flex flex-col md:flex-row gap-4 items-center">
       <div className="flex-1">
         <Search
           placeholder="Search by project, department, or requester..."
@@ -469,18 +391,6 @@ const FundDisbursementRequest = () => {
           onChange={(e) => setSearchText(e.target.value)}
         />
       </div>
-
-      <Select
-        placeholder="Filter by status"
-        allowClear
-        style={{ minWidth: 150 }}
-        onChange={(value) => setStatusFilter(value)}
-        options={[
-          { value: "Pending", label: "Pending" },
-          { value: "Approved", label: "Approved" },
-          { value: "Rejected", label: "Rejected" },
-        ]}
-      />
 
       <Select
         placeholder="Filter by date"
@@ -494,28 +404,13 @@ const FundDisbursementRequest = () => {
         ]}
       />
 
-      {/* Add filter for disbursement type */}
-      <Select
-        placeholder="Disbursement Type"
-        allowClear
-        style={{ minWidth: 180 }}
-        onChange={(value) => setTypeFilter(value)}
-        options={[
-          { value: "all", label: "All Types" },
-          { value: "0", label: "Project Phase" },
-          { value: "1", label: "Conference Expense" },
-          { value: "2", label: "Conference Funding" },
-          { value: "3", label: "Journal Funding" },
-        ]}
-      />
-
       <Button
         type="primary"
-        icon={<ClockCircleOutlined />}
-        onClick={() => navigate("/pending-disbursements")}
+        icon={<DatabaseOutlined />}
+        onClick={handleViewAllRecords}
         className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
       >
-        Pending Disbursements
+        Disbursement Records
       </Button>
     </div>
   );
@@ -531,28 +426,28 @@ const FundDisbursementRequest = () => {
             className="inline-block"
           >
             <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2722B] to-[#FFA500] mb-2">
-              Fund Disbursement Requests
+              Pending Fund Disbursements
             </h2>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </motion.div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Review and process fund disbursement requests for completed project
-            phases
+            Review and process pending fund disbursement requests that require
+            your approval
           </p>
         </div>
 
         {/* Statistics Cards */}
         <Row gutter={[16, 16]} className="mb-8">
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={12}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={<Text className="text-gray-600">Pending Requests</Text>}
-                value={pendingRequests.length}
+                value={pendingDisbursements ? pendingDisbursements.length : 0}
                 prefix={<ClockCircleOutlined className="text-[#F2722B]" />}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={12}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
                 title={
@@ -565,17 +460,6 @@ const FundDisbursementRequest = () => {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={8}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={
-                  <Text className="text-gray-600">Processed Requests</Text>
-                }
-                value={processedRequests.length}
-                prefix={<CheckCircleOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
         </Row>
 
         {/* Filters */}
@@ -584,25 +468,54 @@ const FundDisbursementRequest = () => {
         </Card>
 
         {/* Request Table */}
-        <Card className="shadow-lg rounded-xl border-0">
-          <Table
-            columns={columns}
-            dataSource={filteredData}
-            rowKey="fundDisbursementId"
-            pagination={{
-              pageSize: 10,
-              position: ["bottomCenter"],
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "20", "50"],
-            }}
-            rowClassName={(record) =>
-              record.statusName === "Pending" ? "bg-blue-50" : ""
-            }
-          />
+        <Card
+          className="shadow-lg rounded-xl border-0"
+          title={
+            <div className="flex items-center">
+              <ClockCircleOutlined className="text-blue-500 mr-2" />
+              <span className="font-medium">Pending Approval Requests</span>
+              <Tag color="processing" className="ml-2">
+                {pendingDisbursements ? pendingDisbursements.length : 0} Pending
+              </Tag>
+            </div>
+          }
+        >
+          {!filteredData || filteredData.length === 0 ? (
+            <div className="text-center py-8">
+              <ClockCircleOutlined
+                style={{ fontSize: 48 }}
+                className="text-gray-300"
+              />
+              <p className="mt-4 text-gray-500">
+                No pending disbursement requests found
+              </p>
+              <Button
+                type="primary"
+                icon={<DatabaseOutlined />}
+                onClick={handleViewAllRecords}
+                className="mt-4 bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none"
+              >
+                View All Disbursement Records
+              </Button>
+            </div>
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={filteredData}
+              rowKey="fundDisbursementId"
+              pagination={{
+                pageSize: 10,
+                position: ["bottomCenter"],
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "20", "50"],
+              }}
+              className="pending-disbursements-table"
+            />
+          )}
         </Card>
       </div>
     </div>
   );
 };
 
-export default FundDisbursementRequest;
+export default FundDisbursementPendingRequest;

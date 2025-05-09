@@ -60,6 +60,7 @@ const REQUEST_TYPE = {
   4: "Paper Creation",
   5: "Conference Creation",
   6: "Fund Disbursement",
+  7: "Conference Expense",
 };
 
 const APPROVAL_STATUS = {
@@ -92,6 +93,7 @@ const REQUEST_OPTIONS = [
   { value: "4", label: "Paper Creation" },
   { value: "5", label: "Conference Creation" },
   { value: "6", label: "Fund Disbursement" },
+  { value: "7", label: "Conference Expense" },
 ];
 
 // Status options for filter
@@ -101,6 +103,14 @@ const STATUS_OPTIONS = [
   { value: "1", label: "Approved" },
   { value: "2", label: "Rejected" },
 ];
+
+// Add Fund Disbursement Type enum mapping
+const FUND_DISBURSEMENT_TYPE = {
+  0: "Project Phase",
+  1: "Conference Expense",
+  2: "Conference Funding",
+  3: "Journal Funding",
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
@@ -163,7 +173,12 @@ const RequestRecord = () => {
         return matchesSearch && matchesType && matchesStatus;
       });
 
-      setFilteredRequests(filtered);
+      // Sort by requestedAt in descending order (newest first)
+      const sortedFiltered = [...filtered].sort(
+        (a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)
+      );
+
+      setFilteredRequests(sortedFiltered);
     }
   }, [requestsData, searchText, typeFilter, statusFilter]);
 
@@ -188,10 +203,22 @@ const RequestRecord = () => {
             </h4>
             <p className="text-sm text-gray-500">{record.projectDescription}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap gap-1">
             <Tag color="blue">{record.projectTypeName}</Tag>
             <Tag color="green">{record.departmentName}</Tag>
             <Tag color="purple">{REQUEST_TYPE[record.requestType]}</Tag>
+
+            {/* Show conference or journal info if available */}
+            {record.conferenceName && (
+              <Tag color="cyan" icon={<BankOutlined />}>
+                {record.conferenceName}
+              </Tag>
+            )}
+            {record.journalName && (
+              <Tag color="geekblue" icon={<FileTextOutlined />}>
+                {record.journalName}
+              </Tag>
+            )}
           </div>
 
           <Divider className="my-3" />
@@ -226,28 +253,52 @@ const RequestRecord = () => {
       width: "30%",
       render: (_, record) => (
         <div className="space-y-4">
+          {/* Display Fund Disbursement Type as a prominent tag if available */}
+          {record.fundDisbursementType !== null && (
+            <div className="mb-3">
+              <Tag
+                color="cyan"
+                icon={
+                  record.fundDisbursementType === 1 ? (
+                    <BankOutlined />
+                  ) : record.fundDisbursementType === 2 ? (
+                    <BankOutlined />
+                  ) : record.fundDisbursementType === 3 ? (
+                    <FileTextOutlined />
+                  ) : (
+                    <DollarOutlined />
+                  )
+                }
+                className="px-3 py-1.5 text-sm rounded-md border-0 shadow-sm"
+              >
+                {FUND_DISBURSEMENT_TYPE[record.fundDisbursementType] ||
+                  "Unknown"}
+              </Tag>
+            </div>
+          )}
+
           <div className="flex items-center">
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
               <div className="flex justify-between mb-1">
                 <span className="text-sm text-gray-600">Approved Budget</span>
                 <span className="text-sm font-medium">
-                  ₫{record.approvedBudget?.toLocaleString() || "0"}
+                  {formatCurrency(record.approvedBudget || 0)}
                 </span>
               </div>
               {record.spentBudget > 0 && (
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Spent Budget</span>
                   <span className="text-sm font-medium">
-                    ₫{record.spentBudget?.toLocaleString() || "0"}
+                    {formatCurrency(record.spentBudget || 0)}
                   </span>
                 </div>
               )}
               {record.fundRequestAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Requested Funds</span>
-                  <span className="text-sm font-medium">
-                    ₫{record.fundRequestAmount?.toLocaleString() || "0"}
+                  <span className="text-sm font-medium font-bold text-green-600">
+                    {formatCurrency(record.fundRequestAmount || 0)}
                   </span>
                 </div>
               )}
@@ -278,6 +329,11 @@ const RequestRecord = () => {
                 <span className="font-medium">
                   {formatDate(record.approvedAt)}
                 </span>
+                {record.approverName && (
+                  <span className="text-sm block ml-0">
+                    by {record.approverName}
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -410,39 +466,47 @@ const RequestRecord = () => {
 
         {/* Add Filter Section - Disabled during loading */}
         <div className="mb-6">
-          <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <div className="bg-white p-5 rounded-lg shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {/* Search bar */}
               <Input
                 placeholder="Search requests..."
                 prefix={<SearchOutlined className="text-gray-400" />}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="max-w-md"
+                className="w-full sm:max-w-xs"
                 allowClear
                 value={searchText}
                 disabled={isLoading}
+                size="large"
               />
-              <span className="text-gray-700 font-medium">Filter by:</span>
-              {/* Request type filter */}
-              <Select
-                value={typeFilter}
-                style={{ width: 180 }}
-                onChange={setTypeFilter}
-                options={REQUEST_OPTIONS}
-                className="rounded-md"
-                disabled={isLoading}
-                placeholder="Request Type"
-              />
-              {/* Status filter */}
-              <Select
-                value={statusFilter}
-                style={{ width: 150 }}
-                onChange={setStatusFilter}
-                options={STATUS_OPTIONS}
-                className="rounded-md"
-                disabled={isLoading}
-                placeholder="Status"
-              />
+
+              <div className="flex items-center flex-wrap gap-3">
+                <span className="text-gray-700 font-medium whitespace-nowrap">
+                  Filter by:
+                </span>
+                {/* Request type filter */}
+                <Select
+                  value={typeFilter}
+                  style={{ minWidth: 180 }}
+                  onChange={setTypeFilter}
+                  options={REQUEST_OPTIONS}
+                  className="min-w-[180px]"
+                  disabled={isLoading}
+                  placeholder="Request Type"
+                  size="large"
+                />
+                {/* Status filter */}
+                <Select
+                  value={statusFilter}
+                  style={{ minWidth: 150 }}
+                  onChange={setStatusFilter}
+                  options={STATUS_OPTIONS}
+                  className="min-w-[150px]"
+                  disabled={isLoading}
+                  placeholder="Status"
+                  size="large"
+                />
+              </div>
             </div>
           </div>
         </div>

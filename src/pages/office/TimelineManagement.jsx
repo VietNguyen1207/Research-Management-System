@@ -38,6 +38,7 @@ import {
   ArrowRightOutlined,
   PieChartOutlined,
   ScheduleOutlined,
+  FileOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
@@ -116,10 +117,6 @@ const TimelineManagement = () => {
         return "registration";
       case 2:
         return "review";
-      case 3:
-        return "submission";
-      case 4:
-        return "budget";
       default:
         return "other";
     }
@@ -150,14 +147,8 @@ const TimelineManagement = () => {
         case "review":
           timelineTypeEnum = 2; // ReviewPeriod
           break;
-        case "submission":
-          timelineTypeEnum = 5; // ConferenceSubmission
-          break;
-        case "budget":
-          timelineTypeEnum = 3; // FundRequest
-          break;
         default:
-          timelineTypeEnum = 1;
+          timelineTypeEnum = 1; // Default to ProjectRegistration
       }
 
       // Prepare the request body according to the API requirements
@@ -215,14 +206,8 @@ const TimelineManagement = () => {
         case "review":
           timelineTypeEnum = 2; // ReviewPeriod
           break;
-        case "submission":
-          timelineTypeEnum = 5; // ConferenceSubmission
-          break;
-        case "budget":
-          timelineTypeEnum = 3; // FundRequest
-          break;
         default:
-          timelineTypeEnum = 1;
+          timelineTypeEnum = 1; // Default to ProjectRegistration
       }
 
       // Updated request body
@@ -336,9 +321,9 @@ const TimelineManagement = () => {
   const getTypeIcon = (type) => {
     switch (type) {
       case "registration":
-        return <PlusOutlined />;
+        return <FileOutlined />;
       case "review":
-        return <CheckCircleOutlined />;
+        return <TeamOutlined />;
       case "submission":
         return <CalendarOutlined />;
       case "budget":
@@ -640,6 +625,12 @@ const TimelineManagement = () => {
     </div>
   );
 
+  // Update the TIMELINE_TYPE constant that's used for the timeline visualization
+  const TIMELINE_TYPE = {
+    1: { name: "Registration", icon: <FileOutlined />, color: "blue" },
+    2: { name: "Review", icon: <TeamOutlined />, color: "orange" },
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -667,10 +658,10 @@ const TimelineManagement = () => {
             <Button
               type="primary"
               icon={<ScheduleOutlined />}
-              onClick={() => navigate("/assign-timeline")}
+              onClick={() => navigate("/timeline-sequence-management")}
               className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
             >
-              Assign Project Timelines
+              Timeline Sequence Management
             </Button>
           </Space>
         </div>
@@ -906,8 +897,6 @@ const TimelineManagement = () => {
                         <Select placeholder="Select timeline type">
                           <Option value="registration">Registration</Option>
                           <Option value="review">Review</Option>
-                          <Option value="submission">Submission</Option>
-                          <Option value="budget">Budget</Option>
                         </Select>
                       </Form.Item>
                     </Col>
@@ -1298,8 +1287,6 @@ const TimelineManagement = () => {
               <Select>
                 <Option value="registration">Project Registration</Option>
                 <Option value="review">Review Period</Option>
-                <Option value="submission">Conference Submission</Option>
-                <Option value="budget">Fund Request</Option>
               </Select>
             </Form.Item>
 
@@ -1580,12 +1567,6 @@ const TimelineManagement = () => {
                         label: "Registration",
                       },
                       { type: "review", color: "#4CAF50", label: "Review" },
-                      {
-                        type: "submission",
-                        color: "#2196F3",
-                        label: "Submission",
-                      },
-                      { type: "budget", color: "#9C27B0", label: "Budget" },
                     ].map((item) => {
                       const count = timelineData?.filter(
                         (timeline) => timeline.type === item.type

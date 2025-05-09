@@ -25,10 +25,11 @@ const Login = () => {
 
       message.success("Login successful!");
 
-      // Force navigation with a longer delay and debugging
+      // Navigate to root - let the AppRoutes handle the role-based redirection
       setTimeout(() => {
-        console.log("Attempting navigation to /");
+        console.log("Navigating to root for role-based redirection");
         navigate("/", { replace: true });
+
         // Double-check if we navigated
         setTimeout(
           () => console.log("Current location:", window.location.pathname),

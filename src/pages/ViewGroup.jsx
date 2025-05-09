@@ -24,6 +24,7 @@ import {
   AutoComplete,
   Input,
   Pagination,
+  Select,
 } from "antd";
 import {
   TeamOutlined,
@@ -102,6 +103,11 @@ const ViewGroup = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
 
+  // First, add these state variables near the other state declarations
+  const [searchText, setSearchText] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   // Fetch basic group data
   const { data: basicGroups, isLoading: isLoadingBasicGroups } =
     useGetUserBasicGroupsQuery();
@@ -147,8 +153,54 @@ const ViewGroup = () => {
     });
   }, [basicGroups, groupsWithMembers]);
 
-  // Paginate the groups
-  const paginatedGroups = combinedGroups.slice(
+  // Modify the useEffect that processes the data to include filtering
+  useEffect(() => {
+    if (combinedGroups && combinedGroups.length > 0) {
+      // Apply filters
+      const filtered = combinedGroups.filter((group) => {
+        // Search text filter (match group name or description)
+        const matchesSearch =
+          searchText.toLowerCase() === ""
+            ? true
+            : group.groupName?.toLowerCase().includes(searchText.toLowerCase());
+
+        // Group type filter
+        const matchesType =
+          typeFilter === "all"
+            ? true
+            : group.groupType?.toString() === typeFilter;
+
+        // Status filter
+        const matchesStatus =
+          statusFilter === "all"
+            ? true
+            : group.status?.toString() === statusFilter;
+
+        return matchesSearch && matchesType && matchesStatus;
+      });
+
+      // Sort groups (newest first based on creation date)
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      // Update the current page when filters change
+      setCurrentPage(1);
+
+      // Update the filtered groups list - replace this with your pagination logic
+      const paginatedGroups = filtered.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      );
+
+      // Update the filteredGroups state
+      setFilteredGroups(filtered);
+    }
+  }, [combinedGroups, searchText, typeFilter, statusFilter]);
+
+  // Update the paginatedGroups calculation to use the filtered array:
+  const [filteredGroups, setFilteredGroups] = useState([]);
+
+  // Then calculate paginated groups from the filtered array:
+  const paginatedGroups = filteredGroups.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -1114,6 +1166,59 @@ const ViewGroup = () => {
           </Col>
         </Row>
 
+        {/* Search and Filter Section */}
+        <Card className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Groups
+              </label>
+              <Input
+                placeholder="Search by group name..."
+                allowClear
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full"
+                prefix={<SearchOutlined className="text-gray-400" />}
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Group Type
+              </label>
+              <Select
+                placeholder="Filter by type"
+                onChange={setTypeFilter}
+                value={typeFilter}
+                className="w-full"
+                disabled={isLoading}
+              >
+                <Select.Option value="all">All Types</Select.Option>
+                <Select.Option value="0">Student Group</Select.Option>
+                <Select.Option value="1">Council Group</Select.Option>
+                <Select.Option value="2">Research Group</Select.Option>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <Select
+                placeholder="Filter by status"
+                onChange={setStatusFilter}
+                value={statusFilter}
+                className="w-full"
+                disabled={isLoading}
+              >
+                <Select.Option value="all">All Statuses</Select.Option>
+                <Select.Option value="0">Pending</Select.Option>
+                <Select.Option value="1">Active</Select.Option>
+                <Select.Option value="2">Inactive</Select.Option>
+              </Select>
+            </div>
+          </div>
+        </Card>
+
         {/* Groups List with Pagination */}
         {!combinedGroups || combinedGroups.length === 0 ? (
           <Empty
@@ -1335,7 +1440,7 @@ const ViewGroup = () => {
               <Pagination
                 current={currentPage}
                 pageSize={pageSize}
-                total={combinedGroups.length}
+                total={filteredGroups.length}
                 onChange={handlePageChange}
                 showSizeChanger
                 pageSizeOptions={[6, 9, 12, 18]}

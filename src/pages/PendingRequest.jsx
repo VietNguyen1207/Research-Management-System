@@ -124,6 +124,7 @@ const REQUEST_TYPE = {
   4: "Paper Creation",
   5: "Conference Creation",
   6: "Fund Disbursement",
+  7: "Conference Expense",
 };
 
 // Add this mapping for approval status
@@ -131,6 +132,14 @@ const APPROVAL_STATUS = {
   0: "Pending",
   1: "Approved",
   2: "Rejected",
+};
+
+// Add Fund Disbursement Type enum mapping
+const FUND_DISBURSEMENT_TYPE = {
+  0: "Project Phase",
+  1: "Conference Expense",
+  2: "Conference Funding",
+  3: "Journal Funding",
 };
 
 const formatDate = (dateString) => {
@@ -187,7 +196,12 @@ const PendingRequest = () => {
         return matchesSearch && matchesType;
       });
 
-      setFilteredRequests(filtered);
+      // Sort by requestedAt in descending order (newest first)
+      const sortedFiltered = [...filtered].sort(
+        (a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)
+      );
+
+      setFilteredRequests(sortedFiltered);
     }
   }, [pendingProjectsData, searchText, typeFilter]);
 
@@ -242,6 +256,47 @@ const PendingRequest = () => {
       width: "40%",
       render: (_, record) => (
         <div className="space-y-4">
+          {/* Display Fund Disbursement Type as a prominent tag if available */}
+          {record.fundDisbursementType !== null && record.requestType === 6 && (
+            <div className="mb-3">
+              <Tag
+                color="cyan"
+                icon={
+                  record.fundDisbursementType === 1 ? (
+                    <BankOutlined />
+                  ) : record.fundDisbursementType === 2 ? (
+                    <BankOutlined />
+                  ) : record.fundDisbursementType === 3 ? (
+                    <FileTextOutlined />
+                  ) : (
+                    <DollarOutlined />
+                  )
+                }
+                className="px-3 py-1 text-sm rounded-md border-0 shadow-sm"
+              >
+                {FUND_DISBURSEMENT_TYPE[record.fundDisbursementType] ||
+                  "Unknown"}
+              </Tag>
+            </div>
+          )}
+
+          {/* Display Conference/Journal Info if available */}
+          {record.conferenceName && (
+            <div className="flex items-center mt-1">
+              <BankOutlined className="text-gray-400 mr-2" />
+              <span className="text-sm">
+                Conference: {record.conferenceName}
+              </span>
+            </div>
+          )}
+
+          {record.journalName && (
+            <div className="flex items-center mt-1">
+              <FileTextOutlined className="text-gray-400 mr-2" />
+              <span className="text-sm">Journal: {record.journalName}</span>
+            </div>
+          )}
+
           <div className="flex items-center">
             <DollarOutlined className="text-gray-400 mr-2" />
             <div className="flex-1">
@@ -262,7 +317,7 @@ const PendingRequest = () => {
               {record.fundRequestAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Requested Funds</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium font-bold text-green-600">
                     ₫{record.fundRequestAmount?.toLocaleString() || "0"}
                   </span>
                 </div>
@@ -273,9 +328,9 @@ const PendingRequest = () => {
           <div className="flex items-center">
             <CalendarOutlined className="text-gray-400 mr-2" />
             <div className="text-sm">
-              <span className="text-gray-600">Timeline: </span>
+              <span className="text-gray-600">Project Status: </span>
               <span className="font-medium">
-                Project Status: {PROJECT_STATUS[record.projectStatus] || "N/A"}
+                {PROJECT_STATUS[record.projectStatus] || "N/A"}
               </span>
             </div>
           </div>

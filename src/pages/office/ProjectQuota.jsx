@@ -59,7 +59,19 @@ const ProjectQuota = () => {
   const [departmentInfo, setDepartmentInfo] = useState(null);
 
   // Fetch quota data from API
-  const { data: quotasData, isLoading, isError, error } = useGetQuotasQuery();
+  const {
+    data: quotasData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetQuotasQuery();
+
+  // Force a refetch when the component mounts
+  useEffect(() => {
+    // Immediately refetch data when component mounts
+    refetch();
+  }, [refetch]);
 
   // Filter and transform API data for the specific department
   useEffect(() => {
