@@ -1009,11 +1009,18 @@ const RegisterResearch = () => {
             <Form.Item
               label={
                 <span className="text-gray-700 font-medium text-base">
-                  Supporting Documents
+                  Supporting Documents <span style={{ color: "red" }}>*</span>
                 </span>
               }
               name="supporting_files"
               extra="Upload any relevant documents to support your research proposal"
+              rules={[
+                {
+                  required: true,
+                  message: "Please upload at least one supporting document!",
+                },
+              ]}
+              getValueFromEvent={(e) => e && e.fileList}
             >
               <Upload.Dragger
                 fileList={fileList}

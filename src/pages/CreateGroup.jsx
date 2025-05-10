@@ -38,6 +38,7 @@ import {
   WarningOutlined,
   ClearOutlined,
   CheckCircleFilled,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -65,8 +66,8 @@ const CreateGroup = () => {
   const [stakeholderEmail, setStakeholderEmail] = useState("");
   const [stakeholderName, setStakeholderName] = useState("");
 
-  // Check if user is a lecturer
-  const isLecturer = user?.role === "lecturer";
+  // Check if user is a lecturer or researcher
+  const isLecturer = user?.role === "lecturer" || user?.role === "researcher";
 
   // Set member limit based on role
   const maxMembers = isLecturer ? 10 : 5;
@@ -89,6 +90,7 @@ const CreateGroup = () => {
     data: academicUsers,
     isLoading: isLoadingAcademicUsers,
     isError: isAcademicUsersError,
+    refetch: refetchAcademicUsers,
   } = useGetAcademicUsersQuery(undefined, { skip: !isLecturer });
 
   // Add the create mutation
@@ -108,6 +110,9 @@ const CreateGroup = () => {
     const inputLower = emailInput.toLowerCase();
 
     if (isLecturer && academicUsers) {
+      // Debug log to check if researchers are included
+      console.log("Academic users data:", academicUsers);
+
       // For lecturers, show both students and other lecturers
       const filteredUsers = academicUsers.allUsers
         .filter(
@@ -132,14 +137,21 @@ const CreateGroup = () => {
               size="small"
               icon={<UserOutlined />}
               className={
-                user.userType === "Lecturer" ? "bg-[#1890ff]" : "bg-[#D2691E]"
+                user.userType === "Lecturer" || user.userType === "Researcher"
+                  ? "bg-[#1890ff]"
+                  : "bg-[#D2691E]"
               }
             />
             <div className="flex flex-col">
               <div className="flex items-center">
                 <span className="font-medium">{user.fullName}</span>
                 <Tag
-                  color={user.userType === "Lecturer" ? "blue" : "orange"}
+                  color={
+                    user.userType === "Lecturer" ||
+                    user.userType === "Researcher"
+                      ? "blue"
+                      : "orange"
+                  }
                   className="ml-2 text-xs px-1 py-0"
                 >
                   {user.userType}
@@ -187,6 +199,13 @@ const CreateGroup = () => {
       setAutoCompleteOptions(options);
     }
   }, [emailInput, students, academicUsers, members, isLecturer, user]);
+
+  // Add useEffect to refetch data when component mounts
+  useEffect(() => {
+    if (isLecturer && refetchAcademicUsers) {
+      refetchAcademicUsers();
+    }
+  }, [isLecturer, refetchAcademicUsers]);
 
   const handleAddMember = () => {
     // Calculate the actual max members based on role
@@ -1048,7 +1067,7 @@ const CreateGroup = () => {
                 style={{ width: "100%" }}
                 placeholder={
                   isLecturer
-                    ? "Search for students or lecturers by name or email"
+                    ? "Search for students, lecturers, or researchers by name or email"
                     : "Search for students by name or email"
                 }
                 notFoundContent={
@@ -1069,7 +1088,10 @@ const CreateGroup = () => {
                       <div className="flex flex-col items-center">
                         <TeamOutlined className="text-gray-300 text-xl mb-2" />
                         <span>
-                          Type to search for {isLecturer ? "users" : "students"}
+                          Type to search for{" "}
+                          {isLecturer
+                            ? "users (students, lecturers, researchers)"
+                            : "students"}
                         </span>
                       </div>
                     </div>
@@ -1108,6 +1130,17 @@ const CreateGroup = () => {
               >
                 Add
               </Button>
+              {isLecturer && (
+                <Button
+                  type="default"
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    refetchAcademicUsers();
+                    message.info("Refreshing user list...");
+                  }}
+                  title="Refresh user list"
+                />
+              )}
             </div>
 
             <div className="mt-3 flex justify-between items-center">
@@ -1177,7 +1210,8 @@ const CreateGroup = () => {
                               icon={<UserOutlined />}
                               size="default"
                               className={
-                                member.userType === "Lecturer"
+                                member.userType === "Lecturer" ||
+                                member.userType === "Researcher"
                                   ? "bg-[#1890ff]"
                                   : "bg-[#D2691E]"
                               }
@@ -1197,7 +1231,8 @@ const CreateGroup = () => {
                                   {member.userType && (
                                     <Tag
                                       color={
-                                        member.userType === "Lecturer"
+                                        member.userType === "Lecturer" ||
+                                        member.userType === "Researcher"
                                           ? "blue"
                                           : "orange"
                                       }

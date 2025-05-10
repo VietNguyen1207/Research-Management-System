@@ -35,6 +35,10 @@ export const ProtectedRoutes = ({
 
   // For role-based access
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    // Special case: if route allows "lecturer" and user is "researcher", allow access
+    if (allowedRoles.includes("lecturer") && user.role === "researcher") {
+      return <>{children}</>;
+    }
     return <Navigate to="/unauthorized" replace />;
   }
 

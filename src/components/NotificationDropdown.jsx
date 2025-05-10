@@ -26,7 +26,6 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
-  useGetUserNotificationsQuery,
   useMarkNotificationAsReadMutation,
   useMarkAllNotificationsAsReadMutation,
 } from "../features/notification/notificationApiSlice";
@@ -34,37 +33,47 @@ import {
   useAcceptInvitationMutation,
   useRejectInvitationMutation,
 } from "../features/invitation/invitationApiSlice";
+import { useNotificationCount } from "./Header";
 
 dayjs.extend(relativeTime);
 
 const NotificationDropdown = () => {
+  // Add CSS styles for read transition
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .notification-read-transition {
+        background-color: rgba(235, 250, 235, 0.5) !important;
+        transition: background-color 0.6s ease;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const currentUser = useSelector(selectCurrentUser);
   const userId = currentUser?.id;
   const [markingReadId, setMarkingReadId] = useState(null); // Track which notification is being marked as read
-  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Use the shared notification hook instead of a separate query
+  const { notifications, unreadCount, isLoading, isError, refetch } =
+    useNotificationCount(userId);
   const [sortedNotifications, setSortedNotifications] = useState([]);
   const [sortedUnreadNotifications, setSortedUnreadNotifications] = useState(
     []
   );
 
-  // Fetch notifications
-  const {
-    data: notifications = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useGetUserNotificationsQuery(userId, {
-    skip: !userId,
-    pollingInterval: 30000, // Poll every 30 seconds
-  });
+  // Remove these as they're now provided by the hook
+  // const isLoading = false;
+  // const isError = false;
+  // const refetch = () => {};
 
-  // Update unread count and sort notifications whenever they change
+  // Update sorted notifications whenever they change
   useEffect(() => {
     if (notifications && notifications.length > 0) {
-      // Count unread notifications
-      const count = notifications.filter((n) => n.read === false).length;
-      setUnreadCount(count);
-
       // Sort notifications by timestamp (newest first)
       const sorted = [...notifications].sort((a, b) => {
         return new Date(b.timestamp) - new Date(a.timestamp);
@@ -74,14 +83,7 @@ const NotificationDropdown = () => {
       // Sort unread notifications by timestamp (newest first)
       const unreadSorted = sorted.filter((n) => !n.read);
       setSortedUnreadNotifications(unreadSorted);
-
-      // Debug log
-      console.log(
-        "Unread notifications:",
-        notifications.filter((n) => !n.read)
-      );
     } else {
-      setUnreadCount(0);
       setSortedNotifications([]);
       setSortedUnreadNotifications([]);
     }
@@ -139,13 +141,25 @@ const NotificationDropdown = () => {
 
     // Don't mark as read if it's already read
     const notification = notifications.find((n) => n.id === notificationId);
-    if (notification?.read) return;
+    if (notification && notification.read) return;
 
     setMarkingReadId(notificationId);
     try {
       await markAsRead(notificationId).unwrap();
-      // Update local state immediately for better UX
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      // No need to update local state as the API refetch will handle it
+
+      // Add a subtle animation by applying and removing a CSS class
+      const notificationElement = document.getElementById(
+        `notification-${notificationId}`
+      );
+      if (notificationElement) {
+        notificationElement.classList.add("notification-read-transition");
+        setTimeout(() => {
+          notificationElement.classList.remove("notification-read-transition");
+        }, 600);
+      }
+
+      // Refetch to get updated notification list
       refetch();
     } catch (error) {
       console.error("Mark as read error:", error);
@@ -160,7 +174,7 @@ const NotificationDropdown = () => {
 
     try {
       await markAllAsRead(userId).unwrap();
-      setUnreadCount(0); // Set to zero immediately
+      // No need to set unreadCount to zero - refetch will update it
       message.success("All notifications marked as read");
       refetch();
     } catch (error) {
@@ -198,6 +212,12 @@ const NotificationDropdown = () => {
 
   // Render read status icon
   const renderReadStatus = (notification) => {
+    // Show loading spinner when this specific notification is being marked as read
+    if (markingReadId === notification.id) {
+      return <Spin size="small" className="ml-2" />;
+    }
+
+    // For already read notifications
     if (notification.read) {
       return (
         <Tooltip title="Read">
@@ -334,7 +354,7 @@ const NotificationDropdown = () => {
           <div className="flex-1">
             <div className="flex items-center">
               <Typography.Text strong className="text-base block mb-1">
-                Response Received
+                Notification Mark as Read
               </Typography.Text>
               {renderReadStatus(notification)}
             </div>
@@ -367,8 +387,9 @@ const NotificationDropdown = () => {
           dataSource={sortedNotifications}
           renderItem={(item) => (
             <List.Item
-              className={`border-b-0 ${
-                !item.read ? "bg-orange-50/50" : ""
+              id={`notification-${item.id}`}
+              className={`border-b-0 ${!item.read ? "bg-orange-50/50" : ""} ${
+                markingReadId === item.id ? "opacity-70" : ""
               } hover:bg-orange-50 transition-all duration-200 p-3 cursor-pointer`}
               onClick={() => handleNotificationClick(item)}
             >
@@ -410,7 +431,10 @@ const NotificationDropdown = () => {
           dataSource={sortedUnreadNotifications}
           renderItem={(item) => (
             <List.Item
-              className="border-b-0 bg-orange-50/50 cursor-pointer"
+              id={`notification-${item.id}`}
+              className={`border-b-0 bg-orange-50/50 ${
+                markingReadId === item.id ? "opacity-70" : ""
+              } cursor-pointer`}
               onClick={() => handleNotificationClick(item)}
             >
               {renderNotificationContent(item)}
@@ -457,12 +481,7 @@ const NotificationDropdown = () => {
         </Button>
       </div>
       <Spin
-        spinning={
-          isLoading ||
-          isAcceptingInvitation ||
-          isRejectingInvitation ||
-          isMarkingAsRead
-        }
+        spinning={isLoading || isAcceptingInvitation || isRejectingInvitation}
       >
         <Tabs
           items={items}

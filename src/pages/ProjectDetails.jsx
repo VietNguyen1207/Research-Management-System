@@ -2192,16 +2192,13 @@ const ProjectDetails = () => {
             />
           </Form.Item>
 
-          <Form.Item name="itemizedExpenses" label="Itemized Expenses">
-            <Input.TextArea
-              rows={4}
-              placeholder="List specific expenses (e.g., Equipment: ₫5,000,000, Materials: ₫3,000,000, etc.)"
-            />
-          </Form.Item>
-
           <Form.Item
             name="documentationFiles"
-            label="Supporting Documentation"
+            label={
+              <span>
+                Supporting Documentation <span style={{ color: "red" }}>*</span>
+              </span>
+            }
             valuePropName="fileList"
             getValueFromEvent={(e) => {
               if (Array.isArray(e)) {
@@ -2210,6 +2207,10 @@ const ProjectDetails = () => {
               return e && e.fileList?.slice(0, 3);
             }}
             rules={[
+              {
+                required: true,
+                message: "Please upload at least one supporting document",
+              },
               {
                 validator: (_, fileList) => {
                   if (fileList && fileList.length > 3) {

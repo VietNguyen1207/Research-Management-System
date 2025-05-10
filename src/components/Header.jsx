@@ -19,18 +19,31 @@ import { logoutUser } from "../features/auth/authSlice";
 import NotificationDropdown from "./NotificationDropdown";
 import { useGetUserNotificationsQuery } from "../features/notification/notificationApiSlice";
 
+// Create a shared notification selector hook to avoid duplicate API calls
+export const useNotificationCount = (userId) => {
+  const {
+    data: notifications = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useGetUserNotificationsQuery(userId, {
+    skip: !userId,
+    pollingInterval: 30000, // Poll every 30 seconds
+  });
+
+  // Count unread notifications
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return { notifications, unreadCount, isLoading, isError, refetch };
+};
+
 const Header = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
-  // Get real notifications from API
-  const { data: notifications = [] } = useGetUserNotificationsQuery(user?.id, {
-    skip: !user?.id,
-  });
-
-  // Count unread notifications
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Use the shared hook instead of duplicating the API call
+  const { unreadCount } = useNotificationCount(user?.id);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
@@ -162,11 +175,13 @@ const Header = () => {
                           {user?.role?.charAt(0).toUpperCase() +
                             user?.role?.slice(1)}
                         </span>
-                        {user?.role === "lecturer" && user?.level && (
-                          <span className="text-[10px] uppercase font-bold tracking-wider text-amber-50 bg-gradient-to-r from-amber-600/70 to-orange-600/70 px-1.5 py-0.5 rounded-md shadow-sm backdrop-blur-sm">
-                            {user.level}
-                          </span>
-                        )}
+                        {(user?.role === "lecturer" ||
+                          user?.role === "researcher") &&
+                          user?.level && (
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-50 bg-gradient-to-r from-amber-600/70 to-orange-600/70 px-1.5 py-0.5 rounded-md shadow-sm backdrop-blur-sm">
+                              {user.level}
+                            </span>
+                          )}
                       </div>
                       {user?.department?.departmentName && (
                         <div className="flex items-center mt-1">

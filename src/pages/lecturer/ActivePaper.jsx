@@ -24,6 +24,7 @@ import {
   Menu,
   Skeleton,
   List,
+  Pagination,
 } from "antd";
 import {
   SearchOutlined,
@@ -170,6 +171,10 @@ const ActivePaper = () => {
   // Add state for projects data
   const [projectsData, setProjectsData] = useState([]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+
   if (isErrorConferences || isErrorJournals) {
     message.error(
       `Failed to load conferences or journals: ${
@@ -229,6 +234,17 @@ const ActivePaper = () => {
 
     return matchesSearch && matchesStatus && matchesType && matchesTab;
   });
+
+  // Paginate the filtered projects
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Reset page on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, filterStatus, filterType, activeTab, projectsData]);
 
   // Calculate statistics
   const stats = {
@@ -696,8 +712,8 @@ const ActivePaper = () => {
 
         {/* Enhanced Papers Grid with staggered animation */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.length > 0 ? (
-            filteredProjects.map((project, index) => (
+          {paginatedProjects.length > 0 ? (
+            paginatedProjects.map((project, index) => (
               <motion.div
                 key={project.projectId}
                 initial={{ opacity: 0, y: 20 }}
@@ -838,6 +854,24 @@ const ActivePaper = () => {
             </motion.div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredProjects.length > 0 && (
+          <div className="flex justify-center mt-8">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={filteredProjects.length}
+              showSizeChanger
+              pageSizeOptions={[6, 9, 12, 18]}
+              onChange={(page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              }}
+              showTotal={(total) => `Total ${total} projects`}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

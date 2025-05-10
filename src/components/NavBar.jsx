@@ -180,6 +180,14 @@ const NavBar = () => {
     "Request",
     "Academic Calendar",
   ];
+  const researcherNavItems = [
+    "Group",
+    "Registration",
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Academic Calendar",
+  ];
   const deptHeadNavItems = [
     "Research Project",
     "Paper Project",
@@ -269,6 +277,9 @@ const NavBar = () => {
         case "lecturer":
           allowedItems = lecturerNavItems;
           break;
+        case "researcher":
+          allowedItems = researcherNavItems;
+          break;
         case "department":
           allowedItems = deptHeadNavItems;
           break;
@@ -309,7 +320,7 @@ const NavBar = () => {
 
         //Custom Registration for student and lecturer
         if (item.label === "Registration") {
-          if (user.role === "lecturer") {
+          if (user.role === "lecturer" || user.role === "researcher") {
             return {
               ...item,
               subItems: item.subItems,
@@ -327,7 +338,7 @@ const NavBar = () => {
 
         // Custom Group for lecturer and Office
         if (item.label === "Group") {
-          if (user.role === "lecturer") {
+          if (user.role === "lecturer" || user.role === "researcher") {
             return {
               ...item,
               subItems: item.subItems.filter(

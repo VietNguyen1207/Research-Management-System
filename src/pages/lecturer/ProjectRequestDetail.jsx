@@ -247,7 +247,9 @@ const ProjectRequestDetail = () => {
       // Check if user has permission
       if (
         projectRequest.requestType !== 6 &&
-        (user?.role === "lecturer" || user?.role === "department") &&
+        (user?.role === "lecturer" ||
+          user?.role === "department" ||
+          user?.role === "researcher") &&
         !isUserInCouncil(user)
       ) {
         message.error("You don't have permission to approve this request");
@@ -305,7 +307,9 @@ const ProjectRequestDetail = () => {
       // Check if user has permission
       if (
         projectRequest.requestType !== 6 &&
-        (user?.role === "lecturer" || user?.role === "department") &&
+        (user?.role === "lecturer" ||
+          user?.role === "department" ||
+          user?.role === "researcher") &&
         !isUserInCouncil(user)
       ) {
         message.error("You don't have permission to reject this request");
@@ -702,7 +706,9 @@ const ProjectRequestDetail = () => {
               (projectRequest.requestType === 6 &&
                 (user?.role === "office" || user?.role === "admin")) ||
               (projectRequest.requestType !== 6 &&
-                (user?.role === "lecturer" || user?.role === "department") &&
+                (user?.role === "lecturer" ||
+                  user?.role === "department" ||
+                  user?.role === "researcher") &&
                 isUserInCouncil(user)) ? (
                 <div className="mt-4 md:mt-0 flex gap-3">
                   <Button
@@ -726,7 +732,9 @@ const ProjectRequestDetail = () => {
                   </Button>
                 </div>
               ) : // Show informational message for lecturers/department who aren't in council
-              (user?.role === "lecturer" || user?.role === "department") &&
+              (user?.role === "lecturer" ||
+                  user?.role === "department" ||
+                  user?.role === "researcher") &&
                 !isUserInCouncil(user) &&
                 projectRequest.requestType !== 6 ? (
                 <div className="mt-4 md:mt-0">

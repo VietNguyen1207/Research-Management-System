@@ -73,18 +73,26 @@ export const userApiSlice = apiSlice.injectEndpoints({
           lecturer.userType = "Lecturer"; // Add a type identifier
         });
 
+        // Process researchers - they're in a separate array
+        const researchers = response.data?.researchers || [];
+        researchers.forEach((researcher) => {
+          researcher.levelText = levelMap[researcher.level] || "Unknown";
+          researcher.userType = "Researcher"; // Add a type identifier
+        });
+
         // Add a type identifier to students
         const students = response.data?.students || [];
         students.forEach((student) => {
           student.userType = "Student";
         });
 
-        // Combine all users for autocomplete
-        const allUsers = [...lecturers, ...students];
+        // Combine all users for autocomplete - include researchers
+        const allUsers = [...lecturers, ...researchers, ...students];
 
         return {
           students,
           lecturers,
+          researchers,
           allUsers,
         };
       },

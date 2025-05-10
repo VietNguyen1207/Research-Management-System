@@ -55,7 +55,15 @@ export const notificationApiSlice = apiSlice.injectEndpoints({
       query: (notificationId) => ({
         url: `/notifications/${notificationId}`,
         method: "PATCH",
+        body: { isRead: true },
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
+      transformResponse: (response) => {
+        // Handle the success response
+        return response.data;
+      },
       invalidatesTags: (result, error, notificationId) => [
         { type: "Notifications", id: notificationId },
         { type: "Notifications", id: "LIST" },

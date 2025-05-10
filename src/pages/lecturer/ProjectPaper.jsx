@@ -81,6 +81,12 @@ const ProjectPaper = () => {
   const [createJournalFromResearch, { isLoading: isCreatingJournal }] =
     useCreateJournalFromResearchMutation();
 
+  // Pagination state
+  const [conferencePage, setConferencePage] = useState(1);
+  const [conferencePageSize, setConferencePageSize] = useState(10);
+  const [journalPage, setJournalPage] = useState(1);
+  const [journalPageSize, setJournalPageSize] = useState(10);
+
   // Fetch conferences data
   const {
     data: conferencesResponse,
@@ -255,6 +261,24 @@ const ProjectPaper = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Paginate the filtered data
+  const paginatedConferences = filteredConferences.slice(
+    (conferencePage - 1) * conferencePageSize,
+    conferencePage * conferencePageSize
+  );
+  const paginatedJournals = filteredJournals.slice(
+    (journalPage - 1) * journalPageSize,
+    journalPage * journalPageSize
+  );
+
+  // Reset pagination on filter/search change
+  useEffect(() => {
+    setConferencePage(1);
+  }, [searchText, statusFilter, conferencesList]);
+  useEffect(() => {
+    setJournalPage(1);
+  }, [searchText, statusFilter, journalsList]);
 
   const getPresentationTypeLabel = (typeCode) => {
     switch (typeCode) {
@@ -810,9 +834,18 @@ const ProjectPaper = () => {
                 {filteredConferences.length > 0 ? (
                   <Table
                     columns={columns}
-                    dataSource={filteredConferences}
+                    dataSource={paginatedConferences}
                     rowKey="conferenceId"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{
+                      current: conferencePage,
+                      pageSize: conferencePageSize,
+                      total: filteredConferences.length,
+                      showSizeChanger: true,
+                      onChange: (page, pageSize) => {
+                        setConferencePage(page);
+                        setConferencePageSize(pageSize);
+                      },
+                    }}
                     className="paper-table"
                   />
                 ) : (
@@ -842,9 +875,18 @@ const ProjectPaper = () => {
                 {filteredJournals.length > 0 ? (
                   <Table
                     columns={journalColumns}
-                    dataSource={filteredJournals}
+                    dataSource={paginatedJournals}
                     rowKey="journalId"
-                    pagination={{ pageSize: 10 }}
+                    pagination={{
+                      current: journalPage,
+                      pageSize: journalPageSize,
+                      total: filteredJournals.length,
+                      showSizeChanger: true,
+                      onChange: (page, pageSize) => {
+                        setJournalPage(page);
+                        setJournalPageSize(pageSize);
+                      },
+                    }}
                     className="paper-table"
                   />
                 ) : (

@@ -45,7 +45,7 @@ const RoleBasedRedirect = () => {
 
   if (user) {
     const role = user.role;
-    if (role === "lecturer" || role === "student") {
+    if (role === "lecturer" || role === "student" || role === "researcher") {
       return <Navigate to="/timeline-schedule" replace />;
     } else if (role === "office") {
       return <Navigate to="/timeline-management" replace />;
@@ -98,7 +98,7 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["lecturer"]}>
+          <ProtectedRoutes allowedRoles={["lecturer", "researcher"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
@@ -133,7 +133,13 @@ export const routes = [
         path: "",
         element: (
           <ProtectedRoutes
-            allowedRoles={["lecturer", "department", "office", "student"]}
+            allowedRoles={[
+              "lecturer",
+              "department",
+              "office",
+              "student",
+              "researcher",
+            ]}
           >
             <Outlet />
           </ProtectedRoutes>
