@@ -21,6 +21,7 @@ import {
   Divider,
   Form,
   Modal,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
@@ -53,6 +54,8 @@ import {
   useGetUserConferencesQuery,
   useUpdateConferenceSubmissionStatusMutation,
   useCreateConferenceFromResearchMutation,
+  useGetUserJournalsQuery,
+  useCreateJournalFromResearchMutation,
 } from "../../features/project/conference/conferenceApiSlice";
 
 const { Search } = Input;
@@ -65,25 +68,52 @@ const ProjectPaper = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [projectInfo, setProjectInfo] = useState(null);
   const [conferencesList, setConferencesList] = useState([]);
+  const [journalsList, setJournalsList] = useState([]);
+  const [activeTab, setActiveTab] = useState("conferences");
   const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
   const [selectedConference, setSelectedConference] = useState(null);
   const [statusForm] = Form.useForm();
   const [createPaperModalVisible, setCreatePaperModalVisible] = useState(false);
   const [createPaperForm] = Form.useForm();
+  const [createJournalForm] = Form.useForm();
   const [createConferenceFromResearch, { isLoading: isCreatingConference }] =
     useCreateConferenceFromResearchMutation();
+  const [createJournalFromResearch, { isLoading: isCreatingJournal }] =
+    useCreateJournalFromResearchMutation();
+
+  // Pagination state
+  const [conferencePage, setConferencePage] = useState(1);
+  const [conferencePageSize, setConferencePageSize] = useState(10);
+  const [journalPage, setJournalPage] = useState(1);
+  const [journalPageSize, setJournalPageSize] = useState(10);
 
   // Fetch conferences data
   const {
     data: conferencesResponse,
-    isLoading,
-    isError,
-    error,
-    refetch,
+    isLoading: isLoadingConferences,
+    isError: isErrorConferences,
+    error: errorConferences,
+    refetch: refetchConferences,
   } = useGetUserConferencesQuery();
+
+  // Fetch journals data
+  const {
+    data: journalsResponse,
+    isLoading: isLoadingJournals,
+    isError: isErrorJournals,
+    error: errorJournals,
+    refetch: refetchJournals,
+  } = useGetUserJournalsQuery();
 
   const [updateStatus, { isLoading: isUpdating }] =
     useUpdateConferenceSubmissionStatusMutation();
+
+  // Add useEffect to refetch data when component mounts
+  useEffect(() => {
+    // Refetch data when component mounts
+    refetchConferences();
+    refetchJournals();
+  }, [refetchConferences, refetchJournals]);
 
   useEffect(() => {
     if (conferencesResponse?.data) {
@@ -94,29 +124,59 @@ const ProjectPaper = () => {
 
       setConferencesList(projectConferences);
 
-      // Set project info from the first conference
+      // Set project info from the first conference if available
       if (projectConferences.length > 0) {
-        setProjectInfo({
-          projectId: projectConferences[0].projectId,
-          projectName: projectConferences[0].projectName,
-          totalCount: projectConferences.length,
-          pendingCount: projectConferences.filter(
-            (c) => c.conferenceSubmissionStatus === 0
-          ).length,
-          approvedCount: projectConferences.filter(
-            (c) => c.conferenceSubmissionStatus === 1
-          ).length,
-          rejectedCount: projectConferences.filter(
-            (c) => c.conferenceSubmissionStatus === 2
-          ).length,
-        });
+        updateProjectInfo(projectConferences[0], projectConferences);
       }
     }
   }, [conferencesResponse, projectId]);
 
-  if (isError) {
+  useEffect(() => {
+    if (journalsResponse?.data) {
+      // Filter journals by project ID
+      const projectJournals = journalsResponse.data.filter(
+        (journal) => journal.projectId.toString() === projectId
+      );
+
+      setJournalsList(projectJournals);
+
+      // If no conferences were found, set project info from the first journal
+      if (conferencesList.length === 0 && projectJournals.length > 0) {
+        updateProjectInfo(projectJournals[0], [], projectJournals);
+      } else if (conferencesList.length > 0 && projectJournals.length > 0) {
+        // Update project info to include journals
+        updateProjectInfo(conferencesList[0], conferencesList, projectJournals);
+      }
+    }
+  }, [journalsResponse, projectId, conferencesList]);
+
+  // Helper function to update project info
+  const updateProjectInfo = (firstItem, conferences = [], journals = []) => {
+    setProjectInfo({
+      projectId: firstItem.projectId,
+      projectName: firstItem.projectName,
+      totalCount: conferences.length + journals.length,
+      pendingCount:
+        conferences.filter((c) => c.conferenceSubmissionStatus === 0).length +
+        journals.filter((j) => j.publisherStatus === 0).length,
+      approvedCount:
+        conferences.filter((c) => c.conferenceSubmissionStatus === 1).length +
+        journals.filter((j) => j.publisherStatus === 2).length,
+      rejectedCount:
+        conferences.filter((c) => c.conferenceSubmissionStatus === 2).length +
+        journals.filter((j) => j.publisherStatus === 1).length,
+      conferenceCount: conferences.length,
+      journalCount: journals.length,
+    });
+  };
+
+  if (isErrorConferences || isErrorJournals) {
     message.error(
-      `Failed to load conferences: ${error?.data?.message || "Unknown error"}`
+      `Failed to load conferences or journals: ${
+        errorConferences?.data?.message ||
+        errorJournals?.data?.message ||
+        "Unknown error"
+      }`
     );
   }
 
@@ -133,6 +193,19 @@ const ProjectPaper = () => {
     }
   };
 
+  const getJournalStatusTag = (status) => {
+    switch (status) {
+      case 0: // Pending
+        return <Tag color="warning">Pending</Tag>;
+      case 1: // Rejected
+        return <Tag color="error">Rejected</Tag>;
+      case 2: // Approved
+        return <Tag color="success">Approved</Tag>;
+      default:
+        return <Tag color="default">Unknown</Tag>;
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString || new Date(dateString).getFullYear() <= 1)
       return "Not set";
@@ -140,7 +213,17 @@ const ProjectPaper = () => {
   };
 
   const handleViewPaperDetails = (conference) => {
-    navigate(`/active-paper-details/${conference.conferenceId}`);
+    // First refetch the latest data
+    refetchConferences().then(() => {
+      navigate(`/active-paper-details/${conference.conferenceId}`);
+    });
+  };
+
+  const handleViewJournalDetails = (journal) => {
+    // First refetch the latest data
+    refetchJournals().then(() => {
+      navigate(`/journal-details/${journal.journalId}`);
+    });
   };
 
   // Filter conferences based on search text and status filter
@@ -162,6 +245,40 @@ const ProjectPaper = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Filter journals based on search text and status filter
+  const filteredJournals = journalsList.filter((journal) => {
+    const matchesSearch =
+      searchText === "" ||
+      journal.journalName.toLowerCase().includes(searchText.toLowerCase()) ||
+      journal.publisherName.toLowerCase().includes(searchText.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending" && journal.publisherStatus === 0) ||
+      (statusFilter === "approved" && journal.publisherStatus === 2) ||
+      (statusFilter === "rejected" && journal.publisherStatus === 1);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Paginate the filtered data
+  const paginatedConferences = filteredConferences.slice(
+    (conferencePage - 1) * conferencePageSize,
+    conferencePage * conferencePageSize
+  );
+  const paginatedJournals = filteredJournals.slice(
+    (journalPage - 1) * journalPageSize,
+    journalPage * journalPageSize
+  );
+
+  // Reset pagination on filter/search change
+  useEffect(() => {
+    setConferencePage(1);
+  }, [searchText, statusFilter, conferencesList]);
+  useEffect(() => {
+    setJournalPage(1);
+  }, [searchText, statusFilter, journalsList]);
 
   const getPresentationTypeLabel = (typeCode) => {
     switch (typeCode) {
@@ -222,7 +339,7 @@ const ProjectPaper = () => {
     }
   };
 
-  const handleCreatePaperSubmit = async () => {
+  const handleCreateConferencePaperSubmit = async () => {
     try {
       const values = await createPaperForm.validateFields();
 
@@ -238,13 +355,42 @@ const ProjectPaper = () => {
 
       message.success("Conference paper created successfully!");
       setCreatePaperModalVisible(false);
-      refetch(); // Refresh the conference data
+      refetchConferences(); // Refresh the conference data
+      createPaperForm.resetFields();
     } catch (error) {
       if (error.name !== "ValidationError") {
         console.error("Failed to create conference paper:", error);
         message.error(
           error.data?.message ||
             "Failed to create conference paper. Please try again."
+        );
+      }
+    }
+  };
+
+  const handleCreateJournalPaperSubmit = async () => {
+    try {
+      const values = await createJournalForm.validateFields();
+
+      // Call the API to create a journal paper
+      await createJournalFromResearch({
+        projectId,
+        journalData: {
+          journalName: values.journalName,
+          publisherName: values.publisherName,
+        },
+      }).unwrap();
+
+      message.success("Journal paper created successfully!");
+      setCreatePaperModalVisible(false);
+      createJournalForm.resetFields();
+      refetchJournals(); // Refresh the journals data
+    } catch (error) {
+      if (error.name !== "ValidationError") {
+        console.error("Failed to create journal paper:", error);
+        message.error(
+          error.data?.message ||
+            "Failed to create journal paper. Please try again."
         );
       }
     }
@@ -384,8 +530,104 @@ const ProjectPaper = () => {
     },
   ];
 
+  const journalColumns = [
+    {
+      title: "Journal",
+      dataIndex: "journalName",
+      key: "journalName",
+      render: (text, record) => (
+        <div className="flex items-start space-y-1 flex-col">
+          <div className="flex items-center">
+            <Avatar
+              size="small"
+              icon={<BookOutlined />}
+              className="bg-purple-100 text-purple-600 mr-2"
+            />
+            <span className="font-medium">{text}</span>
+          </div>
+          <div className="text-xs text-gray-500 flex items-center">
+            <BookOutlined className="mr-1" /> {record.publisherName}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: 120,
+      render: (_, record) => getJournalStatusTag(record.publisherStatus),
+    },
+    {
+      title: "DOI",
+      dataIndex: "doiNumber",
+      key: "doiNumber",
+      width: 150,
+      render: (text) =>
+        text || <span className="text-gray-400">Not assigned</span>,
+    },
+    {
+      title: "Dates",
+      key: "dates",
+      render: (_, record) => (
+        <div className="space-y-1">
+          {record.acceptanceDate && (
+            <div className="text-xs flex items-center">
+              <CheckCircleOutlined className="mr-1 text-green-500" />
+              Accepted: {formatDate(record.acceptanceDate)}
+            </div>
+          )}
+          {record.publicationDate && (
+            <div className="text-xs flex items-center">
+              <CalendarOutlined className="mr-1 text-blue-500" />
+              Published: {formatDate(record.publicationDate)}
+            </div>
+          )}
+          {record.submissionDate && (
+            <div className="text-xs flex items-center">
+              <ClockCircleOutlined className="mr-1 text-orange-500" />
+              Submitted: {formatDate(record.submissionDate)}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: 150,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewJournalDetails(record)}
+            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 border-none"
+          >
+            View
+          </Button>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "1",
+                  label: "Edit Submission",
+                  icon: <EditOutlined />,
+                },
+                // Add more actions as needed
+              ],
+            }}
+            placement="bottomRight"
+            trigger={["click"]}
+          >
+            <Button icon={<MoreOutlined />} />
+          </Dropdown>
+        </Space>
+      ),
+    },
+  ];
+
   // Show loading state
-  if (isLoading) {
+  if (isLoadingConferences || isLoadingJournals) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16">
         <Spin size="large" />
@@ -561,7 +803,7 @@ const ProjectPaper = () => {
           <Card className="shadow-md rounded-xl border-0">
             <div className="flex justify-between items-center mb-4">
               <Title level={4} className="m-0 flex items-center">
-                <GlobalOutlined className="mr-2 text-teal-500" /> Conference
+                <ProjectOutlined className="mr-2 text-orange-500" /> Project
                 Papers
               </Title>
               <Button
@@ -570,32 +812,99 @@ const ProjectPaper = () => {
                 onClick={() => setCreatePaperModalVisible(true)}
                 className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 border-none"
               >
-                New Conference
+                New Paper
               </Button>
             </div>
 
-            {filteredConferences.length > 0 ? (
-              <Table
-                columns={columns}
-                dataSource={filteredConferences}
-                rowKey="conferenceId"
-                pagination={{ pageSize: 10 }}
-                className="paper-table"
-              />
-            ) : (
-              <Empty
-                description={
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              className="mb-4"
+              tabBarStyle={{ marginBottom: 16 }}
+            >
+              <Tabs.TabPane
+                tab={
                   <span>
-                    No conference papers found
-                    {searchText || statusFilter !== "all"
-                      ? " matching your filters"
-                      : ""}
+                    <GlobalOutlined /> Conferences (
+                    {projectInfo?.conferenceCount || 0})
                   </span>
                 }
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                className="my-12"
-              />
-            )}
+                key="conferences"
+              >
+                {filteredConferences.length > 0 ? (
+                  <Table
+                    columns={columns}
+                    dataSource={paginatedConferences}
+                    rowKey="conferenceId"
+                    pagination={{
+                      current: conferencePage,
+                      pageSize: conferencePageSize,
+                      total: filteredConferences.length,
+                      showSizeChanger: true,
+                      onChange: (page, pageSize) => {
+                        setConferencePage(page);
+                        setConferencePageSize(pageSize);
+                      },
+                    }}
+                    className="paper-table"
+                  />
+                ) : (
+                  <Empty
+                    description={
+                      <span>
+                        No conference papers found
+                        {searchText || statusFilter !== "all"
+                          ? " matching your filters"
+                          : ""}
+                      </span>
+                    }
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    className="my-12"
+                  />
+                )}
+              </Tabs.TabPane>
+
+              <Tabs.TabPane
+                tab={
+                  <span>
+                    <BookOutlined /> Journals ({projectInfo?.journalCount || 0})
+                  </span>
+                }
+                key="journals"
+              >
+                {filteredJournals.length > 0 ? (
+                  <Table
+                    columns={journalColumns}
+                    dataSource={paginatedJournals}
+                    rowKey="journalId"
+                    pagination={{
+                      current: journalPage,
+                      pageSize: journalPageSize,
+                      total: filteredJournals.length,
+                      showSizeChanger: true,
+                      onChange: (page, pageSize) => {
+                        setJournalPage(page);
+                        setJournalPageSize(pageSize);
+                      },
+                    }}
+                    className="paper-table"
+                  />
+                ) : (
+                  <Empty
+                    description={
+                      <span>
+                        No journal papers found
+                        {searchText || statusFilter !== "all"
+                          ? " matching your filters"
+                          : ""}
+                      </span>
+                    }
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    className="my-12"
+                  />
+                )}
+              </Tabs.TabPane>
+            </Tabs>
           </Card>
         </motion.div>
 
@@ -668,101 +977,184 @@ const ProjectPaper = () => {
           title={
             <div className="flex items-center">
               <FileTextOutlined className="text-blue-500 mr-2" />
-              <span>Create Conference Paper</span>
+              <span>Create Research Paper</span>
             </div>
           }
           open={createPaperModalVisible}
-          onCancel={() => setCreatePaperModalVisible(false)}
+          onCancel={() => {
+            setCreatePaperModalVisible(false);
+            createPaperForm.resetFields();
+            createJournalForm.resetFields();
+          }}
           footer={null}
           width={600}
         >
-          <div className="bg-teal-50 p-4 rounded-lg mb-4 border border-teal-200">
+          <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-200">
             <div className="flex items-start">
-              <InfoCircleOutlined className="text-teal-500 text-lg mt-1 mr-3" />
+              <InfoCircleOutlined className="text-blue-500 text-lg mt-1 mr-3" />
               <div>
-                <Text strong className="text-teal-700">
-                  Create New Conference Paper
+                <Text strong className="text-blue-700">
+                  Create Research Paper
                 </Text>
-                <Text className="text-teal-600 block">
-                  Creating a conference paper will generate a new submission for
-                  this project. You will be able to upload your paper and manage
-                  the submission process.
+                <Text className="text-blue-600 block">
+                  Select the type of paper you want to create for this project.
+                  You will be able to upload your paper and manage the
+                  submission process.
                 </Text>
               </div>
             </div>
           </div>
 
-          <Form
-            form={createPaperForm}
-            layout="vertical"
-            onFinish={handleCreatePaperSubmit}
+          <Tabs
+            defaultActiveKey="conference"
+            className="paper-creation-tabs"
+            tabBarStyle={{ marginBottom: 24 }}
+            destroyInactiveTabPane={true}
           >
-            <Form.Item
-              name="conferenceName"
-              label="Conference Name"
-              rules={[
-                { required: true, message: "Please enter the conference name" },
-              ]}
+            <Tabs.TabPane
+              tab={
+                <span>
+                  <GlobalOutlined /> Conference Paper
+                </span>
+              }
+              key="conference"
             >
-              <Input placeholder="Enter the name of the conference" />
-            </Form.Item>
-
-            <Form.Item
-              name="conferenceRanking"
-              label="Conference Ranking"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select the conference ranking",
-                },
-              ]}
-            >
-              <Select placeholder="Select conference ranking">
-                <Select.Option value="0">Not Ranked</Select.Option>
-                <Select.Option value="1">C</Select.Option>
-                <Select.Option value="2">B</Select.Option>
-                <Select.Option value="3">A</Select.Option>
-                <Select.Option value="4">A*</Select.Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="presentationType"
-              label="Presentation Type"
-              rules={[
-                {
-                  required: true,
-                  message: "Please select the presentation type",
-                },
-              ]}
-            >
-              <Select placeholder="Select presentation type">
-                <Select.Option value="0">Oral Presentation</Select.Option>
-                <Select.Option value="1">Poster Presentation</Select.Option>
-                <Select.Option value="2">Workshop Presentation</Select.Option>
-                <Select.Option value="3">Panel Presentation</Select.Option>
-                <Select.Option value="4">Virtual Presentation</Select.Option>
-                <Select.Option value="5">Demonstration</Select.Option>
-              </Select>
-            </Form.Item>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button onClick={() => setCreatePaperModalVisible(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={isCreatingConference}
-                disabled={isCreatingConference}
-                className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 border-none"
+              <Form
+                form={createPaperForm}
+                layout="vertical"
+                onFinish={handleCreateConferencePaperSubmit}
               >
-                {isCreatingConference
-                  ? "Creating..."
-                  : "Create Conference Paper"}
-              </Button>
-            </div>
-          </Form>
+                <Form.Item
+                  name="conferenceName"
+                  label="Conference Name"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please enter the conference name",
+                    },
+                  ]}
+                >
+                  <Input placeholder="Enter the name of the conference" />
+                </Form.Item>
+
+                <Form.Item
+                  name="conferenceRanking"
+                  label="Conference Ranking"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select the conference ranking",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Select conference ranking">
+                    <Select.Option value="0">Not Ranked</Select.Option>
+                    <Select.Option value="1">C</Select.Option>
+                    <Select.Option value="2">B</Select.Option>
+                    <Select.Option value="3">A</Select.Option>
+                    <Select.Option value="4">A*</Select.Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  name="presentationType"
+                  label="Presentation Type"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select the presentation type",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Select presentation type">
+                    <Select.Option value="0">Oral Presentation</Select.Option>
+                    <Select.Option value="1">Poster Presentation</Select.Option>
+                    <Select.Option value="2">
+                      Workshop Presentation
+                    </Select.Option>
+                    <Select.Option value="3">Panel Presentation</Select.Option>
+                    <Select.Option value="4">
+                      Virtual Presentation
+                    </Select.Option>
+                    <Select.Option value="5">Demonstration</Select.Option>
+                  </Select>
+                </Form.Item>
+
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button onClick={() => setCreatePaperModalVisible(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isCreatingConference}
+                    disabled={isCreatingConference}
+                    className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 border-none"
+                  >
+                    {isCreatingConference
+                      ? "Creating..."
+                      : "Create Conference Paper"}
+                  </Button>
+                </div>
+              </Form>
+            </Tabs.TabPane>
+
+            <Tabs.TabPane
+              tab={
+                <span>
+                  <BookOutlined /> Journal Paper
+                </span>
+              }
+              key="journal"
+            >
+              <Form
+                form={createJournalForm}
+                layout="vertical"
+                onFinish={handleCreateJournalPaperSubmit}
+              >
+                <Form.Item
+                  name="journalName"
+                  label="Journal Name"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please enter the journal name",
+                    },
+                  ]}
+                >
+                  <Input placeholder="Enter the name of the journal" />
+                </Form.Item>
+
+                <Form.Item
+                  name="publisherName"
+                  label="Publisher Name"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please enter the publisher name",
+                    },
+                  ]}
+                >
+                  <Input placeholder="Enter the name of the publisher" />
+                </Form.Item>
+
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button onClick={() => setCreatePaperModalVisible(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isCreatingJournal}
+                    disabled={isCreatingJournal}
+                    className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 border-none"
+                  >
+                    {isCreatingJournal ? "Creating..." : "Create Journal Paper"}
+                  </Button>
+                </div>
+              </Form>
+            </Tabs.TabPane>
+          </Tabs>
         </Modal>
       </div>
     </div>

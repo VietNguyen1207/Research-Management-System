@@ -19,8 +19,10 @@ export const loginUser = createAsyncThunk(
         0: "admin",
         1: "lecturer",
         2: "student",
-        3: "department", // Accounting_Department
+        3: "department",
         4: "office",
+        5: "researcher",
+        6: "stakeholder",
       };
 
       // Map lecturer level to string based on backend enum

@@ -24,6 +24,7 @@ import {
   InputNumber,
   Select,
   Skeleton,
+  Tooltip,
 } from "antd";
 import {
   SearchOutlined,
@@ -282,23 +283,35 @@ const QuotaDetails = () => {
 
   // Calculate used budget percentage
   const budgetUsagePercentage =
-    quotaDetails.projectApprovedBudget === 0
+    quotaDetails.allocatedBudget === 0
       ? 0
       : (quotaDetails.projectSpentBudget / quotaDetails.projectApprovedBudget) *
         100;
 
-  // Calculate disbursed percentage
-  const disbursedPercentage =
-    quotaDetails.projectApprovedBudget === 0
-      ? 0
-      : (quotaDetails.disbursedAmount / quotaDetails.projectApprovedBudget) *
-        100;
+  // Calculate the additional allocated budget from approved conference/journal expenses and funding
+  const additionalAllocatedBudget = quotaDetails.disbursements
+    .filter(
+      (disbursement) =>
+        // Only include approved (status 1) and conference/journal related types (1, 2, 3)
+        disbursement.status === 1 &&
+        [1, 2, 3].includes(disbursement.fundDisbursementType)
+    )
+    .reduce((sum, current) => sum + current.fundRequest, 0);
 
-  // Pending disbursement
-  const pendingDisbursement =
-    quotaDetails.projectSpentBudget - quotaDetails.disbursedAmount > 0
-      ? quotaDetails.projectSpentBudget - quotaDetails.disbursedAmount
-      : 0;
+  // Calculate current total budget
+  const currentTotalBudget =
+    quotaDetails.projectApprovedBudget + additionalAllocatedBudget;
+
+  // Calculate disbursed percentage using current total budget
+  const disbursedPercentage =
+    currentTotalBudget === 0
+      ? 0
+      : (quotaDetails.disbursedAmount / currentTotalBudget) * 100;
+
+  // Calculate pending disbursement - sum of all pending disbursement requests
+  const pendingDisbursement = quotaDetails.disbursements
+    .filter((disbursement) => disbursement.status === 0)
+    .reduce((sum, current) => sum + current.fundRequest, 0);
 
   // Columns for disbursement table
   const disbursementColumns = [
@@ -307,6 +320,9 @@ const QuotaDetails = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       render: (date) => new Date(date).toLocaleDateString(),
+      width: "9%",
+      defaultSortOrder: "descend",
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
       title: "Requested By",
@@ -315,40 +331,133 @@ const QuotaDetails = () => {
       render: (text) => (
         <div className="flex items-center gap-2">
           <UserOutlined />
-          <span>{text}</span>
+          <span className="truncate">{text}</span>
         </div>
       ),
+      width: "13%",
+      ellipsis: true,
+    },
+    {
+      title: "Type",
+      dataIndex: "fundDisbursementTypeName",
+      key: "fundDisbursementTypeName",
+      render: (type, record) => {
+        // Set colors based on type
+        let color;
+        switch (record.fundDisbursementType) {
+          case 0: // ProjectPhase
+            color = "blue";
+            break;
+          case 1: // ConferenceExpense
+            color = "purple";
+            break;
+          case 2: // ConferenceFunding
+            color = "geekblue";
+            break;
+          case 3: // JournalFunding
+            color = "cyan";
+            break;
+          default:
+            color = "default";
+        }
+
+        // Format the display name (add spaces between words)
+        const displayName = type
+          ? type.replace(/([A-Z])/g, " $1").trim()
+          : "Unknown";
+
+        return (
+          <Tag color={color} className="px-2 py-1 whitespace-nowrap text-xs">
+            {displayName}
+          </Tag>
+        );
+      },
+      width: "14%",
     },
     {
       title: "Project Phase",
       dataIndex: "projectPhaseTitle",
       key: "projectPhaseTitle",
+      render: (title) => (
+        <div className="truncate max-w-[160px]" title={title || "N/A"}>
+          {title || "N/A"}
+        </div>
+      ),
+      width: "16%",
+      ellipsis: true,
     },
     {
       title: "Amount",
       dataIndex: "fundRequest",
       key: "fundRequest",
-      render: (amount) => (
-        <Text className="font-medium text-green-600">
-          ₫{amount.toLocaleString()}
-        </Text>
-      ),
+      render: (amount, record) => {
+        // Determine if this affects the budget positively or negatively
+        const isProjectPhase = record.fundDisbursementType === 0; // ProjectPhase
+        const isApproved = record.status === 1; // Approved status
+
+        // For approved records, show visual indication of budget impact
+        if (isApproved) {
+          if (isProjectPhase) {
+            // ProjectPhase - reduces available budget (negative)
+            return (
+              <Tooltip title="This amount reduces the available budget (money spent)">
+                <Text className="font-medium text-red-500 whitespace-nowrap">
+                  -₫{amount.toLocaleString()}
+                </Text>
+              </Tooltip>
+            );
+          } else {
+            // Conference/Journal expenses and funding - increases total budget (positive)
+            return (
+              <Tooltip title="This amount increases the total budget (additional allocation)">
+                <Text className="font-medium text-green-500 whitespace-nowrap">
+                  +₫{amount.toLocaleString()}
+                </Text>
+              </Tooltip>
+            );
+          }
+        }
+
+        // For pending or rejected, show neutral formatting
+        return (
+          <Tooltip title="This request has not affected the budget yet">
+            <Text className="font-medium text-yellow-600 whitespace-nowrap">
+              ₫{amount.toLocaleString()}
+            </Text>
+          </Tooltip>
+        );
+      },
+      width: "10%",
+      align: "right",
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status, record) => (
-        <Tag color={getStatusColor(status)} className="px-3 py-1">
+        <Tag
+          color={getStatusColor(status)}
+          className="px-2 py-1 whitespace-nowrap text-xs"
+        >
           {record.statusName}
         </Tag>
       ),
+      width: "9%",
     },
     {
       title: "Reviewed By",
       dataIndex: "approvedByName",
       key: "approvedByName",
-      render: (name) => name || "Pending Review",
+      render: (name) => (
+        <div
+          className="truncate max-w-[120px]"
+          title={name || "Pending Review"}
+        >
+          {name || "Pending Review"}
+        </div>
+      ),
+      width: "12%",
+      ellipsis: true,
     },
     {
       title: "Actions",
@@ -359,11 +468,13 @@ const QuotaDetails = () => {
           icon={<EyeOutlined />}
           onClick={() => handleViewDisbursementDetails(record)}
           className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none shadow-md transition-all duration-300 flex items-center"
-          style={{ padding: "0 16px", height: "32px" }}
+          style={{ padding: "0 8px", height: "30px", fontSize: "12px" }}
         >
-          <span>View Details</span>
+          View Details
         </Button>
       ),
+      width: "12%",
+      align: "center",
     },
   ];
 
@@ -426,8 +537,21 @@ const QuotaDetails = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
-                title={<Text className="text-gray-600">Approved Budget</Text>}
+                title={<Text className="text-gray-600">Project Budget</Text>}
                 value={quotaDetails.projectApprovedBudget}
+                prefix={<DollarOutlined className="text-blue-500" />}
+                suffix="₫"
+                formatter={(value) => `${value.toLocaleString()}`}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={
+                  <Text className="text-gray-600">Total Allocated Budget</Text>
+                }
+                value={quotaDetails.allocatedBudget}
                 prefix={<DollarOutlined className="text-[#F2722B]" />}
                 suffix="₫"
                 formatter={(value) => `${value.toLocaleString()}`}
@@ -501,6 +625,24 @@ const QuotaDetails = () => {
                 <Descriptions.Item label="Research Group">
                   {quotaDetails.groupName}
                 </Descriptions.Item>
+                <Descriptions.Item
+                  label={
+                    <Tooltip title="Additional funding from approved conference expenses and funding requests">
+                      <span>
+                        Additional Allocated Budget{" "}
+                        <InfoCircleOutlined className="text-blue-500 ml-1" />
+                      </span>
+                    </Tooltip>
+                  }
+                >
+                  {additionalAllocatedBudget > 0 ? (
+                    <Text className="text-green-500">
+                      ₫{additionalAllocatedBudget.toLocaleString()}
+                    </Text>
+                  ) : (
+                    <Text className="text-gray-500">₫0</Text>
+                  )}
+                </Descriptions.Item>
               </Descriptions>
             </Col>
             <Col xs={24} md={12}>
@@ -520,7 +662,9 @@ const QuotaDetails = () => {
                   {new Date(quotaDetails.createdAt).toLocaleDateString()}
                 </Descriptions.Item>
                 <Descriptions.Item label="Last Updated">
-                  {new Date(quotaDetails.updateAt).toLocaleDateString()}
+                  {quotaDetails.updateAt
+                    ? new Date(quotaDetails.updateAt).toLocaleDateString()
+                    : "Not updated yet"}
                 </Descriptions.Item>
               </Descriptions>
             </Col>
@@ -530,6 +674,44 @@ const QuotaDetails = () => {
 
           <div className="mt-4">
             <h4 className="font-medium mb-2">Budget Usage</h4>
+
+            {additionalAllocatedBudget > 0 && (
+              <Alert
+                message="Budget Adjustment"
+                description={
+                  <div>
+                    <p>
+                      This project has received additional budget allocation
+                      from approved conference and journal expenses/funding.
+                    </p>
+                    <p className="mt-2">
+                      <span className="font-medium">Initial Budget:</span> ₫
+                      {quotaDetails.projectApprovedBudget.toLocaleString()}{" "}
+                      <br />
+                      <span className="font-medium">
+                        Additional Funds:
+                      </span>{" "}
+                      <span className="text-green-600">
+                        ₫{additionalAllocatedBudget.toLocaleString()}
+                      </span>{" "}
+                      <br />
+                      <span className="font-medium">
+                        Current Total Budget:
+                      </span>{" "}
+                      ₫
+                      {(
+                        quotaDetails.projectApprovedBudget +
+                        additionalAllocatedBudget
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                }
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+            )}
+
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
                 <div className="mb-4">
@@ -586,12 +768,40 @@ const QuotaDetails = () => {
             </div>
           }
         >
+          <div className="bg-gray-50 p-3 rounded-md mb-4 border border-gray-200">
+            <div className="flex flex-wrap gap-4 items-center">
+              <span className="font-medium">Budget Impact Legend:</span>
+              <div className="flex items-center">
+                <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                <span>
+                  <Text className="text-red-500 font-medium">-₫</Text>: Reduces
+                  available budget (Project Phase)
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                <span>
+                  <Text className="text-green-500 font-medium">+₫</Text>:
+                  Increases total budget (Conference/Journal)
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="inline-block w-3 h-3 bg-yellow-500 rounded-full mr-1"></span>
+                <span>
+                  <Text className="text-yellow-600 font-medium">₫</Text>:
+                  Pending requests (no impact yet)
+                </span>
+              </div>
+            </div>
+          </div>
+
           <Table
             dataSource={quotaDetails.disbursements}
             columns={disbursementColumns}
             rowKey="fundDisbursementId"
             pagination={{ pageSize: 5 }}
-            className="mt-4"
+            className="mt-4 table-fixed"
+            tableLayout="fixed"
           />
         </Card>
 

@@ -534,18 +534,6 @@ const RegisterResearch = () => {
                     disabledDate={(current) =>
                       current && current < moment().startOf("day")
                     }
-                    onChange={(date) => {
-                      // If end date exists but is before new start date, clear it
-                      const endDate = form.getFieldValue(["timeline", "end"]);
-                      if (endDate && date && date.isAfter(endDate)) {
-                        form.setFieldsValue({
-                          timeline: {
-                            ...form.getFieldValue("timeline"),
-                            end: null,
-                          },
-                        });
-                      }
-                    }}
                   />
                 </Form.Item>
                 <Form.Item
@@ -618,6 +606,56 @@ const RegisterResearch = () => {
                       return Promise.reject(
                         new Error("At least one project phase is required")
                       );
+                    }
+
+                    // Ensure phases have both start and end dates
+                    for (let i = 0; i < phases.length; i++) {
+                      const phase = phases[i];
+                      if (!phase || !phase.startDate || !phase.endDate) {
+                        return Promise.reject(
+                          new Error(
+                            `Phase ${i + 1} must have both start and end dates`
+                          )
+                        );
+                      }
+
+                      // Check phase start date is before end date - only if both exist
+                      if (
+                        phase.startDate &&
+                        phase.endDate &&
+                        phase.startDate.isAfter(phase.endDate)
+                      ) {
+                        return Promise.reject(
+                          new Error(
+                            `Phase ${
+                              i + 1
+                            } start date must be before its end date`
+                          )
+                        );
+                      }
+                    }
+
+                    // Ensure phases don't overlap - with proper null checks
+                    for (let i = 0; i < phases.length - 1; i++) {
+                      const currentPhase = phases[i];
+                      const nextPhase = phases[i + 1];
+
+                      // Only check if both phases have the required dates
+                      if (
+                        currentPhase &&
+                        currentPhase.endDate &&
+                        nextPhase &&
+                        nextPhase.startDate &&
+                        currentPhase.endDate.isAfter(nextPhase.startDate)
+                      ) {
+                        return Promise.reject(
+                          new Error(
+                            `Phase ${i + 1} end date overlaps with Phase ${
+                              i + 2
+                            } start date`
+                          )
+                        );
+                      }
                     }
                   },
                 },
@@ -729,6 +767,7 @@ const RegisterResearch = () => {
 
                                       if (
                                         projectStart &&
+                                        value &&
                                         value.isBefore(projectStart)
                                       ) {
                                         return Promise.reject(
@@ -740,6 +779,7 @@ const RegisterResearch = () => {
 
                                       if (
                                         projectEnd &&
+                                        value &&
                                         value.isAfter(projectEnd)
                                       ) {
                                         return Promise.reject(
@@ -755,7 +795,11 @@ const RegisterResearch = () => {
                                         field.name,
                                         "endDate",
                                       ]);
-                                      if (phaseEnd && value.isAfter(phaseEnd)) {
+                                      if (
+                                        phaseEnd &&
+                                        value &&
+                                        value.isAfter(phaseEnd)
+                                      ) {
                                         return Promise.reject(
                                           new Error(
                                             "Start date must be before end date"
@@ -772,6 +816,8 @@ const RegisterResearch = () => {
                                   placeholder="Select start date"
                                   className="w-full rounded-lg"
                                   disabledDate={(current) => {
+                                    if (!current) return false;
+
                                     const projectStart = form.getFieldValue([
                                       "timeline",
                                       "start",
@@ -781,16 +827,29 @@ const RegisterResearch = () => {
                                       "end",
                                     ]);
 
-                                    // Disable dates outside project timeline
+                                    // Get previous phase end date if it exists
+                                    let previousPhaseEndDate = null;
+                                    if (field.name > 0) {
+                                      previousPhaseEndDate = form.getFieldValue(
+                                        [
+                                          "projectPhases",
+                                          field.name - 1,
+                                          "endDate",
+                                        ]
+                                      );
+                                    }
+
+                                    // Disable dates outside project timeline or before previous phase end
                                     return (
-                                      (current &&
-                                        current < moment().startOf("day")) ||
+                                      current.isBefore(
+                                        moment().startOf("day")
+                                      ) || // No dates in the past
                                       (projectStart &&
-                                        current &&
-                                        current < projectStart) ||
+                                        current.isBefore(projectStart)) || // No dates before project start
                                       (projectEnd &&
-                                        current &&
-                                        current > projectEnd)
+                                        current.isAfter(projectEnd)) || // No dates after project end
+                                      (previousPhaseEndDate &&
+                                        current.isBefore(previousPhaseEndDate)) // No dates before previous phase ends
                                     );
                                   }}
                                 />
@@ -821,6 +880,7 @@ const RegisterResearch = () => {
 
                                       if (
                                         projectStart &&
+                                        value &&
                                         value.isBefore(projectStart)
                                       ) {
                                         return Promise.reject(
@@ -832,6 +892,7 @@ const RegisterResearch = () => {
 
                                       if (
                                         projectEnd &&
+                                        value &&
                                         value.isAfter(projectEnd)
                                       ) {
                                         return Promise.reject(
@@ -849,6 +910,7 @@ const RegisterResearch = () => {
                                       ]);
                                       if (
                                         phaseStart &&
+                                        value &&
                                         value.isBefore(phaseStart)
                                       ) {
                                         return Promise.reject(
@@ -867,6 +929,8 @@ const RegisterResearch = () => {
                                   placeholder="Select end date"
                                   className="w-full rounded-lg"
                                   disabledDate={(current) => {
+                                    if (!current) return false;
+
                                     const projectStart = form.getFieldValue([
                                       "timeline",
                                       "start",
@@ -881,19 +945,29 @@ const RegisterResearch = () => {
                                       "startDate",
                                     ]);
 
-                                    // Disable dates outside project timeline and before phase start
+                                    // Get next phase start date if it exists
+                                    let nextPhaseStartDate = null;
+                                    if (field.name < fields.length - 1) {
+                                      nextPhaseStartDate = form.getFieldValue([
+                                        "projectPhases",
+                                        field.name + 1,
+                                        "startDate",
+                                      ]);
+                                    }
+
+                                    // Disable dates outside project timeline, before phase start, or after next phase start
                                     return (
-                                      (current &&
-                                        current < moment().startOf("day")) ||
+                                      current.isBefore(
+                                        moment().startOf("day")
+                                      ) || // No dates in the past
                                       (projectStart &&
-                                        current &&
-                                        current < projectStart) ||
+                                        current.isBefore(projectStart)) || // No dates before project start
                                       (projectEnd &&
-                                        current &&
-                                        current > projectEnd) ||
+                                        current.isAfter(projectEnd)) || // No dates after project end
                                       (phaseStart &&
-                                        current &&
-                                        current < phaseStart)
+                                        current.isBefore(phaseStart)) || // No dates before phase start
+                                      (nextPhaseStartDate &&
+                                        current.isAfter(nextPhaseStartDate)) // No dates after next phase starts
                                     );
                                   }}
                                 />
@@ -935,11 +1009,18 @@ const RegisterResearch = () => {
             <Form.Item
               label={
                 <span className="text-gray-700 font-medium text-base">
-                  Supporting Documents
+                  Supporting Documents <span style={{ color: "red" }}>*</span>
                 </span>
               }
               name="supporting_files"
               extra="Upload any relevant documents to support your research proposal"
+              rules={[
+                {
+                  required: true,
+                  message: "Please upload at least one supporting document!",
+                },
+              ]}
+              getValueFromEvent={(e) => e && e.fileList}
             >
               <Upload.Dragger
                 fileList={fileList}

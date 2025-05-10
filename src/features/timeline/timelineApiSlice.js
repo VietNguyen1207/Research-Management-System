@@ -24,6 +24,24 @@ export const timelineApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["TimelineSequences"],
     }),
+
+    updateTimelineSequence: builder.mutation({
+      query: ({ id, ...sequenceData }) => ({
+        url: `/timeline-sequences/${id}`,
+        method: "PUT",
+        body: sequenceData,
+      }),
+      invalidatesTags: ["TimelineSequences"],
+    }),
+
+    deleteTimelineSequence: builder.mutation({
+      query: (sequenceId) => ({
+        url: `/timeline-sequences/${sequenceId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["TimelineSequences"],
+    }),
+
     createTimeline: builder.mutation({
       query: (timelineData) => ({
         url: "/timelines",
@@ -64,6 +82,8 @@ export const {
   useGetTimelineSequencesQuery,
   useGetTimelinesBySequenceQuery,
   useCreateTimelineSequenceMutation,
+  useUpdateTimelineSequenceMutation,
+  useDeleteTimelineSequenceMutation,
   useGetTimelinesQuery,
   useCreateTimelineMutation,
   useUpdateTimelineMutation,

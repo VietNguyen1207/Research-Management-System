@@ -13,6 +13,17 @@ export const fundDisbursementApiSlice = apiSlice.injectEndpoints({
         })),
       ],
     }),
+    getPendingFundDisbursements: builder.query({
+      query: () => "/pending-fund-disbursement-requests",
+      transformResponse: (response) => response.data,
+      providesTags: (result = []) => [
+        "PendingFundDisbursements",
+        ...result.map(({ requestId }) => ({
+          type: "PendingFundDisbursements",
+          id: requestId,
+        })),
+      ],
+    }),
     getFundDisbursementDetails: builder.query({
       query: (disbursementId) => `/fund-disbursements/${disbursementId}`,
       transformResponse: (response) => response.data,
@@ -69,6 +80,7 @@ export const fundDisbursementApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useGetFundDisbursementsQuery,
+  useGetPendingFundDisbursementsQuery,
   useGetFundDisbursementDetailsQuery,
   useRequestFundDisbursementMutation,
   useUploadDisbursementDocumentMutation,

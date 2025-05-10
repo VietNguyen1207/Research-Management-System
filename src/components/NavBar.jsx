@@ -61,27 +61,18 @@ const navItems = [
       { icon: <TeamOutlined />, label: "View Group" },
       { icon: <FormOutlined />, label: "Create Group" },
       { icon: <FormOutlined />, label: "Create Council" },
-      { icon: <UserOutlined />, label: "Manage Group" },
       { icon: <UserOutlined />, label: "Manage Council" },
     ],
   },
   {
     icon: <FormOutlined />,
     label: "Registration",
-    subItems: [
-      { icon: <FormOutlined />, label: "Research Project" },
-      { icon: <FileSearchOutlined />, label: "Paper Project" },
-      // { icon: <ProjectOutlined />, label: "Case Study Project" },
-    ],
+    subItems: [{ icon: <FormOutlined />, label: "Research Project" }],
   },
   {
     icon: <ExperimentOutlined />,
     label: "Research Project",
-    subItems: [
-      { icon: <ExperimentOutlined />, label: "Active Research" },
-      { icon: <ProjectOutlined />, label: "Completed Research" },
-      { icon: <FileSearchOutlined />, label: "Research Archive" },
-    ],
+    subItems: [{ icon: <ExperimentOutlined />, label: "Active Research" }],
   },
   {
     icon: <FileTextOutlined />,
@@ -89,7 +80,6 @@ const navItems = [
     badge: "3",
     subItems: [
       { icon: <FileTextOutlined />, label: "Active Paper" },
-      { icon: <FormOutlined />, label: "Completed Paper" },
       { icon: <ProjectOutlined />, label: "Paper Archived" },
     ],
   },
@@ -98,7 +88,6 @@ const navItems = [
     label: "Request",
     subItems: [
       { icon: <AuditOutlined />, label: "Pending Request" },
-      { icon: <FormOutlined />, label: "Request Progress" },
       { icon: <TeamOutlined />, label: "Request Record" },
     ],
   },
@@ -142,18 +131,18 @@ const adminSpecificNavItems = [
     icon: <TeamOutlined />,
     label: "User Management",
   },
-  {
-    icon: <ProjectOutlined />,
-    label: "Project Management",
-  },
-  {
-    icon: <FundOutlined />,
-    label: "Quota Management",
-  },
-  {
-    icon: <FieldTimeOutlined />,
-    label: "Timeline Management",
-  },
+  // {
+  //   icon: <ProjectOutlined />,
+  //   label: "Project Management",
+  // },
+  // {
+  //   icon: <FundOutlined />,
+  //   label: "Quota Management",
+  // },
+  // {
+  //   icon: <FieldTimeOutlined />,
+  //   label: "Timeline Management",
+  // },
 ];
 
 const NavBar = () => {
@@ -191,6 +180,14 @@ const NavBar = () => {
     "Request",
     "Academic Calendar",
   ];
+  const researcherNavItems = [
+    "Group",
+    "Registration",
+    "Research Project",
+    "Paper Project",
+    "Request",
+    "Academic Calendar",
+  ];
   const deptHeadNavItems = [
     "Research Project",
     "Paper Project",
@@ -199,9 +196,9 @@ const NavBar = () => {
   ];
   const officeNavItems = [
     "Group",
-    "Research Project",
-    "Paper Project",
-    "Request",
+    // "Research Project",
+    // "Paper Project",
+    // "Request",
     "Timeline Management",
     "Quotas",
   ];
@@ -280,6 +277,9 @@ const NavBar = () => {
         case "lecturer":
           allowedItems = lecturerNavItems;
           break;
+        case "researcher":
+          allowedItems = researcherNavItems;
+          break;
         case "department":
           allowedItems = deptHeadNavItems;
           break;
@@ -320,7 +320,7 @@ const NavBar = () => {
 
         //Custom Registration for student and lecturer
         if (item.label === "Registration") {
-          if (user.role === "lecturer") {
+          if (user.role === "lecturer" || user.role === "researcher") {
             return {
               ...item,
               subItems: item.subItems,
@@ -338,14 +338,13 @@ const NavBar = () => {
 
         // Custom Group for lecturer and Office
         if (item.label === "Group") {
-          if (user.role === "lecturer") {
+          if (user.role === "lecturer" || user.role === "researcher") {
             return {
               ...item,
               subItems: item.subItems.filter(
                 (subItem) =>
                   subItem.label === "View Group" ||
-                  subItem.label === "Create Group" ||
-                  subItem.label === "Manage Group"
+                  subItem.label === "Create Group"
               ),
             };
           }

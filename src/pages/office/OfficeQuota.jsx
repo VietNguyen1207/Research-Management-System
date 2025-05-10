@@ -20,6 +20,7 @@ import {
   Alert,
   message,
   Spin,
+  Skeleton,
 } from "antd";
 import {
   SearchOutlined,
@@ -40,6 +41,8 @@ import {
 import { motion } from "framer-motion";
 import { useGetQuotasQuery } from "../../features/quota/quotaApiSlice";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { apiSlice } from "../../features/api/apiSlice";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
@@ -52,6 +55,7 @@ const OfficeQuota = () => {
   const [statusFilter, setStatusFilter] = useState(null);
   const [budgetRangeFilter, setBudgetRangeFilter] = useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // Fetch quota data from API
   const { data: quotasData, isLoading, isError, error } = useGetQuotasQuery();
@@ -511,6 +515,8 @@ const OfficeQuota = () => {
   };
 
   const handleViewDetails = (record) => {
+    // Invalidate the Quotas tag to force a refetch
+    dispatch(apiSlice.util.invalidateTags(["Quotas"]));
     navigate(`/project-quota/${record.key}`);
   };
 
@@ -561,8 +567,68 @@ const OfficeQuota = () => {
   // Show loading or error states
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spin size="large" tip="Loading quota data..." />
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section Skeleton */}
+          <div className="text-center mb-16">
+            <Skeleton.Input
+              style={{ width: 250, height: 40 }}
+              active
+              size="large"
+            />
+            <div className="mt-4">
+              <Skeleton.Input style={{ width: 500, height: 20 }} active />
+            </div>
+          </div>
+
+          {/* Statistics Cards Skeleton */}
+          <Row gutter={[16, 16]} className="mb-12">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Col xs={24} sm={12} md={6} key={i}>
+                <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+                  <Skeleton
+                    active
+                    paragraph={{ rows: 1 }}
+                    title={{ width: "60%" }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          {/* Filters Section Skeleton */}
+          <Card className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <Skeleton.Input
+                    style={{ width: 140, height: 16, marginBottom: 16 }}
+                    active
+                    size="small"
+                  />
+                  <Skeleton.Input
+                    style={{ width: "100%", height: 40 }}
+                    active
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Main Table Skeleton */}
+          <Card className="shadow-lg rounded-xl border-0">
+            <Skeleton active>
+              <Skeleton.Node active style={{ width: "100%", height: 400 }}>
+                <div className="bg-gray-200 w-full h-full flex items-center justify-center">
+                  <div className="text-gray-500 flex flex-col items-center">
+                    <BankOutlined style={{ fontSize: 48 }} />
+                    <span className="mt-2">Loading department data...</span>
+                  </div>
+                </div>
+              </Skeleton.Node>
+            </Skeleton>
+          </Card>
+        </div>
       </div>
     );
   }

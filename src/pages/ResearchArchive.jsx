@@ -56,11 +56,19 @@ const PROJECT_STATUS = {
 
 // Document Type enum mapping
 const DOCUMENT_TYPE = {
-  0: "Project Document",
-  1: "Research Publication",
-  2: "Council Document",
-  5: "Approval Document", // Added based on documents in data
-  6: "Completion Document", // Added based on documents in data
+  0: "Project Proposal",
+  1: "Disbursement",
+  2: "Council Decision",
+  3: "Conference Proposal",
+  4: "Journal Paper",
+  5: "Disbursement Confirmation",
+  6: "Project Completion",
+  7: "Conference Paper",
+  8: "Conference Expense",
+  9: "Conference Expense Decision",
+  10: "Conference Funding",
+  11: "Journal Funding",
+  12: "Funding Confirmation",
 };
 
 const formatDate = (dateString) => {

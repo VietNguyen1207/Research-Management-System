@@ -486,7 +486,7 @@ const UserManagement = () => {
               rowClassName="hover:bg-blue-50 transition-colors"
               footer={() => (
                 <div className="text-right text-gray-500 text-sm">
-                  © 2024 Research Management System. All rights reserved.
+                  © 2025 Research Management System. All rights reserved.
                 </div>
               )}
             />

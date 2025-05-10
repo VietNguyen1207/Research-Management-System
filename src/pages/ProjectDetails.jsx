@@ -59,6 +59,8 @@ import {
   CloseOutlined,
   FolderOutlined,
   CheckCircleOutlined,
+  GlobalOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
@@ -68,12 +70,16 @@ import {
   useGetProjectCompletionSummaryQuery,
   useRequestProjectCompletionMutation,
   useUploadCompletionDocumentsMutation,
+  useUploadProjectDocumentMutation,
 } from "../features/project/projectApiSlice";
 import {
   useRequestFundDisbursementMutation,
   useUploadDisbursementDocumentMutation,
 } from "../features/fund-disbursement/fundDisbursementApiSlice";
-import { useCreateConferenceFromResearchMutation } from "../features/project/conference/conferenceApiSlice";
+import {
+  useCreateConferenceFromResearchMutation,
+  useCreateJournalFromResearchMutation,
+} from "../features/project/conference/conferenceApiSlice";
 import dayjs from "dayjs";
 
 const { Text, Title, Paragraph } = Typography;
@@ -125,6 +131,12 @@ const DOCUMENT_TYPE = {
   4: "Journal Paper",
   5: "Disbursement Confirmation",
   6: "Project Completion",
+  7: "Conference Paper",
+  8: "Conference Expense",
+  9: "Conference Expense Decision",
+  10: "Conference Funding",
+  11: "Journal Funding",
+  12: "Funding Confirmation",
 };
 
 // Project Phase Status enum mapping
@@ -187,6 +199,13 @@ const getDocumentTypeVisuals = (type) => {
         bgColor: "bg-yellow-100",
         textColor: "text-yellow-600",
       };
+    case 7: // Conference Paper
+      return {
+        icon: <FileTextOutlined />,
+        color: "blue",
+        bgColor: "bg-blue-100",
+        textColor: "text-blue-600",
+      };
     default:
       return {
         icon: <PaperClipOutlined />,
@@ -234,8 +253,18 @@ const ProjectDetails = () => {
   const [completionForm] = Form.useForm();
   const [createPaperModalVisible, setCreatePaperModalVisible] = useState(false);
   const [createPaperForm] = Form.useForm();
+  const [createJournalForm] = Form.useForm();
+  const [createConferenceForm] = Form.useForm();
+  const [uploadDocumentForm] = Form.useForm();
+  const [isUploadDocumentModalVisible, setIsUploadDocumentModalVisible] =
+    useState(false);
   const [createConferenceFromResearch, { isLoading: isCreatingConference }] =
     useCreateConferenceFromResearchMutation();
+  const [createJournalFromResearch, { isLoading: isCreatingJournal }] =
+    useCreateJournalFromResearchMutation();
+  const [uploadProjectDocument, { isLoading: isUploadingProjectDocument }] =
+    useUploadProjectDocumentMutation();
+  const [paperType, setPaperType] = useState("conference");
 
   const {
     data: projectDetailsData,
@@ -482,34 +511,94 @@ const ProjectDetails = () => {
 
   const handleCreatePaperClick = () => {
     setCreatePaperModalVisible(true);
-    createPaperForm.resetFields();
+    createConferenceForm.resetFields();
+    createJournalForm.resetFields();
+    setPaperType("conference");
   };
 
   const handleCreatePaperSubmit = async () => {
     try {
-      const values = await createPaperForm.validateFields();
+      if (paperType === "conference") {
+        const values = await createConferenceForm.validateFields();
 
-      // Send the API request
-      await createConferenceFromResearch({
-        projectId: currentProjectId,
-        conferenceData: {
-          conferenceName: values.conferenceName,
-          conferenceRanking: parseInt(values.conferenceRanking),
-          presentationType: parseInt(values.presentationType),
-        },
-      }).unwrap();
+        // Send the API request for conference paper
+        await createConferenceFromResearch({
+          projectId: currentProjectId,
+          conferenceData: {
+            conferenceName: values.conferenceName,
+            conferenceRanking: parseInt(values.conferenceRanking),
+            presentationType: parseInt(values.presentationType),
+          },
+        }).unwrap();
 
-      message.success("Conference paper created successfully!");
+        message.success("Conference paper created successfully!");
+      } else {
+        const values = await createJournalForm.validateFields();
+
+        // Send the API request for journal paper
+        await createJournalFromResearch({
+          projectId: currentProjectId,
+          journalData: {
+            journalName: values.journalName,
+            publisherName: values.publisherName,
+          },
+        }).unwrap();
+
+        message.success("Journal paper created successfully!");
+      }
+
       setCreatePaperModalVisible(false);
 
       // Optionally navigate to a new page or refresh the current one
       // navigate(`/conference-projects`);
     } catch (error) {
       if (error.name !== "ValidationError") {
-        console.error("Failed to create conference paper:", error);
+        console.error(`Failed to create ${paperType} paper:`, error);
         message.error(
           error.data?.message ||
-            "Failed to create conference paper. Please try again."
+            `Failed to create ${paperType} paper. Please try again.`
+        );
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    setIsUploadDocumentModalVisible(true);
+    uploadDocumentForm.resetFields();
+  };
+
+  const handleUploadDocumentSubmit = async () => {
+    try {
+      const values = await uploadDocumentForm.validateFields();
+
+      if (values.documentFiles?.length > 0) {
+        const formData = new FormData();
+
+        // Add document type to the form data
+        formData.append("documentType", values.documentType);
+
+        // Add files to the form data
+        values.documentFiles.forEach((file) => {
+          formData.append("documentFiles", file.originFileObj);
+        });
+
+        // Call the upload API
+        await uploadProjectDocument({
+          projectId: currentProjectId,
+          formData: formData,
+        }).unwrap();
+
+        message.success("Documents uploaded successfully!");
+        setIsUploadDocumentModalVisible(false);
+        refetch(); // Refresh project data
+      } else {
+        message.error("Please select at least one file to upload");
+      }
+    } catch (error) {
+      if (error.name !== "ValidationError") {
+        console.error("Failed to upload documents:", error);
+        message.error(
+          error.data?.message || "Failed to upload documents. Please try again."
         );
       }
     }
@@ -1014,20 +1103,17 @@ const ProjectDetails = () => {
                       </span>
                     </div>
 
-                    {/* Add Paper Project button - moved from header */}
-                    {projectDetails.projectPhases?.some(
-                      (phase) => phase.status === 2
-                    ) &&
-                      projectDetails.status === 1 && (
-                        <Button
-                          type="primary"
-                          icon={<FileTextOutlined />}
-                          onClick={handleCreatePaperClick}
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none shadow-md"
-                        >
-                          Create Paper
-                        </Button>
-                      )}
+                    {/* Add Paper Project button*/}
+                    {projectDetails.status === 1 && (
+                      <Button
+                        type="primary"
+                        icon={<FileTextOutlined />}
+                        onClick={handleCreatePaperClick}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none shadow-md"
+                      >
+                        Create Paper
+                      </Button>
+                    )}
                   </div>
                 }
               >
@@ -1633,7 +1719,7 @@ const ProjectDetails = () => {
                   type="primary"
                   icon={<UploadOutlined />}
                   className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
-                  // onClick={handleUploadClick} // Add upload handler if needed
+                  onClick={handleUploadClick}
                 >
                   Upload New Document
                 </Button>
@@ -1738,7 +1824,7 @@ const ProjectDetails = () => {
                     type="primary"
                     icon={<UploadOutlined />}
                     className="mt-4 bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] border-none rounded-lg"
-                    // onClick={handleUploadClick} // Add upload handler if needed
+                    onClick={handleUploadClick}
                   >
                     Upload Document
                   </Button>
@@ -2106,16 +2192,13 @@ const ProjectDetails = () => {
             />
           </Form.Item>
 
-          <Form.Item name="itemizedExpenses" label="Itemized Expenses">
-            <Input.TextArea
-              rows={4}
-              placeholder="List specific expenses (e.g., Equipment: ₫5,000,000, Materials: ₫3,000,000, etc.)"
-            />
-          </Form.Item>
-
           <Form.Item
             name="documentationFiles"
-            label="Supporting Documentation"
+            label={
+              <span>
+                Supporting Documentation <span style={{ color: "red" }}>*</span>
+              </span>
+            }
             valuePropName="fileList"
             getValueFromEvent={(e) => {
               if (Array.isArray(e)) {
@@ -2124,6 +2207,10 @@ const ProjectDetails = () => {
               return e && e.fileList?.slice(0, 3);
             }}
             rules={[
+              {
+                required: true,
+                message: "Please upload at least one supporting document",
+              },
               {
                 validator: (_, fileList) => {
                   if (fileList && fileList.length > 3) {
@@ -2937,7 +3024,7 @@ const ProjectDetails = () => {
         title={
           <div className="flex items-center">
             <FileTextOutlined className="text-blue-500 mr-2" />
-            <span>Create Conference Paper</span>
+            <span>Create Research Paper</span>
           </div>
         }
         open={createPaperModalVisible}
@@ -2950,83 +3037,258 @@ const ProjectDetails = () => {
             <InfoCircleOutlined className="text-blue-500 text-lg mt-1 mr-3" />
             <div>
               <Text strong className="text-blue-700">
-                Create Conference Paper from Project
+                Create Research Paper from Project
               </Text>
               <Text className="text-blue-600 block">
-                Creating a conference paper will generate a new project from
-                this research. You will be able to upload your paper and manage
-                the submission process.
+                Select the type of paper you want to create from this research
+                project. You will be able to upload your paper and manage the
+                submission process.
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        <Tabs
+          activeKey={paperType}
+          onChange={setPaperType}
+          className="paper-type-tabs"
+          tabBarStyle={{ marginBottom: 24 }}
+        >
+          <Tabs.TabPane
+            tab={
+              <span>
+                <GlobalOutlined /> Conference Paper
+              </span>
+            }
+            key="conference"
+          >
+            <Form
+              form={createConferenceForm}
+              layout="vertical"
+              onFinish={handleCreatePaperSubmit}
+            >
+              <Form.Item
+                name="conferenceName"
+                label="Conference Name"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please enter the conference name",
+                  },
+                ]}
+              >
+                <Input placeholder="Enter the name of the conference" />
+              </Form.Item>
+
+              <Form.Item
+                name="conferenceRanking"
+                label="Conference Ranking"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select the conference ranking",
+                  },
+                ]}
+              >
+                <Select placeholder="Select conference ranking">
+                  <Select.Option value="0">Not Ranked</Select.Option>
+                  <Select.Option value="1">C</Select.Option>
+                  <Select.Option value="2">B</Select.Option>
+                  <Select.Option value="3">A</Select.Option>
+                  <Select.Option value="4">A*</Select.Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="presentationType"
+                label="Presentation Type"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select the presentation type",
+                  },
+                ]}
+              >
+                <Select placeholder="Select presentation type">
+                  <Select.Option value="0">Oral Presentation</Select.Option>
+                  <Select.Option value="1">Poster Presentation</Select.Option>
+                  <Select.Option value="2">Workshop Presentation</Select.Option>
+                  <Select.Option value="3">Panel Presentation</Select.Option>
+                  <Select.Option value="4">Virtual Presentation</Select.Option>
+                  <Select.Option value="5">Demonstration</Select.Option>
+                </Select>
+              </Form.Item>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button onClick={() => setCreatePaperModalVisible(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={isCreatingConference}
+                  disabled={isCreatingConference}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+                >
+                  {isCreatingConference
+                    ? "Creating..."
+                    : "Create Conference Paper"}
+                </Button>
+              </div>
+            </Form>
+          </Tabs.TabPane>
+
+          <Tabs.TabPane
+            tab={
+              <span>
+                <BookOutlined /> Journal Paper
+              </span>
+            }
+            key="journal"
+          >
+            <Form
+              form={createJournalForm}
+              layout="vertical"
+              onFinish={handleCreatePaperSubmit}
+            >
+              <Form.Item
+                name="journalName"
+                label="Journal Name"
+                rules={[
+                  { required: true, message: "Please enter the journal name" },
+                ]}
+              >
+                <Input placeholder="Enter the name of the journal" />
+              </Form.Item>
+
+              <Form.Item
+                name="publisherName"
+                label="Publisher Name"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please enter the publisher name",
+                  },
+                ]}
+              >
+                <Input placeholder="Enter the name of the publisher" />
+              </Form.Item>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button onClick={() => setCreatePaperModalVisible(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={isCreatingJournal}
+                  disabled={isCreatingJournal}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+                >
+                  {isCreatingJournal ? "Creating..." : "Create Journal Paper"}
+                </Button>
+              </div>
+            </Form>
+          </Tabs.TabPane>
+        </Tabs>
+      </Modal>
+
+      {/* Upload Document Modal */}
+      <Modal
+        title={
+          <div className="flex items-center">
+            <UploadOutlined className="text-blue-500 mr-2" />
+            <span>Upload Project Document</span>
+          </div>
+        }
+        open={isUploadDocumentModalVisible}
+        onCancel={() => setIsUploadDocumentModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-200">
+          <div className="flex items-start">
+            <InfoCircleOutlined className="text-blue-500 text-lg mt-1 mr-3" />
+            <div>
+              <Text strong className="text-blue-700">
+                Upload Project Document
+              </Text>
+              <Text className="text-blue-600 block">
+                Please select the type of document you want to upload and attach
+                the files.
               </Text>
             </div>
           </div>
         </div>
 
         <Form
-          form={createPaperForm}
+          form={uploadDocumentForm}
           layout="vertical"
-          onFinish={handleCreatePaperSubmit}
+          onFinish={handleUploadDocumentSubmit}
+          className="mt-4"
         >
           <Form.Item
-            name="conferenceName"
-            label="Conference Name"
-            rules={[
-              { required: true, message: "Please enter the conference name" },
-            ]}
-          >
-            <Input placeholder="Enter the name of the conference" />
-          </Form.Item>
-
-          <Form.Item
-            name="conferenceRanking"
-            label="Conference Ranking"
+            name="documentFiles"
+            label="Documents"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) {
+                return e.slice(0, 3);
+              }
+              return e && e.fileList?.slice(0, 3);
+            }}
             rules={[
               {
-                required: true,
-                message: "Please select the conference ranking",
+                validator: (_, fileList) => {
+                  if (fileList && fileList.length > 3) {
+                    return Promise.reject("Maximum 3 files allowed");
+                  }
+                  return Promise.resolve();
+                },
               },
             ]}
+            help="Upload up to 3 supporting documents (invoices, receipts, quotes, etc.)"
           >
-            <Select placeholder="Select conference ranking">
-              <Select.Option value="0">Not Ranked</Select.Option>
-              <Select.Option value="1">C</Select.Option>
-              <Select.Option value="2">B</Select.Option>
-              <Select.Option value="3">A</Select.Option>
-              <Select.Option value="4">A*</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="presentationType"
-            label="Presentation Type"
-            rules={[
-              {
-                required: true,
-                message: "Please select the presentation type",
-              },
-            ]}
-          >
-            <Select placeholder="Select presentation type">
-              <Select.Option value="0">Oral Presentation</Select.Option>
-              <Select.Option value="1">Poster Presentation</Select.Option>
-              <Select.Option value="2">Workshop Presentation</Select.Option>
-              <Select.Option value="3">Panel Presentation</Select.Option>
-              <Select.Option value="4">Virtual Presentation</Select.Option>
-              <Select.Option value="5">Demonstration</Select.Option>
-            </Select>
+            <Upload.Dragger
+              name="files"
+              beforeUpload={() => false}
+              multiple={true}
+              maxCount={3}
+              onChange={({ fileList }) => {
+                if (fileList.length > 3) {
+                  message.warning("Maximum 3 files allowed");
+                  uploadDocumentForm.setFieldsValue({
+                    documentFiles: fileList.slice(0, 3),
+                  });
+                }
+              }}
+              listType="picture"
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined className="text-gray-400" />
+              </p>
+              <p className="ant-upload-text">Click or drag files to upload</p>
+              <p className="ant-upload-hint text-xs text-gray-500">
+                Support for PDF, Word, Excel, JPG/PNG files. Max 3 files.
+              </p>
+            </Upload.Dragger>
           </Form.Item>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={() => setCreatePaperModalVisible(false)}>
+            <Button onClick={() => setIsUploadDocumentModalVisible(false)}>
               Cancel
             </Button>
             <Button
               type="primary"
               htmlType="submit"
-              loading={isCreatingConference}
-              disabled={isCreatingConference}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+              className="bg-gradient-to-r from-[#22c55e] to-[#16a34a] hover:from-[#16a34a] hover:to-[#15803d] border-none"
+              icon={<UploadOutlined />}
+              loading={isUploadingProjectDocument}
+              disabled={isUploadingProjectDocument}
             >
-              {isCreatingConference ? "Creating..." : "Create Conference Paper"}
+              {isUploadingProjectDocument
+                ? "Uploading..."
+                : "Upload Project Document"}
             </Button>
           </div>
         </Form>

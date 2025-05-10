@@ -24,6 +24,7 @@ import {
   AutoComplete,
   Input,
   Pagination,
+  Select,
 } from "antd";
 import {
   TeamOutlined,
@@ -46,6 +47,7 @@ import {
   useGetLecturersQuery,
   useGetStudentsQuery,
   useGetUserBasicGroupsQuery,
+  useGetAcademicUsersQuery,
 } from "../features/user/userApiSlice";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
@@ -102,6 +104,11 @@ const ViewGroup = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
 
+  // First, add these state variables near the other state declarations
+  const [searchText, setSearchText] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   // Fetch basic group data
   const { data: basicGroups, isLoading: isLoadingBasicGroups } =
     useGetUserBasicGroupsQuery();
@@ -147,8 +154,54 @@ const ViewGroup = () => {
     });
   }, [basicGroups, groupsWithMembers]);
 
-  // Paginate the groups
-  const paginatedGroups = combinedGroups.slice(
+  // Modify the useEffect that processes the data to include filtering
+  useEffect(() => {
+    if (combinedGroups && combinedGroups.length > 0) {
+      // Apply filters
+      const filtered = combinedGroups.filter((group) => {
+        // Search text filter (match group name or description)
+        const matchesSearch =
+          searchText.toLowerCase() === ""
+            ? true
+            : group.groupName?.toLowerCase().includes(searchText.toLowerCase());
+
+        // Group type filter
+        const matchesType =
+          typeFilter === "all"
+            ? true
+            : group.groupType?.toString() === typeFilter;
+
+        // Status filter
+        const matchesStatus =
+          statusFilter === "all"
+            ? true
+            : group.status?.toString() === statusFilter;
+
+        return matchesSearch && matchesType && matchesStatus;
+      });
+
+      // Sort groups (newest first based on creation date)
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      // Update the current page when filters change
+      setCurrentPage(1);
+
+      // Update the filtered groups list - replace this with your pagination logic
+      const paginatedGroups = filtered.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      );
+
+      // Update the filteredGroups state
+      setFilteredGroups(filtered);
+    }
+  }, [combinedGroups, searchText, typeFilter, statusFilter]);
+
+  // Update the paginatedGroups calculation to use the filtered array:
+  const [filteredGroups, setFilteredGroups] = useState([]);
+
+  // Then calculate paginated groups from the filtered array:
+  const paginatedGroups = filteredGroups.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -165,6 +218,8 @@ const ViewGroup = () => {
     useGetLecturersQuery();
   const { data: studentsData, isLoading: isLoadingStudents } =
     useGetStudentsQuery();
+  const { data: academicUsers, isLoading: isLoadingAcademicUsers } =
+    useGetAcademicUsersQuery();
 
   const [reInviteMember, { isLoading: isReInviting }] =
     useReInviteGroupMemberMutation();
@@ -301,13 +356,17 @@ const ViewGroup = () => {
     }
 
     const inputLower = emailInput.toLowerCase();
+    const isResearchGroup = selectedGroupForInvite?.groupType === 2;
 
     // For supervisor role (2), show lecturers
     if (selectedRole === 2 && lecturersData?.lecturers) {
       const filteredLecturers = lecturersData.lecturers.filter(
         (lecturer) =>
-          lecturer.email.toLowerCase().includes(inputLower) ||
-          lecturer.fullName.toLowerCase().includes(inputLower)
+          (lecturer.email.toLowerCase().includes(inputLower) ||
+            lecturer.fullName.toLowerCase().includes(inputLower)) &&
+          // Exclude current user
+          lecturer.userId !== userId &&
+          lecturer.email.toLowerCase() !== currentUser?.email?.toLowerCase()
       );
 
       const options = filteredLecturers.map((lecturer) => ({
@@ -332,12 +391,67 @@ const ViewGroup = () => {
 
       setAutoCompleteOptions(options);
     }
-    // For student roles (0 or 1), show students
+    // For Research groups (groupType 2), show both students and academics for member roles
+    else if (
+      isResearchGroup &&
+      (selectedRole === 0 || selectedRole === 1) &&
+      academicUsers
+    ) {
+      const filteredUsers = academicUsers.allUsers.filter(
+        (user) =>
+          (user.email.toLowerCase().includes(inputLower) ||
+            user.fullName.toLowerCase().includes(inputLower)) &&
+          // Exclude current user
+          user.userId !== userId &&
+          user.email.toLowerCase() !== currentUser?.email?.toLowerCase()
+      );
+
+      const options = filteredUsers.map((user) => ({
+        value: user.email,
+        label: (
+          <div className="flex items-center space-x-2">
+            <Avatar
+              size="small"
+              icon={<UserOutlined />}
+              className={
+                user.userType === "Lecturer" || user.userType === "Researcher"
+                  ? "bg-blue-500"
+                  : "bg-orange-500"
+              }
+            />
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                <span className="font-medium">{user.fullName}</span>
+                <Tag
+                  color={
+                    user.userType === "Lecturer" ||
+                    user.userType === "Researcher"
+                      ? "blue"
+                      : "orange"
+                  }
+                  className="ml-2 text-xs px-1 py-0"
+                >
+                  {user.userType}
+                </Tag>
+              </div>
+              <div className="text-xs text-gray-500">{user.email}</div>
+            </div>
+          </div>
+        ),
+        user: user,
+      }));
+
+      setAutoCompleteOptions(options);
+    }
+    // For student roles (0 or 1) in non-research groups, show only students
     else if ((selectedRole === 0 || selectedRole === 1) && studentsData) {
       const filteredStudents = studentsData.filter(
         (student) =>
-          student.email.toLowerCase().includes(inputLower) ||
-          student.fullName.toLowerCase().includes(inputLower)
+          (student.email.toLowerCase().includes(inputLower) ||
+            student.fullName.toLowerCase().includes(inputLower)) &&
+          // Exclude current user
+          student.userId !== userId &&
+          student.email.toLowerCase() !== currentUser?.email?.toLowerCase()
       );
 
       const options = filteredStudents.map((student) => ({
@@ -360,7 +474,16 @@ const ViewGroup = () => {
 
       setAutoCompleteOptions(options);
     }
-  }, [emailInput, lecturersData, studentsData, selectedRole]);
+  }, [
+    emailInput,
+    lecturersData,
+    studentsData,
+    selectedRole,
+    selectedGroupForInvite,
+    academicUsers,
+    userId,
+    currentUser,
+  ]);
 
   const handleInviteMember = (group, role, memberId) => {
     // For Leader role, check if there's already an accepted leader
@@ -406,12 +529,22 @@ const ViewGroup = () => {
     try {
       let selectedUser;
 
-      // Find the selected user based on role
+      // Find the selected user based on role and group type
       if (selectedRole === 2) {
+        // For supervisor role, always use lecturers
         selectedUser = lecturersData?.lecturers.find(
           (l) => l.email === values.email
         );
+      } else if (
+        selectedGroupForInvite?.groupType === 2 &&
+        (selectedRole === 0 || selectedRole === 1)
+      ) {
+        // For research groups, member can be student, lecturer or researcher
+        selectedUser = academicUsers?.allUsers.find(
+          (u) => u.email === values.email
+        );
       } else {
+        // For regular groups, members are students
         selectedUser = studentsData?.find((s) => s.email === values.email);
       }
 
@@ -1114,6 +1247,59 @@ const ViewGroup = () => {
           </Col>
         </Row>
 
+        {/* Search and Filter Section */}
+        <Card className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Groups
+              </label>
+              <Input
+                placeholder="Search by group name..."
+                allowClear
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full"
+                prefix={<SearchOutlined className="text-gray-400" />}
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Group Type
+              </label>
+              <Select
+                placeholder="Filter by type"
+                onChange={setTypeFilter}
+                value={typeFilter}
+                className="w-full"
+                disabled={isLoading}
+              >
+                <Select.Option value="all">All Types</Select.Option>
+                <Select.Option value="0">Student Group</Select.Option>
+                <Select.Option value="1">Council Group</Select.Option>
+                <Select.Option value="2">Research Group</Select.Option>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <Select
+                placeholder="Filter by status"
+                onChange={setStatusFilter}
+                value={statusFilter}
+                className="w-full"
+                disabled={isLoading}
+              >
+                <Select.Option value="all">All Statuses</Select.Option>
+                <Select.Option value="0">Pending</Select.Option>
+                <Select.Option value="1">Active</Select.Option>
+                <Select.Option value="2">Inactive</Select.Option>
+              </Select>
+            </div>
+          </div>
+        </Card>
+
         {/* Groups List with Pagination */}
         {!combinedGroups || combinedGroups.length === 0 ? (
           <Empty
@@ -1134,7 +1320,7 @@ const ViewGroup = () => {
               }}
               dataSource={paginatedGroups}
               renderItem={(group) => {
-                // Filter out stakeholders and rejected members for progress calculation
+                // Only count non-stakeholder, non-rejected members for acceptance
                 const relevantMembers = group.members.filter(
                   (m) => m.role !== 6 && m.status !== 3
                 );
@@ -1281,11 +1467,7 @@ const ViewGroup = () => {
                               status="success"
                               text={
                                 <Text type="secondary">
-                                  {`${
-                                    group.members.filter(
-                                      (m) => m.status === 1 && m.role !== 6
-                                    ).length
-                                  } Accepted`}
+                                  {`${acceptedRelevantMembers.length} of ${relevantMembers.length} Members`}
                                 </Text>
                               }
                             />
@@ -1310,18 +1492,14 @@ const ViewGroup = () => {
                             }{" "}
                             Pending
                           </Tag>
-                          {group.members.filter(
-                            (m) => m.status === 3 && m.role !== 6
-                          ).length > 0 && (
-                            <Tag color="error" icon={<CloseCircleOutlined />}>
-                              {
-                                group.members.filter(
-                                  (m) => m.status === 3 && m.role !== 6
-                                ).length
-                              }{" "}
-                              Rejected
-                            </Tag>
-                          )}
+                          <Tag color="error" icon={<CloseCircleOutlined />}>
+                            {
+                              group.members.filter(
+                                (m) => m.status === 3 && m.role !== 6
+                              ).length
+                            }{" "}
+                            Rejected
+                          </Tag>
                         </div>
                       </div>
                     </Card>
@@ -1335,7 +1513,7 @@ const ViewGroup = () => {
               <Pagination
                 current={currentPage}
                 pageSize={pageSize}
-                total={combinedGroups.length}
+                total={filteredGroups.length}
                 onChange={handlePageChange}
                 showSizeChanger
                 pageSizeOptions={[6, 9, 12, 18]}
@@ -1422,6 +1600,9 @@ const ViewGroup = () => {
                   : selectedRole === 1
                   ? "Member"
                   : "Supervisor"}
+                {selectedGroupForInvite?.groupType === 2 &&
+                  (selectedRole === 0 || selectedRole === 1) &&
+                  " (Students, Lecturers, or Researchers)"}
               </span>
             </div>
           }
@@ -1450,13 +1631,27 @@ const ViewGroup = () => {
               </div>
 
               <Form.Item
-                label={selectedRole === 2 ? "New Supervisor" : "New Member"}
+                label={
+                  selectedRole === 2
+                    ? "New Supervisor"
+                    : selectedGroupForInvite?.groupType === 2 &&
+                      (selectedRole === 0 || selectedRole === 1)
+                    ? `New ${
+                        selectedRole === 0 ? "Leader" : "Member"
+                      } (Student, Lecturer, or Researcher)`
+                    : "New Member"
+                }
                 name="email"
                 rules={[
                   {
                     required: true,
                     message: `Please select a ${
-                      selectedRole === 2 ? "lecturer" : "student"
+                      selectedRole === 2
+                        ? "lecturer"
+                        : selectedGroupForInvite?.groupType === 2 &&
+                          (selectedRole === 0 || selectedRole === 1)
+                        ? "user"
+                        : "student"
                     }`,
                   },
                 ]}
@@ -1474,7 +1669,13 @@ const ViewGroup = () => {
                         <div className="flex flex-col items-center">
                           <SearchOutlined className="text-gray-300 text-xl mb-2" />
                           <span>
-                            No {selectedRole === 2 ? "lecturers" : "students"}{" "}
+                            No{" "}
+                            {selectedRole === 2
+                              ? "lecturers"
+                              : selectedGroupForInvite?.groupType === 2 &&
+                                (selectedRole === 0 || selectedRole === 1)
+                              ? "users"
+                              : "students"}{" "}
                             found
                           </span>
                         </div>
@@ -1485,7 +1686,12 @@ const ViewGroup = () => {
                           <TeamOutlined className="text-gray-300 text-xl mb-2" />
                           <span>
                             Type to search for{" "}
-                            {selectedRole === 2 ? "lecturers" : "students"}
+                            {selectedRole === 2
+                              ? "lecturers"
+                              : selectedGroupForInvite?.groupType === 2 &&
+                                (selectedRole === 0 || selectedRole === 1)
+                              ? "users (students, lecturers, or researchers)"
+                              : "students"}
                           </span>
                         </div>
                       </div>
@@ -1495,13 +1701,21 @@ const ViewGroup = () => {
                   <Input
                     className="rounded-lg py-2"
                     style={{ paddingLeft: "40px" }}
-                    placeholder={`Search for ${
-                      selectedRole === 2 ? "lecturers" : "students"
-                    } by name or email`}
+                    placeholder={
+                      selectedRole === 2
+                        ? `Search for lecturers by name or email`
+                        : selectedGroupForInvite?.groupType === 2 &&
+                          (selectedRole === 0 || selectedRole === 1)
+                        ? `Search for students, lecturers, or researchers by name or email`
+                        : `Search for students by name or email`
+                    }
                     suffix={
                       (
                         selectedRole === 2
                           ? isLoadingLecturers
+                          : selectedGroupForInvite?.groupType === 2 &&
+                            (selectedRole === 0 || selectedRole === 1)
+                          ? isLoadingAcademicUsers
                           : isLoadingStudents
                       ) ? (
                         <Spin size="small" />

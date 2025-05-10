@@ -31,9 +31,8 @@ const { RangePicker } = DatePicker;
 
 // Timeline type mapping
 const TIMELINE_TYPE = {
-  1: { name: "Submission", icon: <FileOutlined />, color: "blue" },
+  1: { name: "Registration", icon: <FileOutlined />, color: "blue" },
   2: { name: "Review", icon: <TeamOutlined />, color: "orange" },
-  3: { name: "Funding", icon: <DollarOutlined />, color: "green" },
 };
 
 const TimelineSchedule = () => {

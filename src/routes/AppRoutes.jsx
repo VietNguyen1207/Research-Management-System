@@ -17,14 +17,17 @@ import ActiveResearch from "../pages/ActiveResearch";
 import ResearchArchive from "../pages/ResearchArchive";
 import ActivePaper from "../pages/lecturer/ActivePaper";
 import ActivePaperDetails from "../pages/lecturer/ActivePaperDetails";
+import ActiveJournalDetails from "../pages/lecturer/ActiveJournalDetails";
 import CreateCouncil from "../pages/office/CreateCouncil";
 import ManageCouncil from "../pages/office/ManageCouncil";
 import Timeline from "../pages/office/TimelineManagement";
 import TimelineManagement from "../pages/office/TimelineManagement";
+import TimelineSequenceManagement from "../pages/office/TimelineSequenceManagement";
 import AllTimelines from "../pages/office/AllTimelines";
 import ReviewProject from "../pages/lecturer/ReviewProject";
 import ProjectQuota from "../pages/office/ProjectQuota";
 import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
+import FundDisbursementPendingRequest from "../pages/office/FundDisbursementPendingRequest";
 import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
 import QuotaDetails from "../pages/office/QuotaDetails";
 import RequestRecord from "../pages/lecturer/RequestRecord";
@@ -36,6 +39,27 @@ import TimelineSchedule from "../pages/TimelineSchedule";
 import CouncilRequestRecord from "../pages/lecturer/CouncilRequestRecord";
 import ProjectPaper from "../pages/lecturer/ProjectPaper";
 
+// Component for role-based redirection
+const RoleBasedRedirect = () => {
+  const { user } = useSelector((state) => state.auth);
+
+  if (user) {
+    const role = user.role;
+    if (role === "lecturer" || role === "student" || role === "researcher") {
+      return <Navigate to="/timeline-schedule" replace />;
+    } else if (role === "office") {
+      return <Navigate to="/timeline-management" replace />;
+    } else if (role === "department") {
+      return <Navigate to="/active-research" replace />;
+    } else if (role === "admin") {
+      return <Navigate to="/admin/users" replace />;
+    }
+  }
+
+  // Fallback to research project registration
+  return <Navigate to="/register-research-project" replace />;
+};
+
 export const routes = [
   {
     path: "/",
@@ -45,7 +69,7 @@ export const routes = [
         index: true,
         element: (
           <ProtectedRoutes>
-            <Navigate to="/register-research-project" replace />
+            <RoleBasedRedirect />
           </ProtectedRoutes>
         ),
       },
@@ -74,7 +98,7 @@ export const routes = [
       {
         path: "",
         element: (
-          <ProtectedRoutes allowedRoles={["lecturer"]}>
+          <ProtectedRoutes allowedRoles={["lecturer", "researcher"]}>
             <Outlet />
           </ProtectedRoutes>
         ),
@@ -93,6 +117,10 @@ export const routes = [
             path: "active-paper-details/:conferenceId",
             element: <ActivePaperDetails />,
           },
+          {
+            path: "journal-details/:journalId",
+            element: <ActiveJournalDetails />,
+          },
           { path: "project-papers/:projectId", element: <ProjectPaper /> },
           { path: "request-record", element: <RequestRecord /> },
           {
@@ -105,7 +133,13 @@ export const routes = [
         path: "",
         element: (
           <ProtectedRoutes
-            allowedRoles={["lecturer", "department", "office", "student"]}
+            allowedRoles={[
+              "lecturer",
+              "department",
+              "office",
+              "student",
+              "researcher",
+            ]}
           >
             <Outlet />
           </ProtectedRoutes>
@@ -170,12 +204,20 @@ export const routes = [
           { path: "quota-details/:quotaId", element: <QuotaDetails /> },
           { path: "fund-disbursement", element: <FundDisbursementRequest /> },
           {
+            path: "pending-disbursements",
+            element: <FundDisbursementPendingRequest />,
+          },
+          {
             path: "fund-disbursement-details/:disbursementId",
             element: <FundDisbursementRequestDetails />,
           },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
           { path: "assign-timeline", element: <AssignTimeline /> },
+          {
+            path: "timeline-sequence-management",
+            element: <TimelineSequenceManagement />,
+          },
         ],
       },
       {

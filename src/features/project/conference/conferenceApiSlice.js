@@ -12,6 +12,16 @@ export const conferenceApiSlice = apiSlice.injectEndpoints({
         { type: "Projects", id: projectId },
       ],
     }),
+    createJournalFromResearch: builder.mutation({
+      query: ({ projectId, journalData }) => ({
+        url: `/Journal/create-journal-from-research/${projectId}`,
+        method: "POST",
+        body: journalData,
+      }),
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Projects", id: projectId },
+      ],
+    }),
     getUserConferences: builder.query({
       query: () => ({
         url: `/Conference/my-conferences`,
@@ -52,13 +62,129 @@ export const conferenceApiSlice = apiSlice.injectEndpoints({
         "UserConferences",
       ],
     }),
+    uploadConferenceDocuments: builder.mutation({
+      query: ({ conferenceId, formData }) => ({
+        url: `/Conference/conferences/${conferenceId}/upload-documents`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { conferenceId }) => [
+        { type: "ConferenceDetails", id: conferenceId },
+        "UserConferences",
+      ],
+    }),
+    requestConferenceExpense: builder.mutation({
+      query: ({ conferenceId, expenseData }) => ({
+        url: `/Conference/conferences/${conferenceId}/request-expense`,
+        method: "POST",
+        body: expenseData,
+      }),
+      invalidatesTags: (result, error, { conferenceId }) => [
+        { type: "ConferenceDetails", id: conferenceId },
+        "UserConferences",
+      ],
+    }),
+    uploadConferenceExpenseDocuments: builder.mutation({
+      query: ({ conferenceId, requestId, formData }) => ({
+        url: `/Conference/conferences/${conferenceId}/expense-requests/${requestId}/upload-documents`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { conferenceId }) => [
+        { type: "ConferenceDetails", id: conferenceId },
+        "UserConferences",
+        { type: "ConferenceExpenses", id: conferenceId },
+      ],
+    }),
+    approveConferenceExpenseRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/Conference/expense-requests/${requestId}/approve`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: ["UserConferences", "ConferenceDetails"],
+    }),
+    rejectConferenceExpenseRequest: builder.mutation({
+      query: ({ requestId, formData }) => ({
+        url: `/Conference/expense-requests/${requestId}/reject`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: ["UserConferences", "ConferenceDetails"],
+    }),
+    getConferenceExpenses: builder.query({
+      query: (conferenceId) => ({
+        url: `/Conference/conferences/${conferenceId}/expenses`,
+        method: "GET",
+      }),
+      providesTags: (result, error, conferenceId) => [
+        { type: "ConferenceExpenses", id: conferenceId },
+      ],
+      transformResponse: (response) => response,
+    }),
+    requestConferenceFunding: builder.mutation({
+      query: ({ conferenceId, fundingData }) => ({
+        url: `/Conference/conferences/${conferenceId}/request-funding`,
+        method: "POST",
+        body: fundingData,
+      }),
+      invalidatesTags: (result, error, { conferenceId }) => [
+        { type: "ConferenceDetails", id: conferenceId },
+        "UserConferences",
+      ],
+    }),
+    uploadConferenceFundingDocuments: builder.mutation({
+      query: ({ conferenceId, requestId, formData }) => ({
+        url: `/Conference/conferences/${conferenceId}/funding-requests/${requestId}/upload-documents`,
+        method: "POST",
+        body: formData,
+        formData: true,
+      }),
+      invalidatesTags: (result, error, { conferenceId }) => [
+        { type: "ConferenceDetails", id: conferenceId },
+        "UserConferences",
+      ],
+    }),
+    getConferenceFunding: builder.query({
+      query: (conferenceId) => ({
+        url: `/Conference/conferences/${conferenceId}/funding`,
+        method: "GET",
+      }),
+      providesTags: (result, error, conferenceId) => [
+        { type: "ConferenceFunding", id: conferenceId },
+      ],
+      transformResponse: (response) => response,
+    }),
+    getUserJournals: builder.query({
+      query: () => ({
+        url: `/Journal/user-journals`,
+        method: "GET",
+      }),
+      providesTags: ["UserJournals"],
+      transformResponse: (response) => response,
+    }),
   }),
 });
 
 export const {
   useCreateConferenceFromResearchMutation,
+  useCreateJournalFromResearchMutation,
   useGetUserConferencesQuery,
   useGetConferenceDetailsQuery,
   useUpdateConferenceSubmissionStatusMutation,
   useUpdateApprovedConferenceDetailsMutation,
+  useUploadConferenceDocumentsMutation,
+  useRequestConferenceExpenseMutation,
+  useUploadConferenceExpenseDocumentsMutation,
+  useApproveConferenceExpenseRequestMutation,
+  useRejectConferenceExpenseRequestMutation,
+  useGetConferenceExpensesQuery,
+  useRequestConferenceFundingMutation,
+  useUploadConferenceFundingDocumentsMutation,
+  useGetConferenceFundingQuery,
+  useGetUserJournalsQuery,
 } = conferenceApiSlice;
