@@ -7,6 +7,7 @@ import ViewGroup from "../pages/ViewGroup";
 import ManageGroup from "../pages/ManageGroup";
 import DepartmentQuota from "../pages/DepartmentQuota";
 import OfficeQuota from "../pages/office/OfficeQuota";
+import AssignQuota from "../pages/office/AssignQuota";
 import Unauthorized from "../pages/error/Unauthorized";
 import RegisterResearch from "../pages/RegisterResearch";
 import RegisterPaper from "../pages/lecturer/RegisterPaper";
@@ -200,6 +201,7 @@ export const routes = [
         ),
         children: [
           { path: "quota-management", element: <OfficeQuota /> },
+          { path: "assign-quota", element: <AssignQuota /> },
           { path: "project-quota/:departmentId", element: <ProjectQuota /> },
           { path: "quota-details/:quotaId", element: <QuotaDetails /> },
           { path: "fund-disbursement", element: <FundDisbursementRequest /> },

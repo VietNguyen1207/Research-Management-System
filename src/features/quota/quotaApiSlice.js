@@ -12,7 +12,28 @@ export const quotaApiSlice = apiSlice.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: (result, error, id) => [{ type: "Quotas", id }],
     }),
+    createQuota: builder.mutation({
+      query: (quotaData) => ({
+        url: "/allocate-department-quotas",
+        method: "POST",
+        body: quotaData,
+      }),
+      invalidatesTags: ["Quotas"],
+    }),
+    updateQuota: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/quotas/${id}`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: "Quotas", id }],
+    }),
   }),
 });
 
-export const { useGetQuotasQuery, useGetQuotaDetailsQuery } = quotaApiSlice;
+export const {
+  useGetQuotasQuery,
+  useGetQuotaDetailsQuery,
+  useCreateQuotaMutation,
+  useUpdateQuotaMutation,
+} = quotaApiSlice;
