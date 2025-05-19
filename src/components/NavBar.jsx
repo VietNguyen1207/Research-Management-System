@@ -50,6 +50,7 @@ const ROUTE_MAPPINGS = {
   "User Management": "/admin/users",
   "Project Management": "/admin/projects",
   "Academic Calendar": "/timeline-schedule",
+  "Assign Review": "/assign-review",
 };
 
 // Define navItems outside of component
@@ -62,6 +63,7 @@ const navItems = [
       { icon: <FormOutlined />, label: "Create Group" },
       { icon: <FormOutlined />, label: "Create Council" },
       { icon: <UserOutlined />, label: "Manage Council" },
+      { icon: <AuditOutlined />, label: "Assign Review" },
     ],
   },
   {
@@ -354,7 +356,8 @@ const NavBar = () => {
               subItems: item.subItems.filter(
                 (subItem) =>
                   subItem.label === "Create Council" ||
-                  subItem.label === "Manage Council"
+                  subItem.label === "Manage Council" ||
+                  subItem.label === "Assign Review"
               ),
             };
           }

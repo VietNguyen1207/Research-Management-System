@@ -81,71 +81,21 @@ import {
   useCreateJournalFromResearchMutation,
 } from "../features/project/conference/conferenceApiSlice";
 import dayjs from "dayjs";
+import {
+  PROJECT_TYPE,
+  PROJECT_STATUS,
+  DOCUMENT_TYPE,
+  PHASE_STATUS,
+  MEMBER_ROLE,
+  MEMBER_STATUS,
+} from "../constants/enums";
 
 const { Text, Title, Paragraph } = Typography;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
 const { Step } = Steps;
 
-// Define role mapping
-const MEMBER_ROLE = {
-  0: "Leader",
-  1: "Member",
-  2: "Supervisor",
-  3: "Member", // Assuming 3 is also a member type, adjust if needed
-};
-
-// Define status mapping
-const MEMBER_STATUS = {
-  0: "Pending",
-  1: "Active",
-  2: "Inactive",
-  3: "Rejected",
-};
-
-// Project Type enum mapping
-const PROJECT_TYPE = {
-  0: "Research",
-  1: "Conference",
-  2: "Journal",
-};
-
-// Project Status enum mapping
-const PROJECT_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "Closed",
-  3: "Rejected",
-  4: "Completed",
-  5: "Completion Requested",
-  6: "Completion Approved",
-  7: "Completion Rejected",
-};
-
-// Document Type enum mapping
-const DOCUMENT_TYPE = {
-  0: "Project Proposal",
-  1: "Disbursement",
-  2: "Council Decision",
-  3: "Conference Proposal",
-  4: "Journal Paper",
-  5: "Disbursement Confirmation",
-  6: "Project Completion",
-  7: "Conference Paper",
-  8: "Conference Expense",
-  9: "Conference Expense Decision",
-  10: "Conference Funding",
-  11: "Journal Funding",
-  12: "Funding Confirmation",
-};
-
-// Project Phase Status enum mapping
-const PHASE_STATUS = {
-  0: "In Progress",
-  1: "Pending",
-  2: "Completed",
-  3: "Overdue",
-};
+// Enum mappings are now imported from '../constants/enums.js'
 
 // Helper function to get document icon and color based on type
 const getDocumentTypeVisuals = (type) => {

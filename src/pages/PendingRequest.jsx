@@ -47,25 +47,18 @@ import {
   useGetMyProjectsQuery,
 } from "../features/project/projectApiSlice";
 import { useNavigate } from "react-router-dom";
+import {
+  PROJECT_TYPE,
+  PROJECT_STATUS,
+  DOCUMENT_TYPE,
+  REQUEST_TYPE,
+  APPROVAL_STATUS,
+  FUND_DISBURSEMENT_TYPE,
+} from "../constants/enums";
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Option } = Select;
-
-// Project Type enum mapping
-const PROJECT_TYPE = {
-  0: "Research",
-  1: "Conference",
-  2: "Journal",
-};
-
-// Project Status enum mapping
-const PROJECT_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "Work in progress",
-  3: "Rejected",
-};
 
 const STATUS_COLORS = {
   pending: "gold",
@@ -75,6 +68,7 @@ const STATUS_COLORS = {
   "revision needed": "orange",
   "work in progress": "cyan",
 };
+
 // status
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
@@ -108,39 +102,6 @@ const CATEGORY_OPTIONS = [
   { value: "data science", label: "Data Science" },
   { value: "cybersecurity", label: "Cybersecurity" },
 ];
-
-// Add this constant for document types
-const DOCUMENT_TYPE = {
-  0: "Project Document",
-  1: "Research Publication",
-  2: "Council Document",
-};
-
-// Add these mapping constants for request types
-const REQUEST_TYPE = {
-  1: "Research Creation",
-  2: "Phase Update",
-  3: "Completion",
-  4: "Paper Creation",
-  5: "Conference Creation",
-  6: "Fund Disbursement",
-  7: "Conference Expense",
-};
-
-// Add this mapping for approval status
-const APPROVAL_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "Rejected",
-};
-
-// Add Fund Disbursement Type enum mapping
-const FUND_DISBURSEMENT_TYPE = {
-  0: "Project Phase",
-  1: "Conference Expense",
-  2: "Conference Funding",
-  3: "Journal Funding",
-};
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
