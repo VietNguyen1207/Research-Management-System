@@ -59,6 +59,8 @@ const RegisterResearch = () => {
   const [registeredProjectId, setRegisteredProjectId] = useState(null);
   const [registeredProjectName, setRegisteredProjectName] = useState("");
   const navigate = useNavigate();
+  const [formErrors, setFormErrors] = useState([]);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
 
   // Fetch departments data
   const { data: departments, isLoading: isLoadingDepartments } =
@@ -402,6 +404,26 @@ const RegisterResearch = () => {
     }
   };
 
+  // Add this function after your existing hooks
+  const onFinishFailed = (errorInfo) => {
+    // Extract field names and errors
+    const errors = errorInfo.errorFields.map((field) => ({
+      name: field.name.join(" > "),
+      errors: field.errors,
+    }));
+
+    setFormErrors(errors);
+    setShowErrorSummary(true);
+
+    // Automatically scroll to the error summary
+    setTimeout(() => {
+      document.getElementById("error-summary")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
@@ -415,11 +437,35 @@ const RegisterResearch = () => {
           </p>
         </div>
 
+        {/* Error Summary - add this before the form */}
+        {showErrorSummary && formErrors.length > 0 && (
+          <Alert
+            id="error-summary"
+            message="Please fix the following errors:"
+            description={
+              <ul className="list-disc ml-4">
+                {formErrors.map((error, index) => (
+                  <li key={index} className="text-red-600">
+                    <b>{error.name}</b>: {error.errors[0]}
+                  </li>
+                ))}
+              </ul>
+            }
+            type="error"
+            closable
+            onClose={() => setShowErrorSummary(false)}
+            className="mb-6"
+            showIcon
+          />
+        )}
+
         <Form
           form={form}
           name="register_research"
           layout="vertical"
           onFinish={onFinish}
+          onFinishFailed={onFinishFailed}
+          scrollToFirstError
           className="space-y-8"
           initialValues={{
             type: "research",
