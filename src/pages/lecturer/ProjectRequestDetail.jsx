@@ -51,85 +51,20 @@ import {
   useApproveCompletionRequestMutation,
   useRejectCompletionRequestMutation,
 } from "../../features/project/projectApiSlice";
+import {
+  DOCUMENT_TYPE,
+  REQUEST_TYPE,
+  APPROVAL_STATUS,
+  STATUS_COLORS,
+  GROUP_MEMBER_ROLE,
+  PROJECT_PHASE_STATUS,
+  PHASE_STATUS_COLORS,
+  FUND_DISBURSEMENT_TYPE,
+  RESOURCE_STATUS,
+} from "../../constants/enums";
 
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
-
-// Constants for document types
-const DOCUMENT_TYPE = {
-  0: "Project Proposal",
-  1: "Disbursement",
-  2: "Council Decision",
-  3: "Conference Proposal",
-  4: "Journal Paper",
-  5: "Disbursement Confirmation",
-  6: "Project Completion",
-  7: "Conference Paper",
-  8: "Conference Expense",
-  9: "Conference Expense Decision",
-  10: "Conference Funding",
-  11: "Journal Funding",
-  12: "Funding Confirmation",
-};
-
-// Constants for request types
-const REQUEST_TYPE = {
-  1: "Research Creation",
-  2: "Phase Update",
-  3: "Completion",
-  4: "Paper Creation",
-  5: "Conference Creation",
-  6: "Fund Disbursement",
-};
-
-// Constants for approval status
-const APPROVAL_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "Rejected",
-};
-
-// Constants for status colors
-const STATUS_COLORS = {
-  0: "gold", // Pending
-  1: "green", // Approved
-  2: "red", // Rejected
-};
-
-// Constants for group member roles
-const GROUP_MEMBER_ROLE = {
-  0: "Leader",
-  1: "Member",
-  2: "Supervisor",
-  3: "Council Chairman",
-  4: "Secretary",
-  5: "Council Member",
-  6: "Stakeholder",
-};
-
-// Constants for project phase status
-const PROJECT_PHASE_STATUS = {
-  0: "In Progress",
-  1: "Pending",
-  2: "Completed",
-  3: "Overdue",
-};
-
-// Constants for phase status colors
-const PHASE_STATUS_COLORS = {
-  0: "blue", // In Progress
-  1: "gold", // Pending
-  2: "green", // Completed
-  3: "red", // Overdue
-};
-
-// Add the Fund Disbursement Type enum mapping
-const FUND_DISBURSEMENT_TYPE = {
-  0: "Project Phase",
-  1: "Conference Expense",
-  2: "Conference Funding",
-  3: "Journal Funding",
-};
 
 // Format date helper
 const formatDate = (dateString) => {
@@ -141,16 +76,23 @@ const formatDate = (dateString) => {
   });
 };
 
-// Format datetime helper
+// Updated implementation for Vietnam timezone
 const formatDateTime = (dateString) => {
   if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleString("en-GB", {
+
+  // Create date object from the string
+  const date = new Date(dateString);
+
+  // Format the date using explicit Vietnam timezone (GMT+7)
+  return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(date);
 };
 
 // Format currency helper
@@ -1058,6 +1000,99 @@ const ProjectRequestDetail = () => {
                       </Timeline.Item>
                     ))}
                   </Timeline>
+                </Card>
+              )}
+
+            {/* Proposed Resources Section - New */}
+            {projectRequest.proposedResources &&
+              projectRequest.proposedResources.length > 0 && (
+                <Card
+                  title={
+                    <div className="flex items-center">
+                      <DollarOutlined className="text-[#F2722B] mr-2" />
+                      <span className="font-semibold">Proposed Resources</span>
+                    </div>
+                  }
+                  className="mb-6 shadow-md hover:shadow-lg transition-shadow duration-300"
+                >
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white rounded-lg overflow-hidden">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Resource
+                          </th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Quantity
+                          </th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Cost
+                          </th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {projectRequest.proposedResources.map((resource) => (
+                          <tr
+                            key={resource.proposedResourceId}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="font-medium text-gray-900">
+                                {resource.proposedResourceName}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <Tag color="blue">
+                                {resource.proposedResourceTypeName}
+                              </Tag>
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {resource.proposedResourceQuantity}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {formatCurrency(resource.proposedResourceCost)}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <Tag
+                                color={
+                                  resource.proposedResourceStatus === 1
+                                    ? "gold"
+                                    : resource.proposedResourceStatus === 2
+                                    ? "green"
+                                    : "red"
+                                }
+                              >
+                                {resource.proposedResourceStatusName}
+                              </Tag>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center text-gray-600">
+                      <InfoCircleOutlined className="mr-2" />
+                      <div className="text-sm">
+                        Total resources:{" "}
+                        {projectRequest.proposedResources.length} | Types:{" "}
+                        {
+                          new Set(
+                            projectRequest.proposedResources.map(
+                              (r) => r.proposedResourceTypeName
+                            )
+                          ).size
+                        }
+                      </div>
+                    </div>
+                  </div>
                 </Card>
               )}
 

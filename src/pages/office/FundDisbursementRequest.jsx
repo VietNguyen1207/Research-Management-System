@@ -50,25 +50,11 @@ import {
   useApproveFundDisbursementMutation,
   useRejectFundDisbursementMutation,
 } from "../../features/fund-disbursement/fundDisbursementApiSlice";
+import { PROJECT_TYPE, FUND_DISBURSEMENT_TYPE } from "../../constants/enums";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
 const { TextArea } = Input;
-
-// Project Type enum mapping (assuming similar structure elsewhere)
-const PROJECT_TYPE = {
-  0: "Research",
-  1: "Conference",
-  2: "Journal",
-};
-
-// Add Fund Disbursement Type enum mapping
-const FUND_DISBURSEMENT_TYPE = {
-  0: "Project Phase",
-  1: "Conference Expense",
-  2: "Conference Funding",
-  3: "Journal Funding",
-};
 
 const FundDisbursementRequest = () => {
   const navigate = useNavigate();

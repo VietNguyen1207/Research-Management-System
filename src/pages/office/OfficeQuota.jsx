@@ -37,6 +37,7 @@ import {
   BarChartOutlined,
   CheckCircleOutlined,
   WarningOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useGetQuotasQuery } from "../../features/quota/quotaApiSlice";
@@ -53,7 +54,7 @@ const OfficeQuota = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState(null);
-  const [budgetRangeFilter, setBudgetRangeFilter] = useState(null);
+  const [yearFilter, setYearFilter] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -76,239 +77,50 @@ const OfficeQuota = () => {
             phone: "+84 123 456 789", // Default values
             department: quota.departmentName,
             title: "Department",
-            ongoingProjects: 0,
-            totalBudget: 0,
-            usedBudget: 0,
-            disbursedAmount: 0, // Add to track total disbursed amount
-            remainingBudget: 0,
-            projectTypes: {
-              research: 0,
-              conference: 0,
-              journal: 0,
-            },
-            status: "Active",
-            budgetHistory: [],
-            projectQuotas: {
-              research: 2,
-              conference: 1,
-              journal: 1,
-            },
-            projects: [],
+            quotaYear: quota.quotaYear || new Date().getFullYear(),
+            numProjects: quota.numProjects || 0,
+            totalBudget: quota.allocatedBudget || 0,
+            usedBudget: quota.projectSpentBudget || 0,
+            disbursedAmount: quota.disbursedAmount || 0,
+            status: quota.status === 0 ? "Active" : "Inactive",
+            createdAt: quota.createdAt,
+            updateAt: quota.updateAt,
+            allocatedBy: quota.allocatedBy,
+            allocatorName: quota.allocatorName,
+            quotaId: quota.quotaId,
           });
-        }
+        } else {
+          // If we have multiple quotas for the same department, update the values
+          const dept = deptMap.get(quota.departmentId);
 
-        const dept = deptMap.get(quota.departmentId);
+          // Only update if this quota entry is newer
+          if (new Date(quota.createdAt) > new Date(dept.createdAt)) {
+            dept.totalBudget = quota.allocatedBudget || dept.totalBudget;
+            dept.quotaYear = quota.quotaYear || dept.quotaYear;
+            dept.numProjects = quota.numProjects || dept.numProjects;
+            dept.updateAt = quota.updateAt;
+            dept.quotaId = quota.quotaId;
+          }
 
-        // Add project to department
-        dept.projects.push(quota);
-
-        // Update budget totals
-        dept.totalBudget += quota.projectApprovedBudget;
-        dept.usedBudget += quota.projectSpentBudget;
-        dept.disbursedAmount +=
-          typeof quota.disbursedAmount === "number" ? quota.disbursedAmount : 0;
-
-        // Update project count by type
-        dept.ongoingProjects += 1;
-
-        // Update project types count
-        if (quota.projectTypeName === "Research") {
-          dept.projectTypes.research += 1;
-        } else if (quota.projectTypeName === "Conference") {
-          dept.projectTypes.conference += 1;
-        } else if (quota.projectTypeName === "Journal") {
-          dept.projectTypes.journal += 1;
-        }
-
-        // Add to budget history if not already there
-        const historyEntry = {
-          date: quota.createdAt,
-          amount: quota.allocatedBudget,
-          type: "Initial Allocation",
-          approvedBy: quota.allocatorName,
-        };
-
-        if (!dept.budgetHistory.some((h) => h.date === historyEntry.date)) {
-          dept.budgetHistory.push(historyEntry);
+          // Always add to the used budget and disbursed amount
+          if (quota.projectSpentBudget) {
+            dept.usedBudget += quota.projectSpentBudget;
+          }
+          if (quota.disbursedAmount) {
+            dept.disbursedAmount += quota.disbursedAmount;
+          }
         }
       });
 
       // Calculate remaining budget
       deptMap.forEach((dept) => {
         dept.remainingBudget = dept.totalBudget - dept.usedBudget;
-        dept.pendingDisbursement = dept.totalBudget - dept.disbursedAmount; // Calculate pending disbursement
+        dept.pendingDisbursement = dept.totalBudget - dept.disbursedAmount;
       });
 
       setDepartmentData(Array.from(deptMap.values()));
     }
   }, [quotasData]);
-
-  // Enhanced mock data - commented out but preserved
-  /*
-  const lecturersData = [
-    {
-      key: 1,
-      name: "Dr. Emily Smith",
-      email: "emily.smith@university.edu",
-      phone: "+84 123 456 789",
-      department: "Computer Science",
-      title: "Associate Professor",
-      ongoingProjects: 3,
-      totalBudget: 150000000,
-      usedBudget: 95000000,
-      remainingBudget: 55000000,
-      projectTypes: {
-        research: 1,
-        conference: 1,
-        journal: 1,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-15",
-          amount: 100000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-        {
-          date: "2024-02-01",
-          amount: 50000000,
-          type: "Additional Funding",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 2,
-        conference: 2,
-        journal: 1,
-      },
-    },
-    {
-      key: 2,
-      name: "Prof. John Doe",
-      email: "john.doe@university.edu",
-      phone: "+84 987 654 321",
-      department: "Information Technology",
-      title: "Professor",
-      ongoingProjects: 2,
-      totalBudget: 120000000,
-      usedBudget: 45000000,
-      remainingBudget: 75000000,
-      projectTypes: {
-        research: 1,
-        conference: 1,
-        journal: 0,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-10",
-          amount: 120000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 2,
-        conference: 1,
-        journal: 1,
-      },
-    },
-    {
-      key: 3,
-      name: "Dr. Sarah Johnson",
-      email: "sarah.j@university.edu",
-      phone: "+84 456 789 123",
-      department: "Electrical Engineering",
-      title: "Assistant Professor",
-      ongoingProjects: 2,
-      totalBudget: 100000000,
-      usedBudget: 75000000,
-      remainingBudget: 25000000,
-      projectTypes: {
-        research: 1,
-        conference: 1,
-        journal: 0,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-20",
-          amount: 100000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 2,
-        conference: 1,
-        journal: 1,
-      },
-    },
-    {
-      key: 4,
-      name: "Prof. Michael Chen",
-      email: "michael.chen@university.edu",
-      phone: "+84 789 123 456",
-      department: "Mechanical Engineering",
-      title: "Professor",
-      ongoingProjects: 1,
-      totalBudget: 80000000,
-      usedBudget: 60000000,
-      remainingBudget: 20000000,
-      projectTypes: {
-        research: 1,
-        conference: 0,
-        journal: 0,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-05",
-          amount: 80000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 2,
-        conference: 1,
-        journal: 1,
-      },
-    },
-    {
-      key: 5,
-      name: "Dr. Lisa Wong",
-      email: "lisa.wong@university.edu",
-      phone: "+84 321 654 987",
-      department: "Business Administration",
-      title: "Associate Professor",
-      ongoingProjects: 2,
-      totalBudget: 90000000,
-      usedBudget: 40000000,
-      remainingBudget: 50000000,
-      projectTypes: {
-        research: 1,
-        conference: 1,
-        journal: 0,
-      },
-      status: "Active",
-      budgetHistory: [
-        {
-          date: "2024-01-25",
-          amount: 90000000,
-          type: "Initial Allocation",
-          approvedBy: "Admin",
-        },
-      ],
-      projectQuotas: {
-        research: 2,
-        conference: 1,
-        journal: 1,
-      },
-    },
-  ];
-  */
 
   const columns = [
     {
@@ -327,8 +139,12 @@ const OfficeQuota = () => {
           </div>
           <div className="text-sm text-gray-500 pl-6 space-y-1">
             <div className="flex items-center space-x-2">
+              <CalendarOutlined className="text-gray-400" />
+              <span>Fiscal Year: {record.quotaYear}</span>
+            </div>
+            <div className="flex items-center space-x-2">
               <TeamOutlined className="text-gray-400" />
-              <span>{record.title}</span>
+              <span>Project Quota: {record.numProjects}</span>
             </div>
             <div className="flex items-center space-x-2">
               <MailOutlined className="text-gray-400" />
@@ -338,43 +154,6 @@ const OfficeQuota = () => {
               <PhoneOutlined className="text-gray-400" />
               <span>{record.phone}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <BankOutlined className="text-gray-400" />
-              <span>{record.department}</span>
-            </div>
-          </div>
-        </motion.div>
-      ),
-    },
-    {
-      title: "Projects Overview",
-      key: "projects",
-      render: (_, record) => (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-3"
-        >
-          <div className="flex items-center">
-            <TeamOutlined className="text-[#F2722B]" />
-            <span className="text-base font-medium ml-2">
-              Active Projects: {record.ongoingProjects}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            <Tag color="blue" className="text-center">
-              <span className="font-medium">Research:</span>{" "}
-              {record.projectTypes.research}
-            </Tag>
-            <Tag color="green" className="text-center">
-              <span className="font-medium">Conference:</span>{" "}
-              {record.projectTypes.conference}
-            </Tag>
-            <Tag color="orange" className="text-center">
-              <span className="font-medium">Journal:</span>{" "}
-              {record.projectTypes.journal}
-            </Tag>
           </div>
         </motion.div>
       ),
@@ -408,12 +187,11 @@ const OfficeQuota = () => {
                   ₫{record.totalBudget.toLocaleString()}
                 </span>
               </div>
-              <Button
-                type="text"
-                icon={<HistoryOutlined />}
-                onClick={() => handleViewBudgetHistory(record)}
-                className="text-[#F2722B]"
-              />
+              <Tooltip title="Allocated by">
+                <Tag className="text-xs bg-gray-100 text-gray-600">
+                  {record.allocatorName}
+                </Tag>
+              </Tooltip>
             </div>
             <Progress
               percent={Math.round(usagePercentage)}
@@ -449,9 +227,9 @@ const OfficeQuota = () => {
                   Remaining: ₫{record.remainingBudget.toLocaleString()}
                 </div>
               </Tooltip>
-              <Tooltip title="Pending Disbursement">
-                <div className="text-purple-600">
-                  To Disburse: ₫{record.pendingDisbursement.toLocaleString()}
+              <Tooltip title="Date Allocated">
+                <div className="text-gray-500">
+                  Allocated: {new Date(record.createdAt).toLocaleDateString()}
                 </div>
               </Tooltip>
             </div>
@@ -489,7 +267,7 @@ const OfficeQuota = () => {
             className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
             onClick={() => handleAssignBudget(record)}
           >
-            Assign Budget
+            Modify Budget
           </Button>
           <Button
             type="default"
@@ -497,7 +275,7 @@ const OfficeQuota = () => {
             className="w-full border-[#F2722B] text-[#F2722B] hover:bg-[#F2722B]/10"
             onClick={() => handleViewDetails(record)}
           >
-            View Details
+            View Projects
           </Button>
         </motion.div>
       ),
@@ -507,27 +285,27 @@ const OfficeQuota = () => {
   const handleAssignBudget = (record) => {
     setSelectedDepartment(record);
     form.resetFields();
+    form.setFieldsValue({
+      amount: record.totalBudget,
+      numProjects: record.numProjects,
+      fiscalYear: record.quotaYear,
+    });
     setIsBudgetModalVisible(true);
   };
 
-  const handleViewBudgetHistory = (record) => {
-    // Implement budget history view
-  };
-
   const handleViewDetails = (record) => {
-    // Invalidate the Quotas tag to force a refetch
     dispatch(apiSlice.util.invalidateTags(["Quotas"]));
     navigate(`/project-quota/${record.key}`);
   };
 
   const handleBudgetSubmit = async (values) => {
     try {
-      // API call to update budget
-      message.success("Budget allocated successfully");
+      // API call to update budget would go here
+      message.success("Budget allocation updated successfully");
       setIsBudgetModalVisible(false);
       form.resetFields();
     } catch (error) {
-      message.error("Failed to allocate budget");
+      message.error("Failed to update budget allocation");
       console.error("Budget allocation error:", error);
     }
   };
@@ -540,9 +318,14 @@ const OfficeQuota = () => {
     setStatusFilter(value);
   };
 
-  const handleBudgetRangeFilter = (value) => {
-    setBudgetRangeFilter(value);
+  const handleYearFilter = (value) => {
+    setYearFilter(value);
   };
+
+  // Get unique fiscal years from the data for the filter
+  const fiscalYears = [
+    ...new Set(departmentData.map((dept) => dept.quotaYear)),
+  ].sort((a, b) => b - a);
 
   const filteredData = departmentData.filter((dept) => {
     const matchesSearch =
@@ -553,15 +336,9 @@ const OfficeQuota = () => {
     const matchesStatus =
       !statusFilter || dept.status.toLowerCase() === statusFilter.toLowerCase();
 
-    const matchesBudget =
-      !budgetRangeFilter ||
-      (budgetRangeFilter === "high" && dept.totalBudget > 50000000) ||
-      (budgetRangeFilter === "medium" &&
-        dept.totalBudget >= 20000000 &&
-        dept.totalBudget <= 50000000) ||
-      (budgetRangeFilter === "low" && dept.totalBudget < 20000000);
+    const matchesYear = !yearFilter || dept.quotaYear === yearFilter;
 
-    return matchesSearch && matchesStatus && matchesBudget;
+    return matchesSearch && matchesStatus && matchesYear;
   });
 
   // Show loading or error states
@@ -583,7 +360,7 @@ const OfficeQuota = () => {
 
           {/* Statistics Cards Skeleton */}
           <Row gutter={[16, 16]} className="mb-12">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <Col xs={24} sm={12} md={6} key={i}>
                 <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
                   <Skeleton
@@ -661,7 +438,7 @@ const OfficeQuota = () => {
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Manage and monitor department budgets and project allocations
+            Manage and monitor department budget allocations and quotas
           </p>
         </div>
 
@@ -693,7 +470,7 @@ const OfficeQuota = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
-                title={<Text className="text-gray-600">Total Disbursed</Text>}
+                title={<Text className="text-gray-600">Disbursed Amount</Text>}
                 value={departmentData.reduce(
                   (sum, dept) => sum + dept.disbursedAmount,
                   0
@@ -707,38 +484,12 @@ const OfficeQuota = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
-                title={<Text className="text-gray-600">Active Projects</Text>}
+                title={<Text className="text-gray-600">Project Quota</Text>}
                 value={departmentData.reduce(
-                  (sum, dept) => sum + dept.ongoingProjects,
+                  (sum, dept) => sum + dept.numProjects,
                   0
                 )}
                 prefix={<TeamOutlined className="text-[#F2722B]" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={
-                  <Text className="text-gray-600">Budget Utilization</Text>
-                }
-                value={
-                  departmentData.length
-                    ? Math.round(
-                        (departmentData.reduce(
-                          (sum, dept) => sum + dept.usedBudget,
-                          0
-                        ) /
-                          departmentData.reduce(
-                            (sum, dept) => sum + dept.totalBudget,
-                            0
-                          )) *
-                          100
-                      )
-                    : 0
-                }
-                suffix="%"
-                prefix={<BarChartOutlined className="text-[#F2722B]" />}
               />
             </Card>
           </Col>
@@ -746,13 +497,26 @@ const OfficeQuota = () => {
 
         {/* Filters Section */}
         <Card className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-4">
+            <Title level={4} className="m-0 text-gray-700">
+              Department Quotas
+            </Title>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
+              onClick={() => navigate("/assign-quota")}
+            >
+              Assign New Quota
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search Departments
               </label>
               <Search
-                placeholder="Search by name or department..."
+                placeholder="Search by name..."
                 allowClear
                 className="w-full"
                 prefix={<SearchOutlined className="text-gray-400" />}
@@ -777,18 +541,20 @@ const OfficeQuota = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Budget Range
+                Fiscal Year
               </label>
               <Select
-                placeholder="Filter by budget range"
+                placeholder="Filter by fiscal year"
                 allowClear
                 className="w-full"
-                onChange={handleBudgetRangeFilter}
-                value={budgetRangeFilter}
+                onChange={handleYearFilter}
+                value={yearFilter}
               >
-                <Select.Option value="high">High (&gt;50M₫)</Select.Option>
-                <Select.Option value="medium">Medium (20M₫-50M₫)</Select.Option>
-                <Select.Option value="low">Low (&lt;20M₫)</Select.Option>
+                {fiscalYears.map((year) => (
+                  <Select.Option key={year} value={year}>
+                    {year}
+                  </Select.Option>
+                ))}
               </Select>
             </div>
           </div>
@@ -809,7 +575,7 @@ const OfficeQuota = () => {
 
         {/* Budget Allocation Modal */}
         <Modal
-          title="Allocate Budget"
+          title="Update Budget Allocation"
           open={isBudgetModalVisible}
           onCancel={() => {
             setIsBudgetModalVisible(false);
@@ -832,21 +598,18 @@ const OfficeQuota = () => {
               />
             </Form.Item>
             <Form.Item
-              name="type"
-              label="Allocation Type"
+              name="numProjects"
+              label="Project Quota"
               rules={[{ required: true }]}
             >
-              <Select>
-                <Select.Option value="initial">
-                  Initial Allocation
-                </Select.Option>
-                <Select.Option value="additional">
-                  Additional Funding
-                </Select.Option>
-                <Select.Option value="adjustment">
-                  Budget Adjustment
-                </Select.Option>
-              </Select>
+              <InputNumber className="w-full" min={0} />
+            </Form.Item>
+            <Form.Item
+              name="fiscalYear"
+              label="Fiscal Year"
+              rules={[{ required: true }]}
+            >
+              <InputNumber className="w-full" min={2020} max={2100} />
             </Form.Item>
             <Form.Item name="notes" label="Notes">
               <Input.TextArea rows={4} />
@@ -857,7 +620,7 @@ const OfficeQuota = () => {
                   Cancel
                 </Button>
                 <Button type="primary" htmlType="submit">
-                  Allocate Budget
+                  Update Allocation
                 </Button>
               </Space>
             </Form.Item>

@@ -7,6 +7,7 @@ import ViewGroup from "../pages/ViewGroup";
 import ManageGroup from "../pages/ManageGroup";
 import DepartmentQuota from "../pages/DepartmentQuota";
 import OfficeQuota from "../pages/office/OfficeQuota";
+import AssignQuota from "../pages/office/AssignQuota";
 import Unauthorized from "../pages/error/Unauthorized";
 import RegisterResearch from "../pages/RegisterResearch";
 import RegisterPaper from "../pages/lecturer/RegisterPaper";
@@ -28,7 +29,7 @@ import ReviewProject from "../pages/lecturer/ReviewProject";
 import ProjectQuota from "../pages/office/ProjectQuota";
 import FundDisbursementRequest from "../pages/office/FundDisbursementRequest";
 import FundDisbursementPendingRequest from "../pages/office/FundDisbursementPendingRequest";
-import FundDisbursementRequestDetails from "../pages/office/FundDisbursmentRequestDetails";
+// import FundDisbursementRequestDetails from "../pages/office/FundDisbursementRequestDetails";
 import QuotaDetails from "../pages/office/QuotaDetails";
 import RequestRecord from "../pages/lecturer/RequestRecord";
 import { useSelector } from "react-redux";
@@ -38,6 +39,8 @@ import ProjectRequestDetail from "../pages/lecturer/ProjectRequestDetail";
 import TimelineSchedule from "../pages/TimelineSchedule";
 import CouncilRequestRecord from "../pages/lecturer/CouncilRequestRecord";
 import ProjectPaper from "../pages/lecturer/ProjectPaper";
+import ReviewSchedule from "../pages/lecturer/ReviewSchedule";
+import AssignReview from "../pages/office/AssignReview";
 
 // Component for role-based redirection
 const RoleBasedRedirect = () => {
@@ -127,6 +130,10 @@ export const routes = [
             path: "council-request-records",
             element: <CouncilRequestRecord />,
           },
+          {
+            path: "review-schedule",
+            element: <ReviewSchedule />,
+          },
         ],
       },
       {
@@ -200,6 +207,7 @@ export const routes = [
         ),
         children: [
           { path: "quota-management", element: <OfficeQuota /> },
+          { path: "assign-quota", element: <AssignQuota /> },
           { path: "project-quota/:departmentId", element: <ProjectQuota /> },
           { path: "quota-details/:quotaId", element: <QuotaDetails /> },
           { path: "fund-disbursement", element: <FundDisbursementRequest /> },
@@ -207,10 +215,10 @@ export const routes = [
             path: "pending-disbursements",
             element: <FundDisbursementPendingRequest />,
           },
-          {
-            path: "fund-disbursement-details/:disbursementId",
-            element: <FundDisbursementRequestDetails />,
-          },
+          // {
+          //   path: "fund-disbursement-details/:disbursementId",
+          //   element: <FundDisbursementRequestDetails />,
+          // },
           { path: "create-council", element: <CreateCouncil /> },
           { path: "manage-council", element: <ManageCouncil /> },
           { path: "assign-timeline", element: <AssignTimeline /> },
@@ -218,6 +226,7 @@ export const routes = [
             path: "timeline-sequence-management",
             element: <TimelineSequenceManagement />,
           },
+          { path: "assign-review", element: <AssignReview /> },
         ],
       },
       {

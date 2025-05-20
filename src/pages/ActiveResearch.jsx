@@ -51,42 +51,15 @@ import {
   useGetMyApprovedProjectsQuery,
   useGetMyProjectsQuery,
 } from "../features/project/projectApiSlice";
+import {
+  PROJECT_TYPE,
+  PROJECT_STATUS,
+  DOCUMENT_TYPE,
+} from "../constants/enums";
 
 const { Search } = Input;
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
-
-// Project Type enum mapping
-const PROJECT_TYPE = {
-  0: "Research",
-  1: "Conference",
-  2: "Journal",
-};
-
-// Project Status enum mapping
-const PROJECT_STATUS = {
-  0: "Pending",
-  1: "Approved",
-  2: "Work in progress",
-  3: "Rejected",
-};
-
-// Document Type enum mapping
-const DOCUMENT_TYPE = {
-  0: "Project Proposal",
-  1: "Disbursement",
-  2: "Council Decision",
-  3: "Conference Proposal",
-  4: "Journal Paper",
-  5: "Disbursement Confirmation",
-  6: "Project Completion",
-  7: "Conference Paper",
-  8: "Conference Expense",
-  9: "Conference Expense Decision",
-  10: "Conference Funding",
-  11: "Journal Funding",
-  12: "Funding Confirmation",
-};
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
