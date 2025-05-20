@@ -21,6 +21,8 @@ import {
   DollarOutlined,
   ArrowLeftOutlined,
   SaveOutlined,
+  FileTextOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -58,6 +60,8 @@ const AssignQuota = () => {
         allocatedBudget: values.totalBudget,
         numProjects: values.numProjects,
         quotaYear: values.fiscalYear,
+        numberConference: values.numberConference,
+        numberPaper: values.numberJournals, // Send as numberPaper to match backend
       };
 
       // Call the create quota mutation
@@ -162,6 +166,8 @@ const AssignQuota = () => {
               initialValues={{
                 fiscalYear: new Date().getFullYear(),
                 numProjects: 5,
+                numberConference: 3,
+                numberJournals: 3,
               }}
             >
               <Form.Item
@@ -224,6 +230,51 @@ const AssignQuota = () => {
                   max={100}
                   className="w-full"
                   addonAfter="projects"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    <VideoCameraOutlined className="mr-1" /> Number of
+                    Conferences
+                  </span>
+                }
+                name="numberConference"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please enter the number of conferences",
+                  },
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  max={50}
+                  className="w-full"
+                  addonAfter="conferences"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span>
+                    <FileTextOutlined className="mr-1" /> Number of Journals
+                  </span>
+                }
+                name="numberJournals" // Named "numberJournals" in form but will be sent as "numberPaper"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please enter the number of journals",
+                  },
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  max={50}
+                  className="w-full"
+                  addonAfter="journals"
                 />
               </Form.Item>
 

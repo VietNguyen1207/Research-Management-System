@@ -38,6 +38,8 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   CalendarOutlined,
+  VideoCameraOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { useGetQuotasQuery } from "../../features/quota/quotaApiSlice";
@@ -65,10 +67,23 @@ const OfficeQuota = () => {
   // Transform API data to our component format
   useEffect(() => {
     if (quotasData) {
+      // Add console log to debug the API response
+      console.log("API Quota Data:", quotasData);
+
       // Group quotas by department
       const deptMap = new Map();
 
       quotasData.forEach((quota) => {
+        // Debug the exact values coming from the API for this quota
+        console.log(`Quota ${quota.quotaId} values:`, {
+          numberConference: quota.numberConference,
+          numberPaper: quota.numberPaper,
+          type: {
+            numberConference: typeof quota.numberConference,
+            numberPaper: typeof quota.numberPaper,
+          },
+        });
+
         if (!deptMap.has(quota.departmentId)) {
           deptMap.set(quota.departmentId, {
             key: quota.departmentId,
@@ -79,6 +94,16 @@ const OfficeQuota = () => {
             title: "Department",
             quotaYear: quota.quotaYear || new Date().getFullYear(),
             numProjects: quota.numProjects || 0,
+            // Be more explicit about handling these values
+            numberConference:
+              quota.numberConference !== null &&
+              quota.numberConference !== undefined
+                ? Number(quota.numberConference)
+                : 0,
+            numberPaper:
+              quota.numberPaper !== null && quota.numberPaper !== undefined
+                ? Number(quota.numberPaper)
+                : 0,
             totalBudget: quota.allocatedBudget || 0,
             usedBudget: quota.projectSpentBudget || 0,
             disbursedAmount: quota.disbursedAmount || 0,
@@ -98,6 +123,19 @@ const OfficeQuota = () => {
             dept.totalBudget = quota.allocatedBudget || dept.totalBudget;
             dept.quotaYear = quota.quotaYear || dept.quotaYear;
             dept.numProjects = quota.numProjects || dept.numProjects;
+
+            // Be more explicit with the conference and journal values
+            if (
+              quota.numberConference !== null &&
+              quota.numberConference !== undefined
+            ) {
+              dept.numberConference = Number(quota.numberConference);
+            }
+
+            if (quota.numberPaper !== null && quota.numberPaper !== undefined) {
+              dept.numberPaper = Number(quota.numberPaper);
+            }
+
             dept.updateAt = quota.updateAt;
             dept.quotaId = quota.quotaId;
           }
@@ -111,6 +149,12 @@ const OfficeQuota = () => {
           }
         }
       });
+
+      // After processing all data, log the department map for debugging
+      console.log(
+        "Department data after processing:",
+        Array.from(deptMap.values())
+      );
 
       // Calculate remaining budget
       deptMap.forEach((dept) => {
@@ -145,6 +189,14 @@ const OfficeQuota = () => {
             <div className="flex items-center space-x-2">
               <TeamOutlined className="text-gray-400" />
               <span>Project Quota: {record.numProjects}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <VideoCameraOutlined className="text-gray-400" />
+              <span>Conference Quota: {record.numberConference}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <FileTextOutlined className="text-gray-400" />
+              <span>Journal Quota: {record.numberPaper}</span>
             </div>
             <div className="flex items-center space-x-2">
               <MailOutlined className="text-gray-400" />
@@ -289,6 +341,8 @@ const OfficeQuota = () => {
       amount: record.totalBudget,
       numProjects: record.numProjects,
       fiscalYear: record.quotaYear,
+      numberConference: record.numberConference,
+      numberJournals: record.numberPaper,
     });
     setIsBudgetModalVisible(true);
   };
@@ -301,6 +355,14 @@ const OfficeQuota = () => {
   const handleBudgetSubmit = async (values) => {
     try {
       // API call to update budget would go here
+      const updateData = {
+        amount: values.amount,
+        numProjects: values.numProjects,
+        fiscalYear: values.fiscalYear,
+        numberConference: values.numberConference,
+        numberPaper: values.numberJournals,
+      };
+
       message.success("Budget allocation updated successfully");
       setIsBudgetModalVisible(false);
       form.resetFields();
@@ -470,6 +532,42 @@ const OfficeQuota = () => {
           <Col xs={24} sm={12} md={6}>
             <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
               <Statistic
+                title={<Text className="text-gray-600">Project Quota</Text>}
+                value={departmentData.reduce(
+                  (sum, dept) => sum + dept.numProjects,
+                  0
+                )}
+                prefix={<TeamOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Conference Quota</Text>}
+                value={departmentData.reduce(
+                  (sum, dept) => sum + dept.numberConference,
+                  0
+                )}
+                prefix={<VideoCameraOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
+                title={<Text className="text-gray-600">Journal Quota</Text>}
+                value={departmentData.reduce(
+                  (sum, dept) => sum + dept.numberPaper,
+                  0
+                )}
+                prefix={<FileTextOutlined className="text-[#F2722B]" />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
+              <Statistic
                 title={<Text className="text-gray-600">Disbursed Amount</Text>}
                 value={departmentData.reduce(
                   (sum, dept) => sum + dept.disbursedAmount,
@@ -478,18 +576,6 @@ const OfficeQuota = () => {
                 prefix={<WalletOutlined className="text-[#F2722B]" />}
                 suffix="₫"
                 formatter={(value) => `${value.toLocaleString()}`}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="hover:shadow-lg transition-all duration-300 border border-gray-100">
-              <Statistic
-                title={<Text className="text-gray-600">Project Quota</Text>}
-                value={departmentData.reduce(
-                  (sum, dept) => sum + dept.numProjects,
-                  0
-                )}
-                prefix={<TeamOutlined className="text-[#F2722B]" />}
               />
             </Card>
           </Col>
@@ -600,6 +686,28 @@ const OfficeQuota = () => {
             <Form.Item
               name="numProjects"
               label="Project Quota"
+              rules={[{ required: true }]}
+            >
+              <InputNumber className="w-full" min={0} />
+            </Form.Item>
+            <Form.Item
+              name="numberConference"
+              label={
+                <span>
+                  <VideoCameraOutlined className="mr-1" /> Conference Quota
+                </span>
+              }
+              rules={[{ required: true }]}
+            >
+              <InputNumber className="w-full" min={0} />
+            </Form.Item>
+            <Form.Item
+              name="numberJournals"
+              label={
+                <span>
+                  <FileTextOutlined className="mr-1" /> Journal Quota
+                </span>
+              }
               rules={[{ required: true }]}
             >
               <InputNumber className="w-full" min={0} />
