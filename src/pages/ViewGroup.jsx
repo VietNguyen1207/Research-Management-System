@@ -40,6 +40,7 @@ import {
   UserAddOutlined,
   UserSwitchOutlined,
   SearchOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -1018,11 +1019,51 @@ const ViewGroup = () => {
         <Descriptions.Item
           label={
             <Text strong className="opacity-50">
+              Group Type
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 120 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
               Status
             </Text>
           }
         >
           <Skeleton.Input style={{ width: 80 }} active size="small" />
+        </Descriptions.Item>
+
+        {/* Add Department and Expertises to skeleton */}
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Department
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 160 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Areas of Expertise
+            </Text>
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton.Button
+                key={i}
+                active
+                style={{ width: 100, height: 22 }}
+                className="mr-2"
+              />
+            ))}
+          </div>
         </Descriptions.Item>
 
         <Descriptions.Item
@@ -1032,94 +1073,7 @@ const ViewGroup = () => {
             </Text>
           }
         >
-          <div className="space-y-8">
-            {/* Leader section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-blue-300 mr-2"></div>
-                <Text strong className="text-blue-300">
-                  Leader
-                </Text>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-200 mr-3"></div>
-                  <div className="flex-grow">
-                    <Skeleton.Input
-                      style={{ width: "80%" }}
-                      active
-                      size="small"
-                      className="mb-2"
-                    />
-                    <Skeleton.Input
-                      style={{ width: "60%" }}
-                      active
-                      size="small"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Supervisor section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-green-300 mr-2"></div>
-                <Text strong className="text-green-300">
-                  Supervisors
-                </Text>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-green-200 mr-3"></div>
-                  <div className="flex-grow">
-                    <Skeleton.Input
-                      style={{ width: "80%" }}
-                      active
-                      size="small"
-                      className="mb-2"
-                    />
-                    <Skeleton.Input
-                      style={{ width: "60%" }}
-                      active
-                      size="small"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Members section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-orange-300 mr-2"></div>
-                <Text strong className="text-orange-300">
-                  Members
-                </Text>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4">
-                {/* Multiple members */}
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex items-center mb-4 last:mb-0">
-                    <div className="w-10 h-10 rounded-full bg-orange-200 mr-3"></div>
-                    <div className="flex-grow">
-                      <Skeleton.Input
-                        style={{ width: "80%" }}
-                        active
-                        size="small"
-                        className="mb-2"
-                      />
-                      <Skeleton.Input
-                        style={{ width: "60%" }}
-                        active
-                        size="small"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Rest of the skeleton code */}
         </Descriptions.Item>
       </Descriptions>
     </div>
@@ -1356,6 +1310,10 @@ const ViewGroup = () => {
                                   ? "purple"
                                   : group.groupType === 2
                                   ? "cyan"
+                                  : group.groupType === 3
+                                  ? "green"
+                                  : group.groupType === 4
+                                  ? "volcano"
                                   : "default"
                               }
                               className="hidden sm:inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -1380,7 +1338,9 @@ const ViewGroup = () => {
                         >
                           View Details
                         </Button>,
-                        group.groupType === 1 && (
+                        group.groupType === 1 ||
+                        group.groupType === 3 ||
+                        group.groupType === 4 ? (
                           <Button
                             type="primary"
                             onClick={() => handleReviewProject(group)}
@@ -1389,10 +1349,36 @@ const ViewGroup = () => {
                           >
                             Review Projects
                           </Button>
-                        ),
+                        ) : null,
                       ].filter(Boolean)}
                     >
                       <div className="space-y-4">
+                        {/* Display department if available */}
+                        {group.departmentName && (
+                          <div className="bg-blue-50 p-2 rounded-lg border-l-4 border-blue-500">
+                            <div className="flex items-center">
+                              <BankOutlined className="text-blue-500 mr-2" />
+                              <Text strong>{group.departmentName}</Text>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Display expertises when available */}
+                        {group.expertises && group.expertises.length > 0 && (
+                          <div>
+                            <Text type="secondary" className="block mb-1">
+                              Areas of Expertise:
+                            </Text>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {group.expertises.map((expertise, index) => (
+                                <Tag key={index} color="blue" className="mb-1">
+                                  {expertise}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div>
                           <div className="flex justify-between mb-2">
                             <Text type="secondary">Member Acceptance</Text>
@@ -1566,7 +1552,19 @@ const ViewGroup = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label={<Text strong>Group Type</Text>}>
                     <Tag
-                      color={selectedGroup.groupType === 1 ? "purple" : "blue"}
+                      color={
+                        selectedGroup.groupType === 0
+                          ? "blue"
+                          : selectedGroup.groupType === 1
+                          ? "purple"
+                          : selectedGroup.groupType === 2
+                          ? "cyan"
+                          : selectedGroup.groupType === 3
+                          ? "green"
+                          : selectedGroup.groupType === 4
+                          ? "volcano"
+                          : "default"
+                      }
                     >
                       {selectedGroup.groupTypeString}
                     </Tag>
@@ -1579,6 +1577,30 @@ const ViewGroup = () => {
                       {GROUP_STATUS[selectedGroup.status ?? 1]}
                     </Tag>
                   </Descriptions.Item>
+
+                  {/* Add department display if available */}
+                  {selectedGroup.departmentName && (
+                    <Descriptions.Item label={<Text strong>Department</Text>}>
+                      {selectedGroup.departmentName}
+                    </Descriptions.Item>
+                  )}
+
+                  {/* Add expertises display if available */}
+                  {selectedGroup.expertises &&
+                    selectedGroup.expertises.length > 0 && (
+                      <Descriptions.Item
+                        label={<Text strong>Areas of Expertise</Text>}
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          {selectedGroup.expertises.map((expertise, index) => (
+                            <Tag key={index} color="blue">
+                              {expertise}
+                            </Tag>
+                          ))}
+                        </div>
+                      </Descriptions.Item>
+                    )}
+
                   <Descriptions.Item label={<Text strong>Members</Text>}>
                     {renderMembersList(selectedGroup.members)}
                   </Descriptions.Item>

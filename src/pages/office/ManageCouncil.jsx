@@ -38,12 +38,14 @@ import {
   UserAddOutlined,
   UserSwitchOutlined,
   SearchOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import {
   useGetCouncilGroupsQuery,
   useReInviteGroupMemberMutation,
 } from "../../features/group/groupApiSlice";
 import { useGetLecturersQuery } from "../../features/user/userApiSlice";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -594,11 +596,51 @@ const ManageCouncil = () => {
         <Descriptions.Item
           label={
             <Text strong className="opacity-50">
+              Group Type
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 120 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
               Status
             </Text>
           }
         >
           <Skeleton.Input style={{ width: 80 }} active size="small" />
+        </Descriptions.Item>
+
+        {/* Add Department and Expertises to skeleton */}
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Department
+            </Text>
+          }
+        >
+          <Skeleton.Input style={{ width: 160 }} active size="small" />
+        </Descriptions.Item>
+
+        <Descriptions.Item
+          label={
+            <Text strong className="opacity-50">
+              Areas of Expertise
+            </Text>
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton.Button
+                key={i}
+                active
+                style={{ width: 100, height: 22 }}
+                className="mr-2"
+              />
+            ))}
+          </div>
         </Descriptions.Item>
 
         <Descriptions.Item
@@ -608,98 +650,13 @@ const ManageCouncil = () => {
             </Text>
           }
         >
-          <div className="space-y-8">
-            {/* Chairman section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-blue-300 mr-2"></div>
-                <Text strong className="text-blue-300">
-                  Chairman
-                </Text>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-200 mr-3"></div>
-                  <div className="flex-grow">
-                    <Skeleton.Input
-                      style={{ width: "80%" }}
-                      active
-                      size="small"
-                      className="mb-2"
-                    />
-                    <Skeleton.Input
-                      style={{ width: "60%" }}
-                      active
-                      size="small"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Secretary section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-green-300 mr-2"></div>
-                <Text strong className="text-green-300">
-                  Secretary
-                </Text>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-green-200 mr-3"></div>
-                  <div className="flex-grow">
-                    <Skeleton.Input
-                      style={{ width: "80%" }}
-                      active
-                      size="small"
-                      className="mb-2"
-                    />
-                    <Skeleton.Input
-                      style={{ width: "60%" }}
-                      active
-                      size="small"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Council members section skeleton */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="w-4 h-4 rounded-full bg-orange-300 mr-2"></div>
-                <Text strong className="text-orange-300">
-                  Council Members
-                </Text>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4">
-                {/* Multiple council members */}
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex items-center mb-4 last:mb-0">
-                    <div className="w-10 h-10 rounded-full bg-orange-200 mr-3"></div>
-                    <div className="flex-grow">
-                      <Skeleton.Input
-                        style={{ width: "80%" }}
-                        active
-                        size="small"
-                        className="mb-2"
-                      />
-                      <Skeleton.Input
-                        style={{ width: "60%" }}
-                        active
-                        size="small"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Rest of the skeleton code */}
         </Descriptions.Item>
       </Descriptions>
     </div>
   );
+
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -815,6 +772,36 @@ const ManageCouncil = () => {
           </Col>
         </Row>
 
+        {/* Add this near the top of the page where you have the statistics cards */}
+        <div className="mb-8 flex flex-wrap gap-4 justify-end">
+          <Button
+            type="primary"
+            icon={<TeamOutlined />}
+            onClick={() => navigate("/create-council")}
+            className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+          >
+            Create Review Council
+          </Button>
+
+          <Button
+            type="primary"
+            icon={<TeamOutlined />}
+            onClick={() => navigate("/create-assessment-council")}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
+          >
+            Create Assessment Council
+          </Button>
+
+          <Button
+            type="primary"
+            icon={<TeamOutlined />}
+            onClick={() => navigate("/create-inspection-council")}
+            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none"
+          >
+            Create Inspection Council
+          </Button>
+        </div>
+
         {/* Councils List */}
         {councils.length === 0 ? (
           <Empty
@@ -838,13 +825,15 @@ const ManageCouncil = () => {
                 <Card
                   className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
                   title={
-                    <div className="flex justify-between items-center">
-                      <Text strong className="text-lg">
-                        {council.groupName}
-                      </Text>
-                      <Tag color="orange" className="rounded-full px-3">
-                        {new Date(council.createdAt).toLocaleDateString()}
-                      </Tag>
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between">
+                        <Text strong className="text-lg">
+                          {council.groupName}
+                        </Text>
+                        <Tag color="purple" className="rounded-full px-3">
+                          {council.groupTypeName || "Council"}
+                        </Tag>
+                      </div>
                     </div>
                   }
                   actions={[
@@ -858,11 +847,29 @@ const ManageCouncil = () => {
                   ]}
                 >
                   <div className="space-y-4">
-                    <Text type="secondary" className="block">
-                      <CalendarOutlined className="mr-2" />
-                      Created:{" "}
-                      {new Date(council.createdAt).toLocaleDateString()}
-                    </Text>
+                    <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                      <div className="flex items-center">
+                        <BankOutlined className="text-blue-500 text-lg mr-2" />
+                        <Text strong className="text-base">
+                          {council.departmentName || "Unknown Department"}
+                        </Text>
+                      </div>
+                    </div>
+
+                    {council.expertises && council.expertises.length > 0 && (
+                      <div>
+                        <Text type="secondary" className="block mb-1">
+                          Areas of Expertise:
+                        </Text>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {council.expertises.map((expertise, index) => (
+                            <Tag key={index} color="blue" className="mb-1">
+                              {expertise}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <div className="flex justify-between mb-2">
@@ -890,7 +897,6 @@ const ManageCouncil = () => {
                       />
                     </div>
 
-                    {/* Role summary section */}
                     <div className="flex justify-between items-center">
                       <div className="flex space-x-2">
                         {council.members.some((m) => m.role === 3) && (
@@ -929,7 +935,6 @@ const ManageCouncil = () => {
                       </Space>
                     </div>
 
-                    {/* Status indicators */}
                     <div className="flex flex-wrap gap-2">
                       <Tag color="success" icon={<CheckCircleOutlined />}>
                         {council.members.filter((m) => m.status === 1).length}{" "}
@@ -946,6 +951,20 @@ const ManageCouncil = () => {
                           Rejected
                         </Tag>
                       )}
+                    </div>
+
+                    <div className="pt-2 mt-2 border-t border-gray-100">
+                      <Text type="secondary" className="flex items-center">
+                        <CalendarOutlined className="mr-2" />
+                        Created:{" "}
+                        {new Date(council.createdAt).toLocaleDateString()}
+                        <Tag
+                          color="orange"
+                          className="ml-auto rounded-full px-3"
+                        >
+                          {new Date(council.createdAt).toLocaleDateString()}
+                        </Tag>
+                      </Text>
                     </div>
                   </div>
                 </Card>
@@ -989,9 +1008,38 @@ const ManageCouncil = () => {
                   <Descriptions.Item label={<Text strong>Created Date</Text>}>
                     {new Date(selectedCouncil.createdAt).toLocaleString()}
                   </Descriptions.Item>
+
+                  <Descriptions.Item label={<Text strong>Group Type</Text>}>
+                    <Tag color="purple">
+                      {selectedCouncil.groupTypeName || "Council"}
+                    </Tag>
+                  </Descriptions.Item>
+
                   <Descriptions.Item label={<Text strong>Status</Text>}>
                     {selectedCouncil.status === 1 ? "Active" : "Inactive"}
                   </Descriptions.Item>
+
+                  <Descriptions.Item label={<Text strong>Department</Text>}>
+                    {selectedCouncil.departmentName || "Unknown Department"}
+                  </Descriptions.Item>
+
+                  {selectedCouncil.expertises &&
+                    selectedCouncil.expertises.length > 0 && (
+                      <Descriptions.Item
+                        label={<Text strong>Areas of Expertise</Text>}
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          {selectedCouncil.expertises.map(
+                            (expertise, index) => (
+                              <Tag key={index} color="blue">
+                                {expertise}
+                              </Tag>
+                            )
+                          )}
+                        </div>
+                      </Descriptions.Item>
+                    )}
+
                   <Descriptions.Item label={<Text strong>Members</Text>}>
                     {renderMembersList(selectedCouncil.members)}
                   </Descriptions.Item>

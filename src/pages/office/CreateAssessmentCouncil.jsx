@@ -15,12 +15,12 @@ import {
 import { UserOutlined, TeamOutlined, BankOutlined } from "@ant-design/icons";
 import { useGetDepartmentsQuery } from "../../features/department/departmentApiSlice";
 import { useGetLecturersQuery } from "../../features/user/userApiSlice";
-import { useCreateCouncilGroupMutation } from "../../features/group/groupApiSlice";
+import { useCreateAssessmentCouncilMutation } from "../../features/group/groupApiSlice";
 import { useNavigate } from "react-router-dom";
 
 const { Option } = Select;
 
-const CreateCouncil = () => {
+const CreateAssessmentCouncil = () => {
   const [form] = Form.useForm();
   const [selectedMembers, setSelectedMembers] = useState({
     chairman: null,
@@ -45,34 +45,12 @@ const CreateCouncil = () => {
     isError: isLecturersError,
   } = useGetLecturersQuery();
 
-  // Council creation mutation
-  const [createCouncilGroup, { isLoading: isCreating }] =
-    useCreateCouncilGroupMutation();
+  // Council creation mutation - will be replaced with the actual API
+  const [createAssessmentCouncil, { isLoading: isCreating }] =
+    useCreateAssessmentCouncilMutation();
 
   // Navigate
   const navigate = useNavigate();
-
-  // Debug - log the lecturers data
-  useEffect(() => {
-    if (lecturersData?.lecturers) {
-      console.log("All lecturers:", lecturersData.lecturers);
-    }
-  }, [lecturersData]);
-
-  // Debug - log lecturers for the selected department
-  useEffect(() => {
-    if (lecturersData?.lecturers && selectedDepartment) {
-      // Make sure we're comparing the same type (convert to number to be safe)
-      const deptId = Number(selectedDepartment);
-      const deptLecturers = lecturersData.lecturers.filter(
-        (l) => Number(l.departmentId) === deptId
-      );
-      console.log(
-        `Department ${deptId} has ${deptLecturers.length} lecturers:`,
-        deptLecturers
-      );
-    }
-  }, [lecturersData, selectedDepartment]);
 
   // Filter lecturers by department and exclude already selected ones
   const filterLecturers = (role) => {
@@ -133,19 +111,19 @@ const CreateCouncil = () => {
       // Get the council name from the form
       const councilName = form.getFieldValue("councilName");
 
-      // Prepare the request payload
+      // Prepare the request payload - simplified to match API contract
       const requestPayload = {
-        groupName: councilName, // Ensure the name is included here
-        members: formattedMembers,
+        groupName: councilName,
         groupDepartment: Number(selectedDepartment),
+        members: formattedMembers,
       };
 
-      console.log("Council request payload:", requestPayload);
+      console.log("Assessment Council request payload:", requestPayload);
 
-      // Call the API
-      const response = await createCouncilGroup(requestPayload).unwrap();
+      // Call the specific API for assessment councils
+      const response = await createAssessmentCouncil(requestPayload).unwrap();
 
-      message.success("Council created successfully");
+      message.success("Assessment Council created successfully");
       form.resetFields();
       setSelectedMembers({
         chairman: null,
@@ -424,10 +402,10 @@ const CreateCouncil = () => {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Create Review Council
+            Create Assessment Council
           </h2>
           <p className="text-gray-600">
-            Form a council to review research proposals
+            Form a council to assess and evaluate research projects
           </p>
         </div>
 
@@ -451,7 +429,7 @@ const CreateCouncil = () => {
                     { required: true, message: "Please enter council name" },
                   ]}
                 >
-                  <Input placeholder="Enter a descriptive name for your council" />
+                  <Input placeholder="Enter a descriptive name for your assessment council" />
                 </Form.Item>
 
                 <Form.Item
@@ -801,7 +779,7 @@ const CreateCouncil = () => {
                     disabled={isCreating}
                     icon={<TeamOutlined />}
                   >
-                    Create Council
+                    Create Assessment Council
                   </Button>
                 )}
               </div>
@@ -813,4 +791,4 @@ const CreateCouncil = () => {
   );
 };
 
-export default CreateCouncil;
+export default CreateAssessmentCouncil;
