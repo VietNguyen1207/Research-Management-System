@@ -41,6 +41,8 @@ import CouncilRequestRecord from "../pages/lecturer/CouncilRequestRecord";
 import ProjectPaper from "../pages/lecturer/ProjectPaper";
 import ReviewSchedule from "../pages/lecturer/ReviewSchedule";
 import AssignReview from "../pages/office/AssignReview";
+import CreateAssessmentCouncil from "../pages/office/CreateAssessmentCouncil";
+import CreateInspectionCouncil from "../pages/office/CreateInspectionCouncil";
 
 // Component for role-based redirection
 const RoleBasedRedirect = () => {
@@ -220,6 +222,14 @@ export const routes = [
           //   element: <FundDisbursementRequestDetails />,
           // },
           { path: "create-council", element: <CreateCouncil /> },
+          {
+            path: "create-assessment-council",
+            element: <CreateAssessmentCouncil />,
+          },
+          {
+            path: "create-inspection-council",
+            element: <CreateInspectionCouncil />,
+          },
           { path: "manage-council", element: <ManageCouncil /> },
           { path: "assign-timeline", element: <AssignTimeline /> },
           {

@@ -20,6 +20,24 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
     }),
 
+    createAssessmentCouncil: builder.mutation({
+      query: (councilData) => ({
+        url: "/assessment-council",
+        method: "POST",
+        body: councilData,
+      }),
+      invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
+    }),
+
+    createInspectionCouncil: builder.mutation({
+      query: (councilData) => ({
+        url: "/inspection-council",
+        method: "POST",
+        body: councilData,
+      }),
+      invalidatesTags: ["Groups", "UserGroups", "CouncilGroups"],
+    }),
+
     getCouncilGroups: builder.query({
       query: () => "/council-groups",
       transformResponse: (response) => {
@@ -34,6 +52,11 @@ export const groupApiSlice = apiSlice.injectEndpoints({
                 roleText: getRoleName(member.role),
                 statusText: getStatusName(member.status),
               })),
+              // Ensure expertises is always an array even if not provided
+              expertises: council.expertises || [],
+              // Ensure groupTypeName has a default fallback
+              groupTypeName:
+                council.groupTypeName || getGroupTypeName(council.groupType),
             })),
           };
         }
@@ -120,15 +143,19 @@ export const getGroupStatusName = (status) => {
 
 export const GROUP_TYPE = {
   STUDENT: 0,
-  COUNCIL: 1,
+  RESEARCH_COUNCIL: 1,
   RESEARCH: 2,
+  INSPECTION_COUNCIL: 3,
+  ASSESSMENT_COUNCIL: 4,
 };
 
 export const getGroupTypeName = (type) => {
   const groupTypeMap = {
     [GROUP_TYPE.STUDENT]: "Student",
-    [GROUP_TYPE.COUNCIL]: "Council",
+    [GROUP_TYPE.RESEARCH_COUNCIL]: "Review Council",
     [GROUP_TYPE.RESEARCH]: "Research",
+    [GROUP_TYPE.INSPECTION_COUNCIL]: "Inspection Council",
+    [GROUP_TYPE.ASSESSMENT_COUNCIL]: "Assessment Council",
   };
   return groupTypeMap[type] || "Unknown Group Type";
 };
@@ -137,6 +164,8 @@ export const getGroupTypeName = (type) => {
 export const {
   useCreateResearchGroupMutation,
   useCreateCouncilGroupMutation,
+  useCreateAssessmentCouncilMutation,
+  useCreateInspectionCouncilMutation,
   useGetCouncilGroupsQuery,
   useReInviteGroupMemberMutation,
   useGetUserResearchGroupsQuery,

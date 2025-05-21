@@ -39,6 +39,7 @@ import {
   ClearOutlined,
   CheckCircleFilled,
   ReloadOutlined,
+  CheckOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -65,6 +66,8 @@ const CreateGroup = () => {
   const [stakeholders, setStakeholders] = useState([]);
   const [stakeholderEmail, setStakeholderEmail] = useState("");
   const [stakeholderName, setStakeholderName] = useState("");
+  const [selectedExpertises, setSelectedExpertises] = useState([]);
+  const [availableExpertises, setAvailableExpertises] = useState([]);
 
   // Check if user is a lecturer or researcher
   const isLecturer = user?.role === "lecturer" || user?.role === "researcher";
@@ -100,9 +103,27 @@ const CreateGroup = () => {
   // Get the navigate function
   const navigate = useNavigate();
 
-  // Update autocomplete options based on user role
+  // Add this effect to populate available expertises from all academic users
   useEffect(() => {
-    if (!emailInput) {
+    if (academicUsers?.allUsers) {
+      // Extract and deduplicate all expertise names
+      const expertiseSet = new Set();
+
+      academicUsers.allUsers.forEach((user) => {
+        if (user.expertises && user.expertises.length > 0) {
+          user.expertises.forEach((exp) => {
+            expertiseSet.add(exp.expertiseName);
+          });
+        }
+      });
+
+      setAvailableExpertises(Array.from(expertiseSet).sort());
+    }
+  }, [academicUsers]);
+
+  // Modify the useEffect for filtering users to include expertise filtering
+  useEffect(() => {
+    if (!emailInput && selectedExpertises.length === 0) {
       setAutoCompleteOptions([]);
       return;
     }
@@ -110,24 +131,36 @@ const CreateGroup = () => {
     const inputLower = emailInput.toLowerCase();
 
     if (isLecturer && academicUsers) {
-      // Debug log to check if researchers are included
-      console.log("Academic users data:", academicUsers);
-
       // For lecturers, show both students and other lecturers
-      const filteredUsers = academicUsers.allUsers
-        .filter(
+      let filteredUsers = academicUsers.allUsers.filter(
+        (u) =>
+          // Exclude already added members
+          !members.some((member) => member.email === u.email) &&
+          // Exclude the current user
+          u.userId !== user.userId &&
+          u.email.toLowerCase() !== user.email.toLowerCase()
+      );
+
+      // Apply text search if there's input
+      if (inputLower) {
+        filteredUsers = filteredUsers.filter(
           (u) =>
             u.email.toLowerCase().includes(inputLower) ||
             u.fullName.toLowerCase().includes(inputLower)
-        )
-        .filter(
-          (u) =>
-            // Exclude already added members
-            !members.some((member) => member.email === u.email) &&
-            // Exclude the current user
-            u.userId !== user.userId &&
-            u.email.toLowerCase() !== user.email.toLowerCase()
         );
+      }
+
+      // Apply expertise filter if any are selected
+      if (selectedExpertises.length > 0) {
+        filteredUsers = filteredUsers.filter((u) => {
+          if (!u.expertises || u.expertises.length === 0) return false;
+
+          // Check if user has ANY of the selected expertises (OR logic)
+          return selectedExpertises.some((selectedExp) =>
+            u.expertises.some((exp) => exp.expertiseName === selectedExp)
+          );
+        });
+      }
 
       const options = filteredUsers.map((user) => ({
         value: user.email,
@@ -158,6 +191,15 @@ const CreateGroup = () => {
                 </Tag>
               </div>
               <span className="text-xs text-gray-500">{user.email}</span>
+              {user.expertises && user.expertises.length > 0 && (
+                <div className="mt-1 flex flex-wrap">
+                  {user.expertises.map((expertise, index) => (
+                    <Tag key={index} color="cyan" className="mr-1 mb-1 text-xs">
+                      {expertise.expertiseName}
+                    </Tag>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ),
@@ -198,7 +240,15 @@ const CreateGroup = () => {
 
       setAutoCompleteOptions(options);
     }
-  }, [emailInput, students, academicUsers, members, isLecturer, user]);
+  }, [
+    emailInput,
+    students,
+    academicUsers,
+    members,
+    isLecturer,
+    user,
+    selectedExpertises,
+  ]);
 
   // Add useEffect to refetch data when component mounts
   useEffect(() => {
@@ -300,7 +350,8 @@ const CreateGroup = () => {
               email: user.email,
               fullName: user.fullName,
               role: "Member",
-              userType: user.userType, // Store user type for display
+              userType: user.userType,
+              expertises: user.expertises || [],
             },
           ]);
         } else {
@@ -714,6 +765,70 @@ const CreateGroup = () => {
     setStakeholders(stakeholders.filter((s) => s.email !== email));
   };
 
+  // Add this helper function to handle expertise tag selection
+  const handleExpertiseSelect = (expertise) => {
+    if (selectedExpertises.includes(expertise)) {
+      // Remove if already selected
+      setSelectedExpertises(
+        selectedExpertises.filter((exp) => exp !== expertise)
+      );
+    } else {
+      // Add if not already selected
+      setSelectedExpertises([...selectedExpertises, expertise]);
+    }
+
+    // Clear text input when filtering by expertise
+    setEmailInput("");
+  };
+
+  // Add this UI component right before your AutoComplete component
+  const ExpertiseFilters = () => (
+    <>
+      {isLecturer && availableExpertises.length > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center mb-2">
+            <div className="text-sm font-medium text-gray-700 mr-2">
+              Filter by expertise:
+            </div>
+            {selectedExpertises.length > 0 && (
+              <Button
+                type="text"
+                size="small"
+                onClick={() => setSelectedExpertises([])}
+                className="text-gray-500"
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {availableExpertises.map((expertise) => (
+              <Tag
+                key={expertise}
+                className="cursor-pointer mb-1"
+                color={
+                  selectedExpertises.includes(expertise) ? "cyan" : "default"
+                }
+                onClick={() => handleExpertiseSelect(expertise)}
+                style={{
+                  borderWidth: selectedExpertises.includes(expertise) ? 2 : 1,
+                  fontWeight: selectedExpertises.includes(expertise)
+                    ? 500
+                    : 400,
+                }}
+              >
+                {expertise}
+                {selectedExpertises.includes(expertise) && (
+                  <CheckOutlined className="ml-1" />
+                )}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
@@ -1057,6 +1172,9 @@ const CreateGroup = () => {
               )}
             </div>
 
+            {/* Add expertise filters here */}
+            <ExpertiseFilters />
+
             <div className="flex space-x-2">
               <AutoComplete
                 value={emailInput}
@@ -1248,6 +1366,22 @@ const CreateGroup = () => {
                                   {member.email}
                                 </span>
                               </Tooltip>
+                              {member.expertises &&
+                                member.expertises.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap">
+                                    {member.expertises.map(
+                                      (expertise, index) => (
+                                        <Tag
+                                          key={index}
+                                          color="cyan"
+                                          className="mr-1 mb-1 text-xs"
+                                        >
+                                          {expertise.expertiseName}
+                                        </Tag>
+                                      )
+                                    )}
+                                  </div>
+                                )}
                             </>
                           ) : (
                             <Tooltip title={member.email}>

@@ -22,6 +22,11 @@ export const userApiSlice = apiSlice.injectEndpoints({
             // Add human-readable level
             lecturer.levelText = levelMap[lecturer.level] || "Unknown";
 
+            // Format expertises for easier display
+            lecturer.expertisesList = lecturer.expertises
+              ? lecturer.expertises.map((e) => e.expertiseName).join(", ")
+              : "";
+
             // Group by department
             if (!lecturersByDepartment[lecturer.departmentId]) {
               lecturersByDepartment[lecturer.departmentId] = {
