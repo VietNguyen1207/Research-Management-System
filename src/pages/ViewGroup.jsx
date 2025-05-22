@@ -1230,8 +1230,10 @@ const ViewGroup = () => {
               >
                 <Select.Option value="all">All Types</Select.Option>
                 <Select.Option value="0">Student Group</Select.Option>
-                <Select.Option value="1">Council Group</Select.Option>
+                <Select.Option value="1">Review Council</Select.Option>
                 <Select.Option value="2">Research Group</Select.Option>
+                <Select.Option value="3">Inspection Council</Select.Option>
+                <Select.Option value="4">Assessment Council</Select.Option>
               </Select>
             </div>
             <div>
