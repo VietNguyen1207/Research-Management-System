@@ -190,8 +190,10 @@ export const userApiSlice = apiSlice.injectEndpoints({
 const getGroupTypeString = (groupType) => {
   const groupTypeMap = {
     0: "Student",
-    1: "Council",
+    1: "Review Council",
     2: "Research",
+    3: "Inspection Council",
+    4: "Assessment Council",
   };
   return groupTypeMap[groupType] || "Unknown";
 };

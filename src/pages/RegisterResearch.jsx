@@ -45,6 +45,7 @@ import {
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { PROJECT_RESOURCE_TYPE } from "../constants/enums";
+import { useGetCategoriesQuery } from "../features/category/categoryApiSlice";
 
 const { TextArea } = Input;
 
@@ -212,6 +213,10 @@ const RegisterResearch = () => {
     }).format(amount);
   };
 
+  // Inside the RegisterResearch component, add this query hook
+  const { data: categories, isLoading: isLoadingCategories } =
+    useGetCategoriesQuery();
+
   const onFinish = async (values) => {
     try {
       // Validate budget allocations
@@ -296,6 +301,7 @@ const RegisterResearch = () => {
         departmentId: values.department_id,
         projectPhases: projectPhases,
         proposedResources: proposedResources,
+        categoryIds: values.categories || [],
       };
 
       console.log("Sending project data:", projectData);
@@ -536,6 +542,50 @@ const RegisterResearch = () => {
                   rows={4}
                   className="rounded-lg"
                 />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span className="text-gray-700 font-medium text-base">
+                    Research Categories
+                  </span>
+                }
+                name="categories"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select at least one category!",
+                  },
+                ]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder={
+                    isLoadingCategories
+                      ? "Loading categories..."
+                      : "Select research categories"
+                  }
+                  className="rounded-lg"
+                  loading={isLoadingCategories}
+                  disabled={isLoadingCategories}
+                  optionFilterProp="label"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {categories?.map((category) => (
+                    <Select.Option
+                      key={category.categoryId}
+                      value={category.categoryId}
+                      label={category.categoryName}
+                    >
+                      {category.categoryName}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </div>
           </Card>

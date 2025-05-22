@@ -872,6 +872,24 @@ const ProjectRequestDetail = () => {
                 <Descriptions.Item label="Department">
                   {projectRequest.department?.departmentName}
                 </Descriptions.Item>
+                <Descriptions.Item label="Research Categories">
+                  {projectRequest.categories &&
+                  projectRequest.categories.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {projectRequest.categories.map((category) => (
+                        <Tag
+                          key={category.categoryId}
+                          color="blue"
+                          className="px-2 py-1"
+                        >
+                          {category.categoryName}
+                        </Tag>
+                      ))}
+                    </div>
+                  ) : (
+                    <Text type="secondary">No categories assigned</Text>
+                  )}
+                </Descriptions.Item>
                 <Descriptions.Item label="Status">
                   <Tag color={STATUS_COLORS[projectRequest.approvalStatus]}>
                     {APPROVAL_STATUS[projectRequest.approvalStatus]}

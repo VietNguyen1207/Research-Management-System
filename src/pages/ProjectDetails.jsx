@@ -1113,6 +1113,25 @@ const ProjectDetails = () => {
                       <Descriptions.Item label="Group">
                         {projectDetails.groupName}
                       </Descriptions.Item>
+                      <Descriptions.Item label="Categories">
+                        {projectDetails.categories?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {projectDetails.categories.map((category) => (
+                              <Tag
+                                key={category.categoryId}
+                                color="blue"
+                                className="mr-1 mb-1"
+                              >
+                                {category.categoryName}
+                              </Tag>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">
+                            No categories assigned
+                          </span>
+                        )}
+                      </Descriptions.Item>
                       <Descriptions.Item label="Timeline">
                         {formatDate(projectDetails.startDate)} -{" "}
                         {formatDate(projectDetails.endDate)}

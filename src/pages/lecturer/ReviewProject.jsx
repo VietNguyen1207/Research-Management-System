@@ -235,6 +235,11 @@ const ReviewProject = () => {
         );
       });
 
+      // Sort the filtered results by requestedAt in descending order (newest first)
+      filtered.sort(
+        (a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)
+      );
+
       setFilteredProjects(filtered);
     }
   }, [projectRequestsData, searchText, typeFilter, requestTypeFilter, groupId]);
