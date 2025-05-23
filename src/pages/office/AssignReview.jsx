@@ -20,6 +20,10 @@ import {
   Col,
   Empty,
   Steps,
+  Modal,
+  List,
+  Avatar,
+  Descriptions,
 } from "antd";
 import {
   TeamOutlined,
@@ -31,13 +35,16 @@ import {
   CheckCircleOutlined,
   InfoCircleOutlined,
   PlusOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import moment from "moment";
+import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 // Remove or comment out API imports that don't exist yet
-// import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
-// import { useGetProjectsForReviewQuery } from "../../features/project/projectApiSlice";
-// import { useAssignCouncilReviewMutation } from "../../features/timeline/timelineApiSlice";
+import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
+import {
+  useAssignProjectsToCouncilMutation,
+  useGetAllProjectRequestsQuery,
+} from "../../features/project/projectApiSlice";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -57,6 +64,12 @@ const AssignReview = () => {
   const [notes, setNotes] = useState("");
   const [searchText, setSearchText] = useState("");
   const [councilSearchText, setCouncilSearchText] = useState("");
+  const [projectDuration, setProjectDuration] = useState(null);
+
+  // New state for members modal
+  const [isMembersModalVisible, setIsMembersModalVisible] = useState(false);
+  const [membersToShowInModal, setMembersToShowInModal] = useState([]);
+  const [currentCouncilForModal, setCurrentCouncilForModal] = useState(null);
 
   // Replace API queries with mock data variables
   // Comment out actual API hooks
@@ -77,8 +90,17 @@ const AssignReview = () => {
     useAssignCouncilReviewMutation();
   */
 
+  const {
+    data: allProjectRequestsData,
+    isLoading: projectsLoading,
+    isError: projectsError,
+  } = useGetAllProjectRequestsQuery();
+
+  const [assignProjectsToCouncil, { isLoading: isAssigning }] =
+    useAssignProjectsToCouncilMutation();
+
   // Mock loading state for the assign action
-  const isAssigning = false;
+  // const isAssigning = false;
 
   // Mock data for testing
   const mockCouncils = [
@@ -116,81 +138,36 @@ const AssignReview = () => {
     },
   ];
 
-  const mockProjects = [
-    {
-      id: "P001",
-      name: "Sustainable Energy Solutions for Urban Areas",
-      leaderName: "Sarah Johnson",
-      groupName: "Green Energy Research Team",
-      department: "Engineering",
-      phase: "Implementation",
-      status: "Active",
-      submissionDate: "2023-10-15",
-    },
-    {
-      id: "P002",
-      name: "AI-Based Medical Diagnostic Systems",
-      leaderName: "Michael Chen",
-      groupName: "Medical AI Innovation Group",
-      department: "Information Technology",
-      phase: "Testing",
-      status: "Active",
-      submissionDate: "2023-09-28",
-    },
-    {
-      id: "P003",
-      name: "Climate Change Impact on Local Agriculture",
-      leaderName: "Emily Rodriguez",
-      groupName: "Environmental Research Collective",
-      department: "Agriculture",
-      phase: "Data Collection",
-      status: "Active",
-      submissionDate: "2023-11-05",
-    },
-    {
-      id: "P004",
-      name: "Behavioral Economics in Digital Markets",
-      leaderName: "David Kim",
-      groupName: "Digital Economy Research",
-      department: "Economics",
-      phase: "Analysis",
-      status: "Active",
-      submissionDate: "2023-10-10",
-    },
-    {
-      id: "P005",
-      name: "Novel Materials for Quantum Computing",
-      leaderName: "Lisa Wong",
-      groupName: "Quantum Materials Lab",
-      department: "Physics",
-      phase: "Experimentation",
-      status: "Active",
-      submissionDate: "2023-09-15",
-    },
-  ];
+  const {
+    data: councilsData,
+    isLoading: councilsLoading,
+    isError: councilsApiError,
+  } = useGetCouncilGroupsQuery();
 
   // Use mock data directly
-  const councils = mockCouncils;
-  const projects = mockProjects;
-  const councilsLoadingState = false;
-  const projectsLoadingState = false;
+  const councils = councilsData?.data || [];
+  const projects = (allProjectRequestsData?.data || [])
+    .slice() // Create a shallow copy to avoid mutating the cached data
+    .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)); // Sort by requestedAt descending
+
   const councilsErrorState = false;
-  const projectsErrorState = false;
 
   // Filter projects based on search text
   const filteredProjects = projects.filter(
     (project) =>
-      project.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      project.leaderName.toLowerCase().includes(searchText.toLowerCase()) ||
-      project.groupName.toLowerCase().includes(searchText.toLowerCase()) ||
-      project.department.toLowerCase().includes(searchText.toLowerCase())
+      project.projectName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.requesterName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.groupName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.departmentName?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   // Filter councils based on search text
   const filteredCouncils = councils.filter(
     (council) =>
-      council.name.toLowerCase().includes(councilSearchText.toLowerCase()) ||
-      council.departmentName
+      (council.name ?? "")
+        .toLowerCase()
+        .includes(councilSearchText.toLowerCase()) ||
+      (council.departmentName ?? "")
         .toLowerCase()
         .includes(councilSearchText.toLowerCase())
   );
@@ -199,13 +176,13 @@ const AssignReview = () => {
   const projectColumns = [
     {
       title: "Project",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "projectName",
+      key: "projectName",
       render: (text, record) => (
         <Space direction="vertical" size={0}>
           <Text strong>{text}</Text>
           <Text type="secondary" style={{ fontSize: "12px" }}>
-            <ProjectOutlined className="mr-1" /> ID: {record.id}
+            <ProjectOutlined className="mr-1" /> ID: {record.requestId}
           </Text>
         </Space>
       ),
@@ -218,47 +195,7 @@ const AssignReview = () => {
         <Space direction="vertical" size={0}>
           <Text>{text}</Text>
           <Text type="secondary" style={{ fontSize: "12px" }}>
-            Leader: {record.leaderName}
-          </Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Department",
-      dataIndex: "department",
-      key: "department",
-      render: (text) => <Tag color="blue">{text}</Tag>,
-    },
-    {
-      title: "Phase",
-      dataIndex: "phase",
-      key: "phase",
-      render: (text) => <Tag color="purple">{text}</Tag>,
-    },
-    {
-      title: "Submission Date",
-      dataIndex: "submissionDate",
-      key: "submissionDate",
-      render: (date) => (
-        <div className="flex items-center">
-          <CalendarOutlined className="mr-1" />
-          {date}
-        </div>
-      ),
-    },
-  ];
-
-  // Council selection table columns
-  const councilColumns = [
-    {
-      title: "Council Name",
-      dataIndex: "name",
-      key: "name",
-      render: (text, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong>{text}</Text>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            <TeamOutlined className="mr-1" /> {record.members.length} members
+            Requester: {record.requesterName}
           </Text>
         </Space>
       ),
@@ -270,63 +207,255 @@ const AssignReview = () => {
       render: (text) => <Tag color="blue">{text}</Tag>,
     },
     {
-      title: "Chairman",
-      key: "chairman",
-      render: (_, record) => {
-        const chairman = record.members.find(
-          (m) => m.role === "Council Chairman"
+      title: "Status",
+      dataIndex: "statusName",
+      key: "statusName",
+      render: (text) => <Tag color="purple">{text}</Tag>,
+    },
+    {
+      title: "Categories",
+      dataIndex: "categories",
+      key: "categories",
+      render: (categories) => {
+        if (!categories || categories.length === 0) {
+          return <Text type="secondary">N/A</Text>;
+        }
+        // Display categories as Tags
+        return (
+          <div
+            style={{
+              maxWidth: 200,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "4px",
+            }}
+          >
+            {categories.map((cat) => (
+              <Tag key={cat.categoryId} color="blue">
+                {cat.categoryName}
+              </Tag>
+            ))}
+          </div>
         );
-        return chairman ? chairman.name : "N/A";
+      },
+    },
+    {
+      title: "Requested Date",
+      dataIndex: "requestedAt",
+      key: "requestedAt",
+      render: (date) => (
+        <div className="flex items-center">
+          <CalendarOutlined className="mr-1" />
+          {dayjs(date).format("YYYY-MM-DD HH:mm")}
+        </div>
+      ),
+    },
+    {
+      title: "Council Match",
+      key: "councilMatch",
+      width: 150, // Adjust width as needed
+      render: (text, record) => {
+        if (!selectedCouncil) {
+          return (
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Select council first
+            </Text>
+          );
+        }
+        if (
+          !record.categories ||
+          record.categories.length === 0 ||
+          !selectedCouncil.expertises ||
+          selectedCouncil.expertises.length === 0
+        ) {
+          return <Tag color="default">N/A</Tag>;
+        }
+
+        const projectCategories = record.categories.map((cat) => ({
+          ...cat,
+          nameLower: cat.categoryName.toLowerCase(),
+        }));
+        const councilExpertiseNamesLower = selectedCouncil.expertises.map(
+          (exp) => exp.toLowerCase()
+        );
+
+        const matchedCategories = projectCategories.filter((cat) =>
+          councilExpertiseNamesLower.includes(cat.nameLower)
+        );
+
+        if (matchedCategories.length > 0) {
+          return (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+            >
+              <Tag
+                color="success"
+                icon={<CheckCircleOutlined />}
+                style={{ marginBottom: "4px" }}
+              >
+                {matchedCategories.length} Match(es)
+              </Tag>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                  maxHeight: "60px",
+                  overflowY: "auto",
+                }}
+              >
+                {matchedCategories.map((cat) => (
+                  <Tooltip
+                    key={cat.categoryId}
+                    title={`Matches: ${cat.categoryName}`}
+                  >
+                    <Tag color="geekblue">{cat.categoryName}</Tag>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <Tag color="warning" icon={<InfoCircleOutlined />}>
+              No Direct Match
+            </Tag>
+          );
+        }
+      },
+    },
+  ];
+
+  // Council selection table columns
+  const councilColumns = [
+    {
+      title: "Council Name",
+      dataIndex: "groupName",
+      key: "groupName",
+      render: (text, record) => (
+        <Space direction="vertical" size={0}>
+          <Text strong>{text}</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            <TeamOutlined className="mr-1" />{" "}
+            {record.currentMember || record.members?.length || 0} /{" "}
+            {record.maxMember} members
+          </Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Department",
+      dataIndex: "departmentName",
+      key: "departmentName",
+      render: (text) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: "Expertise",
+      key: "expertises",
+      dataIndex: "expertises",
+      render: (expertises) => {
+        if (!expertises || expertises.length === 0) {
+          return <Text type="secondary">N/A</Text>;
+        }
+        // Display expertises as Tags
+        return (
+          <div
+            style={{
+              maxWidth: 200,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "4px",
+            }}
+          >
+            {expertises.map((expertise, index) => (
+              <Tag key={index} color="purple">
+                {" "}
+                {/* Using a different color for distinction */}
+                {expertise}
+              </Tag>
+            ))}
+          </div>
+        );
       },
     },
     {
       title: "Members",
       key: "members",
       render: (_, record) => (
-        <Tooltip
-          title={
-            <ul style={{ margin: 0, padding: 0, listStyleType: "none" }}>
-              {record.members.map((member) => (
-                <li key={member.id}>
-                  {member.name} - {member.role}
-                </li>
-              ))}
-            </ul>
-          }
+        <Button
+          size="small"
+          icon={<TeamOutlined />}
+          onClick={() => {
+            setMembersToShowInModal(record.members || []);
+            setCurrentCouncilForModal(record); // Store the council name for the modal title
+            setIsMembersModalVisible(true);
+          }}
         >
-          <Button size="small" icon={<TeamOutlined />}>
-            View Members
-          </Button>
-        </Tooltip>
+          View Members
+        </Button>
       ),
     },
   ];
 
   // Handle form submission
   const handleSubmit = async () => {
-    // Validation logic remains the same
-    if (selectedProjects.length === 0) {
-      message.error("Please select at least one project to review");
+    // Validation logic remains the same for first two steps - already handled by nextStep
+
+    // Ensure all data for submission is available (final check before API call)
+    if (
+      selectedProjects.length === 0 ||
+      !selectedCouncil ||
+      !reviewDate ||
+      !reviewTimeRange ||
+      !reviewTimeRange[0] ||
+      !projectDuration ||
+      !(
+        dayjs(projectDuration).hour() > 0 || dayjs(projectDuration).minute() > 0
+      )
+    ) {
+      message.error("Missing required information. Please complete all steps.");
       return;
     }
 
-    if (!selectedCouncil) {
-      message.error("Please select a council");
-      return;
+    // Prepare the payload for the API
+    const assignments = [];
+    let currentScheduledDateTime = dayjs(reviewDate)
+      .hour(dayjs(reviewTimeRange[0]).hour())
+      .minute(dayjs(reviewTimeRange[0]).minute())
+      .second(0)
+      .millisecond(0);
+
+    const durationHours = dayjs(projectDuration).hour();
+    const durationMinutes = dayjs(projectDuration).minute();
+    const durationString = `${String(durationHours).padStart(2, "0")}:${String(
+      durationMinutes
+    ).padStart(2, "0")}:00`;
+
+    for (const project of selectedProjects) {
+      assignments.push({
+        projectRequestId: project.requestId,
+        scheduledDate: currentScheduledDateTime.toISOString(),
+        scheduledTime: durationString,
+        notes: `${location ? `Location: ${location}. ` : ""}${
+          notes || ""
+        }`.trim(),
+      });
+      // Add duration for the next project's start time
+      currentScheduledDateTime = currentScheduledDateTime
+        .add(durationHours, "hour")
+        .add(durationMinutes, "minute");
     }
 
-    if (!reviewDate || !reviewTimeRange) {
-      message.error("Please select a review date and time range");
-      return;
-    }
+    const payload = {
+      councilGroupId: selectedCouncil.groupId, // Changed from selectedCouncil.id
+      assignments: assignments,
+    };
 
-    if (!location) {
-      message.error("Please enter a location for the review");
-      return;
-    }
+    console.log("Submitting payload:", JSON.stringify(payload, null, 2));
 
     try {
-      // Mock successful submission
+      // Call the new mutation
+      await assignProjectsToCouncil(payload).unwrap();
       message.success("Review session assigned successfully!");
 
       // Navigate back after success
@@ -340,14 +469,47 @@ const AssignReview = () => {
 
   // Move to next step
   const nextStep = () => {
-    if (currentStep === 0 && selectedProjects.length === 0) {
+    if (currentStep === 0 && !selectedCouncil) {
+      message.error("Please select a council for review");
+      return;
+    }
+
+    if (currentStep === 1 && selectedProjects.length === 0) {
       message.error("Please select at least one project to review");
       return;
     }
 
-    if (currentStep === 1 && !selectedCouncil) {
-      message.error("Please select a council for review");
-      return;
+    // Validation for Step 2 (Schedule Review)
+    if (currentStep === 2) {
+      form
+        .validateFields() // Validate all fields in Step 2 form
+        .then(() => {
+          if (
+            !reviewDate ||
+            !reviewTimeRange ||
+            !reviewTimeRange[0] ||
+            !projectDuration ||
+            !(
+              dayjs(projectDuration).hour() > 0 ||
+              dayjs(projectDuration).minute() > 0
+            )
+          ) {
+            // This is a fallback, form.validateFields should catch most of it.
+            message.error(
+              "Please ensure date, start time, and a valid project duration are set."
+            );
+            return;
+          }
+          setCurrentStep(currentStep + 1); // Proceed if form validation passes
+        })
+        .catch((info) => {
+          console.log("Validate Failed:", info);
+          message.error(
+            "Please correct the errors in the schedule information."
+          );
+          return; // Stay on current step if validation fails
+        });
+      return; // Important: nextStep logic for step 2 is handled by form validation promise
     }
 
     setCurrentStep(currentStep + 1);
@@ -363,17 +525,20 @@ const AssignReview = () => {
     if (selected) {
       setSelectedProjects([...selectedProjects, record]);
     } else {
-      setSelectedProjects(selectedProjects.filter((p) => p.id !== record.id));
+      setSelectedProjects(
+        selectedProjects.filter((p) => p.requestId !== record.requestId)
+      );
     }
   };
 
   // Handle council selection
   const handleCouncilSelection = (record) => {
+    console.log("Council selected (handleCouncilSelection):", record);
     setSelectedCouncil(record);
   };
 
   // Loading state
-  if (councilsLoadingState || projectsLoadingState) {
+  if (councilsLoading || projectsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -387,7 +552,7 @@ const AssignReview = () => {
   }
 
   // Error state
-  if (councilsErrorState || projectsErrorState) {
+  if (councilsApiError || projectsError) {
     return (
       <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -421,15 +586,135 @@ const AssignReview = () => {
         {/* Steps */}
         <Card className="mb-8 shadow-sm">
           <Steps current={currentStep} className="px-8">
-            <Step title="Select Projects" icon={<ProjectOutlined />} />
             <Step title="Select Council" icon={<TeamOutlined />} />
+            <Step title="Select Projects" icon={<ProjectOutlined />} />
             <Step title="Schedule Review" icon={<CalendarOutlined />} />
             <Step title="Confirm" icon={<CheckCircleOutlined />} />
           </Steps>
         </Card>
 
-        {/* Step 1: Project Selection */}
+        {/* MODAL FOR DISPLAYING COUNCIL MEMBERS - ADD THIS SECTION */}
+        {currentCouncilForModal && (
+          <Modal
+            title={`Members of "${currentCouncilForModal.groupName}"`}
+            open={isMembersModalVisible}
+            onCancel={() => setIsMembersModalVisible(false)}
+            footer={[
+              <Button
+                key="close"
+                onClick={() => setIsMembersModalVisible(false)}
+              >
+                Close
+              </Button>,
+            ]}
+            width={600} // Increase width for table
+          >
+            {membersToShowInModal.length > 0 ? (
+              <Table
+                dataSource={membersToShowInModal}
+                rowKey={(member) => member.groupMemberId || member.userId} // Ensure a unique key
+                columns={[
+                  {
+                    title: "Name",
+                    dataIndex: "memberName",
+                    key: "memberName",
+                  },
+                  {
+                    title: "Email",
+                    dataIndex: "memberEmail",
+                    key: "memberEmail",
+                    render: (email) =>
+                      email || <Text type="secondary">N/A</Text>,
+                  },
+                  {
+                    title: "Role",
+                    dataIndex: "roleText",
+                    key: "roleText",
+                    render: (roleText) =>
+                      roleText ? (
+                        <Tag color="blue">{roleText}</Tag>
+                      ) : (
+                        <Text type="secondary">N/A</Text>
+                      ),
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "statusText",
+                    key: "statusText",
+                    render: (statusText) => {
+                      let color = "default";
+                      if (statusText === "Accepted") color = "success";
+                      if (statusText === "Pending") color = "processing";
+                      if (
+                        statusText === "Rejected" ||
+                        statusText === "Inactive"
+                      )
+                        color = "error";
+                      return statusText ? (
+                        <Tag color={color}>{statusText}</Tag>
+                      ) : (
+                        <Text type="secondary">N/A</Text>
+                      );
+                    },
+                  },
+                ]}
+                pagination={false} // Optional: disable pagination if list is usually short
+                size="small"
+              />
+            ) : (
+              <Empty description="No members found for this council." />
+            )}
+          </Modal>
+        )}
+
+        {/* Step 0: Council Selection (Previously Step 1) */}
         {currentStep === 0 && (
+          <Card className="shadow-md mb-8">
+            <Title level={4} className="mb-6 flex items-center">
+              <TeamOutlined className="mr-2 text-[#F2722B]" />
+              Select Review Council
+            </Title>
+
+            <Input
+              placeholder="Search by council name or department"
+              prefix={<SearchOutlined />}
+              value={councilSearchText}
+              onChange={(e) => setCouncilSearchText(e.target.value)}
+              className="mb-4"
+              style={{ maxWidth: "500px" }}
+            />
+
+            {/* Log selectedCouncil and derived selectedRowKeys before Table render */}
+            {/* console.log("Rendering councils table. Selected council:", selectedCouncil) */}
+            {/* console.log("Derived selectedRowKeys for councils table:", selectedCouncil ? [selectedCouncil.groupId] : []) */}
+            <Table
+              rowKey="groupId"
+              dataSource={filteredCouncils}
+              columns={councilColumns}
+              rowSelection={{
+                type: "radio",
+                selectedRowKeys: selectedCouncil
+                  ? [selectedCouncil.groupId]
+                  : [],
+                onSelect: (record) => handleCouncilSelection(record),
+              }}
+              pagination={{ pageSize: 5 }}
+            />
+
+            <div className="flex justify-end mt-6">
+              <Button
+                type="primary"
+                onClick={nextStep}
+                className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
+              >
+                Next: Select Projects
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 1: Project Selection (Previously Step 0) */}
+        {currentStep === 1 && (
           <Card className="shadow-md mb-8">
             <Title level={4} className="mb-6 flex items-center">
               <ProjectOutlined className="mr-2 text-[#F2722B]" />
@@ -446,61 +731,20 @@ const AssignReview = () => {
             />
 
             <Table
-              rowKey="id"
+              rowKey="requestId"
               dataSource={filteredProjects}
               columns={projectColumns}
               rowSelection={{
                 type: "checkbox",
-                selectedRowKeys: selectedProjects.map((p) => p.id),
+                selectedRowKeys: selectedProjects.map((p) => p.requestId),
                 onSelect: (record, selected) =>
                   handleProjectSelection(record, selected),
               }}
               pagination={{ pageSize: 5 }}
             />
 
-            <div className="flex justify-end mt-6">
-              <Button
-                type="primary"
-                onClick={nextStep}
-                className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
-              >
-                Next: Select Council
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Step 2: Council Selection */}
-        {currentStep === 1 && (
-          <Card className="shadow-md mb-8">
-            <Title level={4} className="mb-6 flex items-center">
-              <TeamOutlined className="mr-2 text-[#F2722B]" />
-              Select Review Council
-            </Title>
-
-            <Input
-              placeholder="Search by council name or department"
-              prefix={<SearchOutlined />}
-              value={councilSearchText}
-              onChange={(e) => setCouncilSearchText(e.target.value)}
-              className="mb-4"
-              style={{ maxWidth: "500px" }}
-            />
-
-            <Table
-              rowKey="id"
-              dataSource={filteredCouncils}
-              columns={councilColumns}
-              rowSelection={{
-                type: "radio",
-                selectedRowKeys: selectedCouncil ? [selectedCouncil.id] : [],
-                onSelect: (record) => handleCouncilSelection(record),
-              }}
-              pagination={{ pageSize: 5 }}
-            />
-
             <div className="flex justify-between mt-6">
-              <Button onClick={prevStep}>Previous: Select Projects</Button>
+              <Button onClick={prevStep}>Previous: Select Council</Button>
               <Button
                 type="primary"
                 onClick={nextStep}
@@ -512,7 +756,7 @@ const AssignReview = () => {
           </Card>
         )}
 
-        {/* Step 3: Schedule Review */}
+        {/* Step 2: Schedule Review (Previously Step 2) */}
         {currentStep === 2 && (
           <Card className="shadow-md mb-8">
             <Title level={4} className="mb-6 flex items-center">
@@ -533,9 +777,9 @@ const AssignReview = () => {
                     <DatePicker
                       style={{ width: "100%" }}
                       value={reviewDate}
-                      onChange={setReviewDate}
+                      onChange={(date) => setReviewDate(date)}
                       disabledDate={(current) =>
-                        current && current < moment().startOf("day")
+                        current && current.isBefore(dayjs().startOf("day"))
                       }
                       format="YYYY-MM-DD"
                     />
@@ -543,37 +787,79 @@ const AssignReview = () => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item
-                    label="Time Range"
-                    name="timeRange"
+                    label="Session Start Time"
+                    name="sessionStartTime"
                     rules={[
-                      { required: true, message: "Please select a time range" },
+                      { required: true, message: "Please select a start time" },
                     ]}
                   >
-                    <DatePicker.RangePicker
+                    <DatePicker.TimePicker
                       style={{ width: "100%" }}
-                      value={reviewTimeRange}
-                      onChange={setReviewTimeRange}
-                      picker="time"
+                      onChange={(time) => {
+                        if (reviewTimeRange)
+                          setReviewTimeRange([time, reviewTimeRange[1]]);
+                        else setReviewTimeRange([time, null]);
+                      }}
                       format="HH:mm"
+                      minuteStep={15}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={24}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Duration Per Project (HH:mm)"
+                    name="projectDuration"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please set duration per project",
+                      },
+                      {
+                        validator: (_, value) => {
+                          if (
+                            value &&
+                            (dayjs(value).hour() > 0 ||
+                              dayjs(value).minute() > 0)
+                          ) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(
+                            new Error("Duration must be greater than 0 minutes")
+                          );
+                        },
+                      },
+                    ]}
+                  >
+                    <DatePicker.TimePicker
+                      style={{ width: "100%" }}
+                      onChange={(time) => setProjectDuration(time)}
+                      format="HH:mm"
+                      showNow={false}
+                      placeholder="e.g., 01:30 for 1h 30m"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Location"
+                    name="location"
+                    rules={[
+                      { required: true, message: "Please enter a location" },
+                    ]}
+                  >
+                    <Input
+                      placeholder="Room, building, or online meeting link"
+                      prefix={<EnvironmentOutlined />}
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
                     />
                   </Form.Item>
                 </Col>
               </Row>
 
-              <Form.Item
-                label="Location"
-                name="location"
-                rules={[{ required: true, message: "Please enter a location" }]}
-              >
-                <Input
-                  placeholder="Enter review location (Room number, building, or online meeting link)"
-                  prefix={<EnvironmentOutlined />}
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-              </Form.Item>
-
-              <Form.Item label="Additional Notes" name="notes">
+              <Form.Item label="Overall Session Notes" name="notes">
                 <TextArea
                   rows={4}
                   placeholder="Enter any additional notes or instructions for the review"
@@ -584,7 +870,7 @@ const AssignReview = () => {
             </Form>
 
             <div className="flex justify-between mt-6">
-              <Button onClick={prevStep}>Previous: Select Council</Button>
+              <Button onClick={prevStep}>Previous: Select Projects</Button>
               <Button
                 type="primary"
                 onClick={nextStep}
@@ -596,7 +882,7 @@ const AssignReview = () => {
           </Card>
         )}
 
-        {/* Step 4: Confirmation */}
+        {/* Step 3: Confirmation */}
         {currentStep === 3 && (
           <Card className="shadow-md mb-8">
             <Title level={4} className="mb-6 flex items-center">
@@ -605,100 +891,227 @@ const AssignReview = () => {
             </Title>
 
             <Row gutter={[24, 24]}>
-              <Col xs={24} md={12}>
+              {/* Projects to Review Card */}
+              <Col xs={24} lg={12}>
                 <Card
-                  title="Projects to Review"
+                  title={
+                    <Space>
+                      <ProjectOutlined /> Projects to Review (
+                      {selectedProjects.length})
+                    </Space>
+                  }
                   bordered={false}
-                  className="bg-gray-50"
+                  className="bg-gray-50 h-full" // Added h-full for consistent height if needed
+                  headStyle={{ borderBottom: "1px solid #f0f0f0" }}
                 >
-                  {selectedProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="mb-2 pb-2 border-b border-gray-200 last:border-b-0"
-                    >
-                      <Text strong>{project.name}</Text>
-                      <div className="text-xs text-gray-500">
-                        Group: {project.groupName} | Leader:{" "}
-                        {project.leaderName}
-                      </div>
-                    </div>
-                  ))}
+                  {selectedProjects.length > 0 ? (
+                    <List
+                      dataSource={selectedProjects}
+                      renderItem={(project) => (
+                        <List.Item style={{ padding: "12px 0" }}>
+                          <List.Item.Meta
+                            title={<Text strong>{project.projectName}</Text>}
+                            description={
+                              <>
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    display: "block",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  Group: {project.groupName || "N/A"} |
+                                  Requester: {project.requesterName || "N/A"}
+                                </Text>
+                                {project.categories &&
+                                  project.categories.length > 0 && (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        flexWrap: "wrap",
+                                        gap: "4px",
+                                        marginTop: "4px",
+                                      }}
+                                    >
+                                      {project.categories.map((cat) => (
+                                        <Tag key={cat.categoryId} color="cyan">
+                                          {cat.categoryName}
+                                        </Tag>
+                                      ))}
+                                    </div>
+                                  )}
+                              </>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <Empty description="No projects selected" />
+                  )}
                 </Card>
               </Col>
-              <Col xs={24} md={12}>
+
+              {/* Review Council Card */}
+              <Col xs={24} lg={12}>
                 <Card
-                  title="Review Council"
+                  title={
+                    <Space>
+                      <TeamOutlined /> Review Council
+                    </Space>
+                  }
                   bordered={false}
-                  className="bg-gray-50"
+                  className="bg-gray-50 h-full" // Added h-full
+                  headStyle={{ borderBottom: "1px solid #f0f0f0" }}
                 >
-                  {selectedCouncil && (
-                    <div>
-                      <Text strong>{selectedCouncil.name}</Text>
-                      <div className="text-xs text-gray-500 mb-2">
-                        Department: {selectedCouncil.departmentName}
-                      </div>
-                      <div className="mt-2">
-                        <Text type="secondary">Council Members:</Text>
-                        <ul className="list-disc pl-5 mt-1">
-                          {selectedCouncil.members.map((member) => (
-                            <li key={member.id} className="text-sm">
-                              {member.name}{" "}
-                              <Tag size="small">{member.role}</Tag>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                  {selectedCouncil ? (
+                    <>
+                      <Title level={5}>{selectedCouncil.groupName}</Title>
+                      <Paragraph
+                        type="secondary"
+                        style={{ marginBottom: "12px" }}
+                      >
+                        Department: {selectedCouncil.departmentName || "N/A"}
+                      </Paragraph>
+
+                      {selectedCouncil.expertises &&
+                        selectedCouncil.expertises.length > 0 && (
+                          <div style={{ marginBottom: "12px" }}>
+                            <Text strong>Expertise: </Text>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "4px",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {selectedCouncil.expertises.map((exp, index) => (
+                                <Tag key={index} color="purple">
+                                  {exp}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      <Text strong>
+                        Members ({selectedCouncil.members?.length || 0}):
+                      </Text>
+                      <List
+                        size="small"
+                        dataSource={selectedCouncil.members || []}
+                        renderItem={(member) => (
+                          <List.Item style={{ padding: "4px 0" }}>
+                            {member.memberName}{" "}
+                            <Tag
+                              color={
+                                member.roleText === "Council Chairman"
+                                  ? "gold"
+                                  : member.roleText === "Secretary"
+                                  ? "geekblue"
+                                  : "default"
+                              }
+                            >
+                              {member.roleText || "N/A"}
+                            </Tag>
+                          </List.Item>
+                        )}
+                        style={{
+                          maxHeight: "150px",
+                          overflowY: "auto",
+                          marginTop: "4px",
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <Empty description="No council selected" />
                   )}
                 </Card>
               </Col>
             </Row>
 
+            {/* Review Schedule Details Card */}
             <Card
-              title="Review Schedule Details"
+              title={
+                <Space>
+                  <CalendarOutlined /> Review Schedule Details
+                </Space>
+              }
               bordered={false}
-              className="bg-gray-50 mt-4"
+              className="bg-white mt-6 shadow-md" // Changed bg to white for contrast, added shadow
+              headStyle={{ borderBottom: "1px solid #f0f0f0" }}
             >
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={8}>
-                  <div className="flex items-center">
-                    <CalendarOutlined className="mr-2 text-[#F2722B]" />
-                    <Text strong>Date:</Text>
-                    <Text className="ml-2">
-                      {reviewDate ? reviewDate.format("YYYY-MM-DD") : "Not set"}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} md={8}>
-                  <div className="flex items-center">
-                    <ClockCircleOutlined className="mr-2 text-[#F2722B]" />
-                    <Text strong>Time:</Text>
-                    <Text className="ml-2">
-                      {reviewTimeRange
-                        ? `${reviewTimeRange[0].format(
-                            "HH:mm"
-                          )} - ${reviewTimeRange[1].format("HH:mm")}`
-                        : "Not set"}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} md={8}>
-                  <div className="flex items-center">
-                    <EnvironmentOutlined className="mr-2 text-[#F2722B]" />
-                    <Text strong>Location:</Text>
-                    <Text className="ml-2">{location || "Not set"}</Text>
-                  </div>
-                </Col>
+              <Descriptions bordered column={{ xs: 1, sm: 2 }} size="small">
+                <Descriptions.Item label="Review Date">
+                  {reviewDate ? (
+                    dayjs(reviewDate).format("YYYY-MM-DD")
+                  ) : (
+                    <Text type="secondary">Not set</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Session Start Time">
+                  {reviewTimeRange && reviewTimeRange[0] ? (
+                    dayjs(reviewTimeRange[0]).format("HH:mm")
+                  ) : (
+                    <Text type="secondary">Not set</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Duration Per Project">
+                  {projectDuration ? (
+                    dayjs(projectDuration).format("HH:mm")
+                  ) : (
+                    <Text type="secondary">Not set</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Projects to Schedule">
+                  {selectedProjects.length > 0 ? (
+                    selectedProjects.length
+                  ) : (
+                    <Text type="secondary">0</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item
+                  label="Estimated End Time"
+                  span={selectedProjects.length === 0 ? 2 : 1}
+                >
+                  {reviewDate &&
+                  reviewTimeRange &&
+                  reviewTimeRange[0] &&
+                  projectDuration &&
+                  selectedProjects.length > 0 ? (
+                    (() => {
+                      let endTime = dayjs(reviewDate)
+                        .hour(dayjs(reviewTimeRange[0]).hour())
+                        .minute(dayjs(reviewTimeRange[0]).minute())
+                        .second(0)
+                        .millisecond(0);
+                      const totalDurationMinutes =
+                        (dayjs(projectDuration).hour() * 60 +
+                          dayjs(projectDuration).minute()) *
+                        selectedProjects.length;
+                      endTime = endTime.add(totalDurationMinutes, "minute");
+                      return endTime.format("HH:mm [on] YYYY-MM-DD");
+                    })()
+                  ) : (
+                    <Text type="secondary">N/A</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item
+                  label="Scheduling Mode"
+                  span={selectedProjects.length > 0 ? 1 : 2}
+                >
+                  Projects will be scheduled sequentially.
+                </Descriptions.Item>
+                <Descriptions.Item label="Location" span={2}>
+                  {location || <Text type="secondary">Not set</Text>}
+                </Descriptions.Item>
                 {notes && (
-                  <Col xs={24}>
-                    <Divider style={{ margin: "12px 0" }} />
-                    <Text strong>Additional Notes:</Text>
-                    <Paragraph className="mt-2 bg-white p-3 rounded">
-                      {notes}
-                    </Paragraph>
-                  </Col>
+                  <Descriptions.Item label="Overall Session Notes" span={2}>
+                    <Paragraph style={{ marginBottom: 0 }}>{notes}</Paragraph>
+                  </Descriptions.Item>
                 )}
-              </Row>
+              </Descriptions>
             </Card>
 
             <Alert
