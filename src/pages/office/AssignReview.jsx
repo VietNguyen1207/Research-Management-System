@@ -419,6 +419,23 @@ const AssignReview = () => {
 
     // Prepare the payload for the API
     const assignments = [];
+
+    console.log(
+      " handleSubmit - reviewDate:",
+      reviewDate ? dayjs(reviewDate).format() : reviewDate
+    );
+    console.log(" handleSubmit - reviewTimeRange:", reviewTimeRange);
+    console.log(
+      " handleSubmit - reviewTimeRange[0]:",
+      reviewTimeRange && reviewTimeRange[0]
+        ? dayjs(reviewTimeRange[0]).format()
+        : reviewTimeRange && reviewTimeRange[0]
+    );
+    console.log(
+      " handleSubmit - projectDuration:",
+      projectDuration ? dayjs(projectDuration).format() : projectDuration
+    );
+
     let currentScheduledDateTime = dayjs(reviewDate)
       .hour(dayjs(reviewTimeRange[0]).hour())
       .minute(dayjs(reviewTimeRange[0]).minute())

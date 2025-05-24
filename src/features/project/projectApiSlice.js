@@ -320,6 +320,16 @@ export const projectApiSlice = apiSlice.injectEndpoints({
           : [{ type: "ProjectRequests", id: "LIST" }],
       transformResponse: (response) => response,
     }),
+    getAssignedProjectsForCouncil: builder.query({
+      query: (councilGroupId) => ({
+        url: `/council-groups/${councilGroupId}/assigned-projects`,
+        method: "GET",
+      }),
+      providesTags: (result, error, councilGroupId) => [
+        { type: "AssignedProjects", id: councilGroupId },
+      ],
+      transformResponse: (response) => response.data,
+    }),
   }),
 });
 
@@ -348,4 +358,5 @@ export const {
   useRejectCompletionRequestMutation,
   useAssignProjectsToCouncilMutation,
   useGetAllProjectRequestsQuery,
+  useGetAssignedProjectsForCouncilQuery,
 } = projectApiSlice;

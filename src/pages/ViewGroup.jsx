@@ -55,7 +55,7 @@ import {
   useReInviteGroupMemberMutation,
   getGroupTypeName,
 } from "../features/group/groupApiSlice";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const { Text } = Typography;
 
@@ -89,6 +89,7 @@ const getGroupStatusIcon = (status) => {
 
 const ViewGroup = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentUser = useSelector(selectCurrentUser);
   const userId = currentUser?.id;
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -1340,12 +1341,28 @@ const ViewGroup = () => {
                         >
                           View Details
                         </Button>,
+                        (group.groupType === 1 || // Review Council
+                          group.groupType === 3 || // Inspection Council
+                          group.groupType === 4) && ( // Assessment Council
+                          <Button
+                            type="default" // Changed to default to differentiate from "Review Projects"
+                            icon={<CalendarOutlined />} // Added calendar icon
+                            onClick={() =>
+                              navigate(
+                                `/review-schedule?councilGroupId=${group.groupId}`
+                              )
+                            }
+                            className="border-blue-500 text-blue-500 hover:bg-blue-50"
+                          >
+                            View Schedule
+                          </Button>
+                        ),
                         group.groupType === 1 ||
                         group.groupType === 3 ||
                         group.groupType === 4 ? (
                           <Button
                             type="primary"
-                            onClick={() => handleReviewProject(group)}
+                            onClick={() => handleReviewProject(group)} // This likely navigates to a page to manage/review specific projects for that council
                             className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
                             icon={<BookOutlined />}
                           >

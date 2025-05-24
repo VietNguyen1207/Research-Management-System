@@ -28,9 +28,9 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
-import { useGetAllTimelinesQuery } from "../../features/timeline/timelineApiSlice";
+import { useGetAssignedProjectsForCouncilQuery } from "../../features/project/projectApiSlice";
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -39,30 +39,33 @@ const { Option } = Select;
 
 const ReviewSchedule = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [searchText, setSearchText] = useState("");
   const [dateRange, setDateRange] = useState(null);
   const [filteredReviews, setFilteredReviews] = useState([]);
 
-  // Fetch council data - Skipping API call for mock data
+  const queryParams = new URLSearchParams(location.search);
+  const councilGroupId = queryParams.get("councilGroupId");
+
+  const {
+    data: assignedProjectsData,
+    isLoading: assignedProjectsLoading,
+    isError: assignedProjectsError,
+    error: assignedProjectsApiError,
+  } = useGetAssignedProjectsForCouncilQuery(councilGroupId, {
+    skip: !councilGroupId,
+  });
+
   const {
     data: councilGroupsData,
     isLoading: councilLoading,
     isError: councilError,
-  } = useGetCouncilGroupsQuery({ skip: true });
+  } = useGetCouncilGroupsQuery();
 
-  // Fetch timeline data - Skipping API call for mock data
-  const {
-    data: timelineData,
-    isLoading: timelineLoading,
-    isError: timelineError,
-  } = useGetAllTimelinesQuery({ skip: true });
-
-  // Combine council and timeline data to get review schedules
   const [reviewSchedules, setReviewSchedules] = useState([]);
 
-  // Helper function to get timeline status (remains the same)
   const getTimelineStatus = (startDate, endDate) => {
     const now = new Date();
     const start = new Date(startDate);
@@ -78,179 +81,71 @@ const ReviewSchedule = () => {
   };
 
   useEffect(() => {
-    // MOCK DATA IMPLEMENTATION
-    const mockSchedules = [
-      {
-        id: "council1-timelineA",
-        councilId: "council1",
-        councilName: "Engineering Project Review Council",
-        timelineId: "timelineA",
-        event: "Final Year Project Defense - Session 1",
-        startDate: new Date(
-          new Date().setDate(new Date().getDate() + 7)
-        ).toISOString(), // 1 week from now
-        endDate: new Date(
-          new Date().setDate(new Date().getDate() + 7) + 2 * 60 * 60 * 1000
-        ).toISOString(), // 2 hours duration
-        location: "Room A101, Engineering Block",
-        projectIds: ["P001", "P002", "P003"],
-        role: "Council Chairman",
-        status: getTimelineStatus(
-          new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-          new Date(
-            new Date().setDate(new Date().getDate() + 7) + 2 * 60 * 60 * 1000
-          ).toISOString()
-        ),
-      },
-      {
-        id: "council2-timelineB",
-        councilId: "council2",
-        councilName: "IT Research Grant Committee",
-        timelineId: "timelineB",
-        event: "Grant Proposal Review - Phase 2",
-        startDate: new Date(
-          new Date().setDate(new Date().getDate() + 14)
-        ).toISOString(), // 2 weeks from now
-        endDate: new Date(
-          new Date().setDate(new Date().getDate() + 14) + 3 * 60 * 60 * 1000
-        ).toISOString(), // 3 hours duration
-        location: "Online via Zoom - Link in Calendar",
-        projectIds: ["G004", "G005"],
-        role: "Council Member",
-        status: getTimelineStatus(
-          new Date(new Date().setDate(new Date().getDate() + 14)).toISOString(),
-          new Date(
-            new Date().setDate(new Date().getDate() + 14) + 3 * 60 * 60 * 1000
-          ).toISOString()
-        ),
-      },
-      {
-        id: "council1-timelineC",
-        councilId: "council1",
-        councilName: "Engineering Project Review Council",
-        timelineId: "timelineC",
-        event: "Mid-term Project Review - Group Alpha",
-        startDate: new Date(
-          new Date().setDate(new Date().getDate() - 7)
-        ).toISOString(), // 1 week ago
-        endDate: new Date(
-          new Date().setDate(new Date().getDate() - 7) + 2 * 60 * 60 * 1000
-        ).toISOString(), // 2 hours duration
-        location: "Room A102, Engineering Block",
-        projectIds: ["P006"],
-        role: "Secretary",
-        status: getTimelineStatus(
-          new Date(new Date().setDate(new Date().getDate() - 7)).toISOString(),
-          new Date(
-            new Date().setDate(new Date().getDate() - 7) + 2 * 60 * 60 * 1000
-          ).toISOString()
-        ),
-      },
-      {
-        id: "council3-timelineD",
-        councilId: "council3",
-        councilName: "University Ethics Committee",
-        timelineId: "timelineD",
-        event: "Ethics Clearance Review - Batch 5",
-        startDate: new Date().toISOString(), // Today
-        endDate: new Date(
-          new Date().getTime() + 1 * 60 * 60 * 1000
-        ).toISOString(), // 1 hour from now
-        location: "Conference Hall 3",
-        projectIds: ["E007", "E008", "E009"],
-        role: "Council Member",
-        status: getTimelineStatus(
-          new Date().toISOString(),
-          new Date(new Date().getTime() + 1 * 60 * 60 * 1000).toISOString()
-        ),
-      },
-      {
-        id: "council2-timelineE",
-        councilId: "council2",
-        councilName: "IT Research Grant Committee",
-        timelineId: "timelineE",
-        event: "Emergency Grant Proposal Review",
-        startDate: new Date(
-          new Date().setDate(new Date().getDate() + 1)
-        ).toISOString(), // Tomorrow
-        endDate: new Date(
-          new Date().setDate(new Date().getDate() + 1) + 1.5 * 60 * 60 * 1000
-        ).toISOString(), // 1.5 hours duration
-        location: "Dean's Office Meeting Room",
-        projectIds: ["G010"],
-        role: "Council Chairman",
-        status: getTimelineStatus(
-          new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
-          new Date(
-            new Date().setDate(new Date().getDate() + 1) + 1.5 * 60 * 60 * 1000
-          ).toISOString()
-        ),
-      },
-    ];
-    setReviewSchedules(mockSchedules);
-    // END OF MOCK DATA IMPLEMENTATION
+    if (assignedProjectsData) {
+      const schedules = assignedProjectsData.map((project) => {
+        let locationDetail = "N/A";
+        if (project.notes) {
+          const locationMatch = project.notes.match(/Location: (.*)/);
+          if (locationMatch && locationMatch[1]) {
+            locationDetail = locationMatch[1].replace(/\.$/, "");
+          } else {
+            locationDetail = project.notes;
+          }
+        }
 
-    // Original API data processing logic (commented out for mock data)
-    /*
-    if (councilGroupsData?.data && timelineData) {
-      // Find all councils where the current user is a member
-      const userCouncils = councilGroupsData.data.filter((council) =>
-        council.members.some(
-          (member) => member.userId === user?.userId && member.status === 1 // Assuming status 1 is 'active'
-        )
-      );
+        let userRoleInCouncil = "Member";
+        if (councilGroupsData?.data && user?.userId) {
+          const council = councilGroupsData.data.find(
+            (c) => c.groupId === project.assignedCouncilId
+          );
+          if (council && council.members) {
+            const memberInfo = council.members.find(
+              (m) => m.userId === user.userId
+            );
+            if (memberInfo && memberInfo.roleText) {
+              userRoleInCouncil = memberInfo.roleText;
+            }
+          }
+        }
 
-      // Find all review timelines
-      const reviewTimelines = timelineData.filter(
-        (timeline) => timeline.timelineType === 2 // Assuming 2 is the review timeline type
-      );
-
-      // Combine the data
-      const schedules = userCouncils.flatMap((council) => {
-        // Find timelines associated with this council
-        // This is an assumption - you might need to adjust based on your actual data model
-        const councilTimelines = reviewTimelines.filter(
-          (timeline) => timeline.groupId === council.groupId
-        );
-
-        return councilTimelines.map((timeline) => ({
-          id: `${council.groupId}-${timeline.id}`,
-          councilId: council.groupId,
-          councilName: council.name,
-          timelineId: timeline.id,
-          event: timeline.event,
-          startDate: timeline.startDate,
-          endDate: timeline.endDate,
-          location: timeline.location || "Online",
-          projectIds: timeline.projectIds || [], // Assuming this exists
-          role: council.members.find((m) => m.userId === user?.userId)?.roleText || "Member",
-          status: getTimelineStatus(timeline.startDate, timeline.endDate),
-        }));
+        return {
+          id: project.assignReviewId,
+          councilId: project.assignedCouncilId,
+          councilName: project.assignedCouncilName || "Council",
+          timelineId: project.assignReviewId,
+          event: project.projectName,
+          startDate: project.scheduledDate,
+          endDate: project.scheduledEndTime,
+          location: locationDetail,
+          projectIds: [project.projectId],
+          role: userRoleInCouncil,
+          status: getTimelineStatus(
+            project.scheduledDate,
+            project.scheduledEndTime
+          ),
+          projectRequestId: project.requestId,
+        };
       });
-
       setReviewSchedules(schedules);
+    } else {
+      setReviewSchedules([]);
     }
-    */
-  }, [councilGroupsData, timelineData, user]); // user dependency is kept for potential future use if mock data considers user roles
+  }, [assignedProjectsData, councilGroupsData, user]);
 
-  // Filter reviews based on search, date range, and tab
   useEffect(() => {
     const currentDate = new Date();
 
     let filtered = reviewSchedules.filter((review) => {
-      // Text search
       const matchesSearch = searchText
         ? review.councilName.toLowerCase().includes(searchText.toLowerCase()) ||
           review.event.toLowerCase().includes(searchText.toLowerCase())
         : true;
 
-      // Date range filter
       const matchesDateRange = dateRange
         ? new Date(review.startDate) >= dateRange[0].startOf("day").toDate() &&
           new Date(review.endDate) <= dateRange[1].endOf("day").toDate()
         : true;
 
-      // Tab filter (upcoming, past, all)
       const reviewEndDate = new Date(review.endDate);
       const matchesTab =
         activeTab === "all"
@@ -262,7 +157,6 @@ const ReviewSchedule = () => {
       return matchesSearch && matchesDateRange && matchesTab;
     });
 
-    // Sort by date (nearest upcoming first for "upcoming", most recent first for "past")
     filtered.sort((a, b) => {
       const dateA = new Date(a.startDate);
       const dateB = new Date(b.startDate);
@@ -272,8 +166,8 @@ const ReviewSchedule = () => {
     setFilteredReviews(filtered);
   }, [reviewSchedules, searchText, dateRange, activeTab]);
 
-  // Helper functions (formatDate, formatTime, getDaysFromNow) remain the same
   const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -282,6 +176,7 @@ const ReviewSchedule = () => {
   };
 
   const formatTime = (dateStr) => {
+    if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -289,24 +184,30 @@ const ReviewSchedule = () => {
   };
 
   const getDaysFromNow = (dateStr) => {
+    if (!dateStr) return "";
     const today = new Date();
     const targetDate = new Date(dateStr);
-    const diffTime = Math.abs(targetDate - today);
+    const diffTime = targetDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (targetDate > today) {
+    if (diffDays > 0) {
       return `in ${diffDays} day${diffDays !== 1 ? "s" : ""}`;
-    } else if (targetDate < today) {
-      return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+    } else if (diffDays < 0) {
+      return `${Math.abs(diffDays)} day${
+        Math.abs(diffDays) !== 1 ? "s" : ""
+      } ago`;
+    } else if (
+      new Date(targetDate).toDateString() === new Date(today).toDateString()
+    ) {
+      return "today";
     } else {
       return "today";
     }
   };
 
-  // Table columns (remains the same)
   const columns = [
     {
-      title: "Review Session",
+      title: "Review Session (Project)",
       dataIndex: "event",
       key: "event",
       render: (text, record) => (
@@ -349,25 +250,29 @@ const ReviewSchedule = () => {
           <Space>
             <EnvironmentOutlined />
             <Text>
-              {location.length > 25
+              {location && location.length > 25
                 ? `${location.substring(0, 25)}...`
-                : location}
+                : location || "N/A"}
             </Text>
           </Space>
         </Tooltip>
       ),
     },
     {
-      title: "Role",
+      title: "Your Role",
       dataIndex: "role",
       key: "role",
-      render: (role) => <Tag color="blue">{role}</Tag>,
+      render: (role) => <Tag color="blue">{role || "Member"}</Tag>,
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (status) => <Tag color={status.color}>{status.text}</Tag>,
+      render: (status) => (
+        <Tag color={status?.color || "default"}>
+          {status?.text || "Unknown"}
+        </Tag>
+      ),
     },
     {
       title: "Action",
@@ -377,21 +282,33 @@ const ReviewSchedule = () => {
           type="primary"
           size="small"
           onClick={() =>
-            navigate(`/review-project?councilId=${record.councilId}`)
+            navigate(`/review-project?groupId=${record.councilId}`)
           }
         >
-          Review Projects
+          Review Projects in Council
         </Button>
       ),
     },
   ];
 
-  // MODIFIED Loading and Error states for mock data:
-  // We assume mock data is always available and loaded without errors.
-  // You can reinstate the original loading/error logic when removing mock data.
-  const MOCK_DATA_LOADED_SUCCESSFULLY = true;
+  const isLoading = assignedProjectsLoading || councilLoading;
 
-  if (!MOCK_DATA_LOADED_SUCCESSFULLY && (councilLoading || timelineLoading)) {
+  if (!councilGroupId) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Alert
+            message="Council Group Not Specified"
+            description="Please access this page via a link that specifies a council group ID in the URL (e.g., /review-schedule?councilGroupId=1)."
+            type="warning"
+            showIcon
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -404,13 +321,16 @@ const ReviewSchedule = () => {
     );
   }
 
-  if (!MOCK_DATA_LOADED_SUCCESSFULLY && (councilError || timelineError)) {
+  if (assignedProjectsError) {
     return (
       <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <Alert
-            message="Error"
-            description="Failed to load review schedule. Please try again later."
+            message="Error Loading Schedule"
+            description={
+              assignedProjectsApiError?.data?.message ||
+              "Failed to load review schedule for this council. Please try again later or check the council ID."
+            }
             type="error"
             showIcon
           />
@@ -430,17 +350,18 @@ const ReviewSchedule = () => {
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#F2722B] to-[#FFA500] rounded-full"></div>
           </div>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            View your upcoming and past research review sessions as a council
-            member
+            View upcoming and past review sessions for council:{" "}
+            <Text strong>
+              {reviewSchedules[0]?.councilName || `ID ${councilGroupId}`}
+            </Text>
           </p>
         </div>
 
-        {/* Filters */}
         <Card className="mb-8 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
               <Input
-                placeholder="Search by council name or event"
+                placeholder="Search by project name or council"
                 prefix={<SearchOutlined />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -459,7 +380,6 @@ const ReviewSchedule = () => {
           </div>
         </Card>
 
-        {/* Review Schedule Table */}
         {filteredReviews.length > 0 ? (
           <Card className="shadow-md">
             <Table
@@ -478,18 +398,19 @@ const ReviewSchedule = () => {
                   No review sessions found
                   {activeTab !== "all" && ` for ${activeTab} reviews`}
                   {searchText && ` matching "${searchText}"`}
+                  {councilGroupId && ` for council ID ${councilGroupId}`}
                 </span>
               }
             />
             {activeTab === "upcoming" && (
               <Text type="secondary" className="block mt-2">
-                You don't have any upcoming review sessions scheduled
+                This council does not have any upcoming review sessions
+                scheduled
               </Text>
             )}
           </Card>
         )}
 
-        {/* Legend */}
         <Card className="mt-8 shadow-sm">
           <Title level={5}>Status Legend</Title>
           <Divider className="my-3" />
@@ -499,7 +420,7 @@ const ReviewSchedule = () => {
               <Text type="secondary">Currently active review session</Text>
             </div>
             <div className="flex items-center">
-              <Badge status="blue" text="Upcoming" className="mr-2" />
+              <Badge color="blue" text="Upcoming" className="mr-2" />
               <Text type="secondary">Future review session</Text>
             </div>
             <div className="flex items-center">
@@ -511,7 +432,7 @@ const ReviewSchedule = () => {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <InfoCircleOutlined className="mr-1" />
-          All times are in your local timezone. Please plan accordingly.
+          All times are displayed in your local timezone.
         </div>
       </div>
     </div>
