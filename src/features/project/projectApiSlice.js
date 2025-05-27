@@ -290,6 +290,46 @@ export const projectApiSlice = apiSlice.injectEndpoints({
         { type: "ProjectRequestDetails", id: requestId },
       ],
     }),
+    assignProjectsToCouncil: builder.mutation({
+      query: (assignmentData) => ({
+        url: "/projects/assign-to-council",
+        method: "POST",
+        body: assignmentData,
+      }),
+      invalidatesTags: (result, error, { councilGroupId, assignments }) => [
+        { type: "DepartmentProjectRequests", id: "LIST" },
+        ...(assignments
+          ? assignments.map(({ projectRequestId }) => ({
+              type: "ProjectRequestDetails",
+              id: projectRequestId,
+            }))
+          : []),
+      ],
+    }),
+    getAllProjectRequests: builder.query({
+      query: () => "/project-requests",
+      providesTags: (result) =>
+        result && result.data
+          ? [
+              ...result.data.map(({ requestId }) => ({
+                type: "ProjectRequests",
+                id: requestId,
+              })),
+              { type: "ProjectRequests", id: "LIST" },
+            ]
+          : [{ type: "ProjectRequests", id: "LIST" }],
+      transformResponse: (response) => response,
+    }),
+    getAssignedProjectsForCouncil: builder.query({
+      query: (councilGroupId) => ({
+        url: `/council/${councilGroupId}/assigned-projects`,
+        method: "GET",
+      }),
+      providesTags: (result, error, councilGroupId) => [
+        { type: "AssignedProjects", id: councilGroupId },
+      ],
+      transformResponse: (response) => response.data,
+    }),
   }),
 });
 
@@ -316,4 +356,7 @@ export const {
   useUploadCompletionDocumentsMutation,
   useApproveCompletionRequestMutation,
   useRejectCompletionRequestMutation,
+  useAssignProjectsToCouncilMutation,
+  useGetAllProjectRequestsQuery,
+  useGetAssignedProjectsForCouncilQuery,
 } = projectApiSlice;

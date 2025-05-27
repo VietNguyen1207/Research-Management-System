@@ -57,6 +57,8 @@ export const groupApiSlice = apiSlice.injectEndpoints({
               // Ensure groupTypeName has a default fallback
               groupTypeName:
                 council.groupTypeName || getGroupTypeName(council.groupType),
+              // Add readable group status
+              groupStatusName: getGroupStatusName(council.status),
             })),
           };
         }
@@ -127,7 +129,7 @@ export const GROUP_STATUS = {
   PENDING: 0,
   ACTIVE: 1,
   INACTIVE: 2,
-  COMPLETED: 3,
+  ASSIGNED: 3,
 };
 
 // Helper function to convert group status numbers to readable text
@@ -136,7 +138,7 @@ export const getGroupStatusName = (status) => {
     [GROUP_STATUS.PENDING]: "Pending",
     [GROUP_STATUS.ACTIVE]: "Active",
     [GROUP_STATUS.INACTIVE]: "Inactive",
-    [GROUP_STATUS.COMPLETED]: "Completed",
+    [GROUP_STATUS.ASSIGNED]: "Assigned",
   };
   return groupStatusMap[status] || "Unknown Status";
 };

@@ -691,16 +691,45 @@ const CreateCouncil = () => {
                           required: true,
                           message: "Please select at least one member",
                         },
+                        {
+                          validator: (_, value) => {
+                            if (
+                              selectedMembers.members &&
+                              selectedMembers.members.length === 3
+                            ) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(
+                              new Error("Please select exactly 3 members.")
+                            );
+                          },
+                        },
                       ]}
                     >
                       <Select
                         mode="multiple"
                         placeholder="Select members"
                         onChange={(values) => {
-                          const members = lecturersData.lecturers.filter((l) =>
-                            values.includes(l.email)
-                          );
-                          setSelectedMembers((prev) => ({ ...prev, members }));
+                          let currentSelectedEmails = values;
+                          if (values.length > 3) {
+                            message.warning(
+                              "You can select a maximum of 3 members.",
+                              2
+                            );
+                            currentSelectedEmails = values.slice(0, 3); // Take the first 3 selected
+                            form.setFieldsValue({
+                              members: currentSelectedEmails,
+                            }); // Update the form field itself
+                          }
+
+                          const newSelectedLecturers =
+                            lecturersData.lecturers.filter((l) =>
+                              currentSelectedEmails.includes(l.email)
+                            );
+                          setSelectedMembers((prev) => ({
+                            ...prev,
+                            members: newSelectedLecturers,
+                          }));
                         }}
                         loading={isLoadingLecturers}
                         disabled={!selectedDepartment || isLoadingLecturers}

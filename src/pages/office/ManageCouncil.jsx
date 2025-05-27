@@ -25,6 +25,7 @@ import {
   Result,
   Input,
   AutoComplete,
+  Pagination,
 } from "antd";
 import {
   TeamOutlined,
@@ -50,6 +51,14 @@ import { useNavigate } from "react-router-dom";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+// Define colors for council group statuses
+const COUNCIL_GROUP_STATUS_COLORS = {
+  Pending: "gold",
+  Active: "green",
+  Inactive: "default", // Ant Design's default grey
+  Assigned: "blue",
+};
+
 const ManageCouncil = () => {
   const [selectedCouncil, setSelectedCouncil] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -59,6 +68,10 @@ const ManageCouncil = () => {
   const [emailInput, setEmailInput] = useState("");
   const [autoCompleteOptions, setAutoCompleteOptions] = useState([]);
   const [isModalContentLoading, setIsModalContentLoading] = useState(false);
+
+  // Add state for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6); // Adjust as needed for card layout
 
   // Fetch council groups using the API
   const {
@@ -77,8 +90,16 @@ const ManageCouncil = () => {
   const [reInviteMember, { isLoading: isReInviting }] =
     useReInviteGroupMemberMutation();
 
-  // Transformed data for UI display
-  const councils = councilsData?.data || [];
+  // Transformed data for UI display, sorted by newest first
+  const councils = (councilsData?.data || [])
+    .slice() // Create a shallow copy to avoid mutating the cached data
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // Calculate paginated councils
+  const paginatedCouncils = councils.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   // Add this effect to update autocomplete options
   useEffect(() => {
@@ -187,6 +208,14 @@ const ManageCouncil = () => {
   const handleModalClose = () => {
     setIsModalVisible(false);
     setSelectedCouncil(null);
+  };
+
+  // Add handler for pagination change
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    if (size !== pageSize) {
+      setPageSize(size);
+    }
   };
 
   const handleInviteMember = (council, role, memberId) => {
@@ -809,168 +838,203 @@ const ManageCouncil = () => {
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         ) : (
-          <List
-            grid={{
-              gutter: [16, 16],
-              xs: 1,
-              sm: 1,
-              md: 2,
-              lg: 2,
-              xl: 3,
-              xxl: 3,
-            }}
-            dataSource={councils}
-            renderItem={(council) => (
-              <List.Item>
-                <Card
-                  className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
-                  title={
-                    <div className="flex flex-col">
-                      <div className="flex items-center justify-between">
-                        <Text strong className="text-lg">
-                          {council.groupName}
-                        </Text>
-                        <Tag color="purple" className="rounded-full px-3">
-                          {council.groupTypeName || "Council"}
-                        </Tag>
-                      </div>
-                    </div>
-                  }
-                  actions={[
-                    <Button
-                      type="primary"
-                      onClick={() => showCouncilDetails(council)}
-                      className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
-                    >
-                      View Details
-                    </Button>,
-                  ]}
-                >
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
-                      <div className="flex items-center">
-                        <BankOutlined className="text-blue-500 text-lg mr-2" />
-                        <Text strong className="text-base">
-                          {council.departmentName || "Unknown Department"}
-                        </Text>
-                      </div>
-                    </div>
-
-                    {council.expertises && council.expertises.length > 0 && (
-                      <div>
-                        <Text type="secondary" className="block mb-1">
-                          Areas of Expertise:
-                        </Text>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {council.expertises.map((expertise, index) => (
-                            <Tag key={index} color="blue" className="mb-1">
-                              {expertise}
+          <>
+            <List
+              grid={{
+                gutter: 16,
+                xs: 1,
+                sm: 1,
+                md: 2,
+                lg: 2,
+                xl: 3,
+              }}
+              dataSource={paginatedCouncils}
+              renderItem={(council) => (
+                <List.Item>
+                  <Card
+                    className="hover:shadow-xl transition-all duration-300 border-gray-200 rounded-lg"
+                    title={
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between">
+                          <Text strong className="text-lg truncate">
+                            {council.groupName}
+                          </Text>
+                          <Space>
+                            <Tag color="purple" className="rounded-full px-3">
+                              {council.groupTypeName || "Council"}
                             </Tag>
-                          ))}
+                            {council.groupStatusName && (
+                              <Tag
+                                color={
+                                  COUNCIL_GROUP_STATUS_COLORS[
+                                    council.groupStatusName
+                                  ] || "default"
+                                }
+                                className="rounded-full px-3"
+                              >
+                                {council.groupStatusName}
+                              </Tag>
+                            )}
+                          </Space>
                         </div>
                       </div>
-                    )}
-
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <Text type="secondary">Member Acceptance</Text>
-                        <Text strong>{`${
-                          council.members.filter((m) => m.status === 1).length
-                        }/${
-                          council.members.filter((m) => m.status !== 3).length
-                        }`}</Text>
-                      </div>
-                      <Progress
-                        percent={Math.round(
-                          (council.members.filter((m) => m.status === 1)
-                            .length /
-                            council.members.filter((m) => m.status !== 3)
-                              .length) *
-                            100
-                        )}
-                        size="small"
-                        status="active"
-                        strokeColor={{
-                          "0%": "#108ee9",
-                          "100%": "#87d068",
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex space-x-2">
-                        {council.members.some((m) => m.role === 3) && (
-                          <Tooltip title="Chairman">
-                            <Avatar className="bg-blue-500">C</Avatar>
-                          </Tooltip>
-                        )}
-                        {council.members.some((m) => m.role === 4) && (
-                          <Tooltip title="Secretary">
-                            <Avatar className="bg-green-500">S</Avatar>
-                          </Tooltip>
-                        )}
-                        <Tooltip
-                          title={`Council Members (${
-                            council.members.filter((m) => m.role === 5).length
-                          })`}
-                        >
-                          <Avatar className="bg-orange-500">
-                            {council.members.filter((m) => m.role === 5).length}
-                          </Avatar>
-                        </Tooltip>
+                    }
+                    actions={[
+                      <Button
+                        type="primary"
+                        onClick={() => showCouncilDetails(council)}
+                        className="bg-gradient-to-r from-[#FF8C00] to-[#FFA500] hover:from-[#F2722B] hover:to-[#FFA500] border-none"
+                      >
+                        View Details
+                      </Button>,
+                    ]}
+                  >
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                        <div className="flex items-center">
+                          <BankOutlined className="text-blue-500 text-lg mr-2" />
+                          <Text strong className="text-base">
+                            {council.departmentName || "Unknown Department"}
+                          </Text>
+                        </div>
                       </div>
 
-                      <Space>
-                        <Badge
-                          status="success"
-                          text={
-                            <Text type="secondary">
-                              {`${
-                                council.members.filter((m) => m.status === 1)
-                                  .length
-                              } Accepted`}
-                            </Text>
-                          }
-                        />
-                      </Space>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Tag color="success" icon={<CheckCircleOutlined />}>
-                        {council.members.filter((m) => m.status === 1).length}{" "}
-                        Accepted
-                      </Tag>
-                      <Tag color="warning" icon={<ClockCircleOutlined />}>
-                        {council.members.filter((m) => m.status === 0).length}{" "}
-                        Pending
-                      </Tag>
-                      {council.members.filter((m) => m.status === 2).length >
-                        0 && (
-                        <Tag color="error" icon={<CloseCircleOutlined />}>
-                          {council.members.filter((m) => m.status === 2).length}{" "}
-                          Rejected
-                        </Tag>
+                      {council.expertises && council.expertises.length > 0 && (
+                        <div>
+                          <Text type="secondary" className="block mb-1">
+                            Areas of Expertise:
+                          </Text>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {council.expertises.map((expertise, index) => (
+                              <Tag key={index} color="blue" className="mb-1">
+                                {expertise}
+                              </Tag>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </div>
 
-                    <div className="pt-2 mt-2 border-t border-gray-100">
-                      <Text type="secondary" className="flex items-center">
-                        <CalendarOutlined className="mr-2" />
-                        Created:{" "}
-                        {new Date(council.createdAt).toLocaleDateString()}
-                        <Tag
-                          color="orange"
-                          className="ml-auto rounded-full px-3"
-                        >
-                          {new Date(council.createdAt).toLocaleDateString()}
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Text type="secondary">Member Acceptance</Text>
+                          <Text strong>{`${
+                            council.members.filter((m) => m.status === 1).length
+                          }/${
+                            council.members.filter((m) => m.status !== 3).length
+                          }`}</Text>
+                        </div>
+                        <Progress
+                          percent={Math.round(
+                            (council.members.filter((m) => m.status === 1)
+                              .length /
+                              council.members.filter((m) => m.status !== 3)
+                                .length) *
+                              100
+                          )}
+                          size="small"
+                          status="active"
+                          strokeColor={{
+                            "0%": "#108ee9",
+                            "100%": "#87d068",
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <div className="flex space-x-2">
+                          {council.members.some((m) => m.role === 3) && (
+                            <Tooltip title="Chairman">
+                              <Avatar className="bg-blue-500">C</Avatar>
+                            </Tooltip>
+                          )}
+                          {council.members.some((m) => m.role === 4) && (
+                            <Tooltip title="Secretary">
+                              <Avatar className="bg-green-500">S</Avatar>
+                            </Tooltip>
+                          )}
+                          <Tooltip
+                            title={`Council Members (${
+                              council.members.filter((m) => m.role === 5).length
+                            })`}
+                          >
+                            <Avatar className="bg-orange-500">
+                              {
+                                council.members.filter((m) => m.role === 5)
+                                  .length
+                              }
+                            </Avatar>
+                          </Tooltip>
+                        </div>
+
+                        <Space>
+                          <Badge
+                            status="success"
+                            text={
+                              <Text type="secondary">
+                                {`${
+                                  council.members.filter((m) => m.status === 1)
+                                    .length
+                                } Accepted`}
+                              </Text>
+                            }
+                          />
+                        </Space>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Tag color="success" icon={<CheckCircleOutlined />}>
+                          {council.members.filter((m) => m.status === 1).length}{" "}
+                          Accepted
                         </Tag>
-                      </Text>
+                        <Tag color="warning" icon={<ClockCircleOutlined />}>
+                          {council.members.filter((m) => m.status === 0).length}{" "}
+                          Pending
+                        </Tag>
+                        {council.members.filter((m) => m.status === 2).length >
+                          0 && (
+                          <Tag color="error" icon={<CloseCircleOutlined />}>
+                            {
+                              council.members.filter((m) => m.status === 2)
+                                .length
+                            }{" "}
+                            Rejected
+                          </Tag>
+                        )}
+                      </div>
+
+                      <div className="pt-2 mt-2 border-t border-gray-100">
+                        <Text type="secondary" className="flex items-center">
+                          <CalendarOutlined className="mr-2" />
+                          Created:{" "}
+                          {new Date(council.createdAt).toLocaleDateString()}
+                          <Tag
+                            color="orange"
+                            className="ml-auto rounded-full px-3"
+                          >
+                            {new Date(council.createdAt).toLocaleDateString()}
+                          </Tag>
+                        </Text>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              </List.Item>
+                  </Card>
+                </List.Item>
+              )}
+            />
+
+            {/* Add Pagination Component */}
+            {councils.length > pageSize && (
+              <div className="flex justify-center mt-8">
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={councils.length}
+                  onChange={handlePageChange}
+                  showSizeChanger
+                  pageSizeOptions={["6", "9", "12", "18"]}
+                />
+              </div>
             )}
-          />
+          </>
         )}
 
         {/* Council Details Modal */}

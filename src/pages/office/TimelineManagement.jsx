@@ -679,7 +679,7 @@ const TimelineManagement = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <CalendarOutlined className="text-[#F2722B]" />
-                      <span>Event Timeline Visualization</span>
+                      <span>Current Available Timelines</span>
                     </div>
                   </div>
                 }
