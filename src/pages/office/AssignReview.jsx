@@ -52,6 +52,14 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
 
+// Define status colors for council group statuses
+const COUNCIL_GROUP_STATUS_COLORS = {
+  Pending: "gold",
+  Active: "green",
+  Inactive: "default",
+  Assigned: "blue", // Or any other color you prefer for Assigned
+};
+
 const AssignReview = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
@@ -151,6 +159,14 @@ const AssignReview = () => {
     .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)); // Sort by requestedAt descending
 
   const councilsErrorState = false;
+
+  // Automatically set start time to 7:00 AM and duration to 1 hour when reviewDate is selected
+  useEffect(() => {
+    if (reviewDate) {
+      setReviewTimeRange([dayjs("07:00", "HH:mm"), null]);
+      setProjectDuration(dayjs("01:00", "HH:mm"));
+    }
+  }, [reviewDate]);
 
   // Filter projects based on search text
   const filteredProjects = projects.filter(
@@ -350,6 +366,15 @@ const AssignReview = () => {
       render: (text) => <Tag color="blue">{text}</Tag>,
     },
     {
+      title: "Status",
+      key: "status",
+      dataIndex: "groupStatusName", // Use the new field from the API
+      render: (statusName) => {
+        const color = COUNCIL_GROUP_STATUS_COLORS[statusName] || "default";
+        return <Tag color={color}>{statusName || "Unknown"}</Tag>;
+      },
+    },
+    {
       title: "Expertise",
       key: "expertises",
       dataIndex: "expertises",
@@ -499,22 +524,13 @@ const AssignReview = () => {
     // Validation for Step 2 (Schedule Review)
     if (currentStep === 2) {
       form
-        .validateFields() // Validate all fields in Step 2 form
+        .validateFields(["reviewDate", "location"]) // Validate only reviewDate and location
         .then(() => {
           if (
-            !reviewDate ||
-            !reviewTimeRange ||
-            !reviewTimeRange[0] ||
-            !projectDuration ||
-            !(
-              dayjs(projectDuration).hour() > 0 ||
-              dayjs(projectDuration).minute() > 0
-            )
+            !reviewDate || // reviewTimeRange and projectDuration are now set programmatically
+            !location // Ensure location is also checked, though form.validateFields should cover it
           ) {
-            // This is a fallback, form.validateFields should catch most of it.
-            message.error(
-              "Please ensure date, start time, and a valid project duration are set."
-            );
+            message.error("Please ensure date and location are set.");
             return;
           }
           setCurrentStep(currentStep + 1); // Proceed if form validation passes
@@ -804,62 +820,6 @@ const AssignReview = () => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item
-                    label="Session Start Time"
-                    name="sessionStartTime"
-                    rules={[
-                      { required: true, message: "Please select a start time" },
-                    ]}
-                  >
-                    <DatePicker.TimePicker
-                      style={{ width: "100%" }}
-                      onChange={(time) => {
-                        if (reviewTimeRange)
-                          setReviewTimeRange([time, reviewTimeRange[1]]);
-                        else setReviewTimeRange([time, null]);
-                      }}
-                      format="HH:mm"
-                      minuteStep={15}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Duration Per Project (HH:mm)"
-                    name="projectDuration"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Please set duration per project",
-                      },
-                      {
-                        validator: (_, value) => {
-                          if (
-                            value &&
-                            (dayjs(value).hour() > 0 ||
-                              dayjs(value).minute() > 0)
-                          ) {
-                            return Promise.resolve();
-                          }
-                          return Promise.reject(
-                            new Error("Duration must be greater than 0 minutes")
-                          );
-                        },
-                      },
-                    ]}
-                  >
-                    <DatePicker.TimePicker
-                      style={{ width: "100%" }}
-                      onChange={(time) => setProjectDuration(time)}
-                      format="HH:mm"
-                      showNow={false}
-                      placeholder="e.g., 01:30 for 1h 30m"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
                     label="Location"
                     name="location"
                     rules={[
@@ -875,15 +835,29 @@ const AssignReview = () => {
                   </Form.Item>
                 </Col>
               </Row>
-
-              <Form.Item label="Overall Session Notes" name="notes">
-                <TextArea
-                  rows={4}
-                  placeholder="Enter any additional notes or instructions for the review"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </Form.Item>
+              {/* Display fixed time and duration information */}
+              <Row gutter={24} className="mt-4">
+                <Col xs={24} md={12}>
+                  <div className="ant-form-item">
+                    <div className="ant-form-item-label">
+                      <label>Review Start Time</label>
+                    </div>
+                    <div className="ant-form-item-control-input">
+                      <Text strong>07:00 AM</Text>
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div className="ant-form-item">
+                    <div className="ant-form-item-label">
+                      <label>Review Duration</label>
+                    </div>
+                    <div className="ant-form-item-control-input">
+                      <Text strong>1 hour (01:00)</Text>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
             </Form>
 
             <div className="flex justify-between mt-6">
@@ -1123,11 +1097,11 @@ const AssignReview = () => {
                 <Descriptions.Item label="Location" span={2}>
                   {location || <Text type="secondary">Not set</Text>}
                 </Descriptions.Item>
-                {notes && (
+                {/* {notes && (
                   <Descriptions.Item label="Overall Session Notes" span={2}>
                     <Paragraph style={{ marginBottom: 0 }}>{notes}</Paragraph>
                   </Descriptions.Item>
-                )}
+                )} */}
               </Descriptions>
             </Card>
 

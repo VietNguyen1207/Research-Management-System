@@ -322,7 +322,7 @@ export const projectApiSlice = apiSlice.injectEndpoints({
     }),
     getAssignedProjectsForCouncil: builder.query({
       query: (councilGroupId) => ({
-        url: `/council-groups/${councilGroupId}/assigned-projects`,
+        url: `/council/${councilGroupId}/assigned-projects`,
         method: "GET",
       }),
       providesTags: (result, error, councilGroupId) => [

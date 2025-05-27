@@ -41,6 +41,7 @@ import {
   UserSwitchOutlined,
   SearchOutlined,
   BankOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -64,6 +65,7 @@ const GROUP_STATUS = {
   0: "Pending",
   1: "Active",
   2: "Inactive",
+  3: "Assigned",
 };
 
 // Add status colors for group statuses
@@ -71,6 +73,7 @@ const GROUP_STATUS_COLORS = {
   0: "gold", // Pending - yellow/gold
   1: "green", // Active - green
   2: "default", // Inactive - gray
+  3: "cyan", // Assigned - cyan (or your preferred color)
 };
 
 // Add status icons for group statuses
@@ -82,6 +85,8 @@ const getGroupStatusIcon = (status) => {
       return <ClockCircleOutlined className="text-yellow-500" />;
     case 2: // Inactive
       return <StopOutlined className="text-gray-500" />;
+    case 3: // Assigned
+      return <LinkOutlined className="text-cyan-500" />;
     default:
       return null;
   }
@@ -1231,7 +1236,7 @@ const ViewGroup = () => {
               >
                 <Select.Option value="all">All Types</Select.Option>
                 <Select.Option value="0">Student Group</Select.Option>
-                <Select.Option value="1">Review Council</Select.Option>
+                <Select.Option value="1">Research Council</Select.Option>
                 <Select.Option value="2">Research Group</Select.Option>
                 <Select.Option value="3">Inspection Council</Select.Option>
                 <Select.Option value="4">Assessment Council</Select.Option>
@@ -1330,6 +1335,26 @@ const ViewGroup = () => {
                             >
                               {GROUP_STATUS[group.status ?? 1]}
                             </Tag>
+                            {(group.groupType === 1 || // Review Council
+                              group.groupType === 3 || // Inspection Council
+                              group.groupType === 4) && ( // Assessment Council
+                              <Tooltip title="View Schedule">
+                                <Button
+                                  type="text"
+                                  shape="circle"
+                                  icon={
+                                    <CalendarOutlined className="text-blue-500 hover:text-blue-700" />
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card click
+                                    navigate(
+                                      `/review-schedule?councilGroupId=${group.groupId}`
+                                    );
+                                  }}
+                                  className="ml-2"
+                                />
+                              </Tooltip>
+                            )}
                           </div>
                         </div>
                       }
@@ -1343,20 +1368,8 @@ const ViewGroup = () => {
                         </Button>,
                         (group.groupType === 1 || // Review Council
                           group.groupType === 3 || // Inspection Council
-                          group.groupType === 4) && ( // Assessment Council
-                          <Button
-                            type="default" // Changed to default to differentiate from "Review Projects"
-                            icon={<CalendarOutlined />} // Added calendar icon
-                            onClick={() =>
-                              navigate(
-                                `/review-schedule?councilGroupId=${group.groupId}`
-                              )
-                            }
-                            className="border-blue-500 text-blue-500 hover:bg-blue-50"
-                          >
-                            View Schedule
-                          </Button>
-                        ),
+                          group.groupType === 4) && // Assessment Council
+                          null, // Removed the button from actions
                         group.groupType === 1 ||
                         group.groupType === 3 ||
                         group.groupType === 4 ? (

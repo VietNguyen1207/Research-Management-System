@@ -258,12 +258,12 @@ const ReviewSchedule = () => {
         </Tooltip>
       ),
     },
-    {
-      title: "Your Role",
-      dataIndex: "role",
-      key: "role",
-      render: (role) => <Tag color="blue">{role || "Member"}</Tag>,
-    },
+    // {
+    //   title: "Your Role",
+    //   dataIndex: "role",
+    //   key: "role",
+    //   render: (role) => <Tag color="blue">{role || "Member"}</Tag>,
+    // },
     {
       title: "Status",
       dataIndex: "status",
@@ -282,10 +282,10 @@ const ReviewSchedule = () => {
           type="primary"
           size="small"
           onClick={() =>
-            navigate(`/review-project?groupId=${record.councilId}`)
+            navigate(`/project-request/${record.projectRequestId}`)
           }
         >
-          Review Projects in Council
+          Review Projects
         </Button>
       ),
     },
