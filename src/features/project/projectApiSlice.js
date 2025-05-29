@@ -330,6 +330,41 @@ export const projectApiSlice = apiSlice.injectEndpoints({
       ],
       transformResponse: (response) => response.data,
     }),
+    getProjectRequestVotes: builder.query({
+      query: (projectRequestId) => ({
+        url: `/vote/project-request/${projectRequestId}`,
+        method: "GET",
+      }),
+      providesTags: (result, error, projectRequestId) => [
+        { type: "ProjectRequestVotes", id: projectRequestId },
+      ],
+      transformResponse: (response) => response.data,
+    }),
+    submitProjectVote: builder.mutation({
+      query: (voteData) => ({
+        url: "/vote/project-request",
+        method: "POST",
+        body: voteData,
+      }),
+      invalidatesTags: (result, error, { projectRequestId }) => [
+        { type: "ProjectRequestVotes", id: projectRequestId },
+        { type: "ProjectRequestDetails", id: projectRequestId },
+      ],
+    }),
+    finalizeProjectVoting: builder.mutation({
+      query: ({ projectRequestId, councilId }) => ({
+        url: `/projects/finalize-voting/${projectRequestId}/${councilId}`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { projectRequestId, councilId }) => [
+        { type: "ProjectRequestDetails", id: projectRequestId },
+        { type: "ProjectRequestVotes", id: projectRequestId },
+        { type: "ProjectRequests", id: "LIST" },
+        { type: "DepartmentProjectRequests", id: "LIST" },
+        { type: "UserProjectRequests", id: "LIST" },
+        { type: "AssignedProjects", id: councilId },
+      ],
+    }),
   }),
 });
 
@@ -359,4 +394,7 @@ export const {
   useAssignProjectsToCouncilMutation,
   useGetAllProjectRequestsQuery,
   useGetAssignedProjectsForCouncilQuery,
+  useGetProjectRequestVotesQuery,
+  useSubmitProjectVoteMutation,
+  useFinalizeProjectVotingMutation,
 } = projectApiSlice;

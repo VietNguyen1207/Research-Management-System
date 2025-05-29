@@ -50,6 +50,8 @@ import {
   useRejectProjectRequestMutation,
   useApproveCompletionRequestMutation,
   useRejectCompletionRequestMutation,
+  useGetProjectRequestVotesQuery,
+  useSubmitProjectVoteMutation,
 } from "../../features/project/projectApiSlice";
 import {
   DOCUMENT_TYPE,
@@ -104,16 +106,6 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Add a helper function to check if user is authorized to approve/reject
-const isUserInCouncil = (user) => {
-  // Find council group where user is Chairman or Secretary
-  const councilGroup = user?.groups?.find(
-    (group) => group.groupType === 1 && (group.role === 3 || group.role === 4)
-  );
-
-  return !!councilGroup;
-};
-
 const ProjectRequestDetail = () => {
   const { requestId } = useParams();
   const navigate = useNavigate();
@@ -138,6 +130,16 @@ const ProjectRequestDetail = () => {
     refetch,
   } = useGetProjectRequestDetailsQuery(requestId);
 
+  // Fetch project votes
+  const {
+    data: votesData,
+    isLoading: votesLoading,
+    isError: votesError,
+    error: votesApiError,
+  } = useGetProjectRequestVotesQuery(requestId, {
+    skip: !requestId, // Skip if requestId is not available
+  });
+
   // Mutations for approve/reject
   const [approveProjectRequest, { isLoading: isApproving }] =
     useApproveProjectRequestMutation();
@@ -150,8 +152,54 @@ const ProjectRequestDetail = () => {
   const [rejectCompletionRequest, { isLoading: isRejectingCompletion }] =
     useRejectCompletionRequestMutation();
 
+  // Mutation for submitting a vote
+  const [submitVote, { isLoading: isSubmittingVote }] =
+    useSubmitProjectVoteMutation();
+
   // Extract project request data
   const projectRequest = response?.data;
+
+  // --- Button Visibility Logic ---
+  let showVoteButtons = false;
+  let voteMessage = "";
+
+  if (isLoading || votesLoading) {
+    // If main data or votes data is loading, don't decide on buttons yet
+    // Or show a generic loading state for the button area if preferred
+    voteMessage = "Loading project and vote information...";
+  } else if (projectRequest && user) {
+    const projectIsOpenForVoting =
+      projectRequest.approvalStatus === 0 || // Pending
+      projectRequest.approvalStatus === 3; // Assigned
+
+    if (projectIsOpenForVoting) {
+      let currentUserHasVoted = false;
+      if (votesData && votesData.length > 0 && user.full_name) {
+        currentUserHasVoted = votesData.some(
+          (vote) => vote.voterName === user.full_name
+        );
+      }
+
+      if (currentUserHasVoted) {
+        showVoteButtons = false;
+        voteMessage =
+          "You have already cast your vote for this project request.";
+      } else {
+        // If project is open for voting and current user (by name) hasn't voted,
+        // show buttons. Backend will authorize if they *can* vote.
+        showVoteButtons = true;
+      }
+    } else {
+      showVoteButtons = false;
+      const statusName =
+        APPROVAL_STATUS[projectRequest.approvalStatus] || "its current state";
+      voteMessage = `This project request is ${statusName} and not currently open for new votes.`;
+    }
+  } else if (isError) {
+    voteMessage =
+      "Could not load project details to determine voting eligibility.";
+  }
+  // --- End Button Visibility Logic ---
 
   // Handle checkbox changes
   const handleApprovalCheckboxChange = (e) => {
@@ -186,59 +234,24 @@ const ProjectRequestDetail = () => {
   // Handle approve submission
   const handleApprovalSubmit = async (values) => {
     try {
-      // Check if user has permission
-      if (
-        projectRequest.requestType !== 6 &&
-        (user?.role === "lecturer" ||
-          user?.role === "department" ||
-          user?.role === "researcher") &&
-        !isUserInCouncil(user)
-      ) {
-        message.error("You don't have permission to approve this request");
-        return;
-      }
+      // The old permission check for council chairman/secretary is removed
+      // as this modal is now for individual council member voting.
+      // Backend will authorize if the user can vote.
 
-      // Check if we have files
-      if (approvalFileList.length === 0) {
-        message.error("Please upload an approval document");
-        return;
-      }
+      await submitVote({
+        projectRequestId: requestId,
+        voteStatus: 1, // 1 for Approve
+        comment: values.comment || "",
+      }).unwrap();
 
-      // Get the file from the upload component
-      const file = approvalFileList[0]?.originFileObj;
-      if (!file) {
-        message.error("Invalid file selected");
-        return;
-      }
-
-      // Create FormData and append the file
-      const formData = new FormData();
-      formData.append("documentFiles", file);
-
-      // Use different API based on request type
-      if (projectRequest.requestType === 3) {
-        // Completion request
-        await approveCompletionRequest({
-          requestId,
-          formData: formData,
-        }).unwrap();
-      } else {
-        // Other request types
-        await approveProjectRequest({
-          requestId,
-          formData: formData,
-        }).unwrap();
-      }
-
-      message.success("Project request has been approved successfully");
+      message.success("Your vote (Approve) has been submitted successfully");
       setApprovalModalVisible(false);
       form.resetFields();
-      refetch();
+      refetch(); // Refetch project details (and implicitly votes via tags)
     } catch (err) {
-      console.error("Error approving project request:", err);
+      console.error("Error submitting approval vote:", err);
       message.error(
-        err.data?.message ||
-          "Failed to approve project request. Please try again."
+        err.data?.message || "Failed to submit approval vote. Please try again."
       );
     }
   };
@@ -246,60 +259,25 @@ const ProjectRequestDetail = () => {
   // Handle reject submission
   const handleRejectionSubmit = async (values) => {
     try {
-      // Check if user has permission
-      if (
-        projectRequest.requestType !== 6 &&
-        (user?.role === "lecturer" ||
-          user?.role === "department" ||
-          user?.role === "researcher") &&
-        !isUserInCouncil(user)
-      ) {
-        message.error("You don't have permission to reject this request");
-        return;
-      }
+      // The old permission check for council chairman/secretary is removed
+      // as this modal is now for individual council member voting.
+      // Backend will authorize if the user can vote.
 
-      // Check if we have files
-      if (rejectionFileList.length === 0) {
-        message.error("Please upload a rejection document");
-        return;
-      }
+      await submitVote({
+        projectRequestId: requestId,
+        voteStatus: 2, // 2 for Reject
+        comment: values.rejectionReason, // This field is already in rejectionForm
+      }).unwrap();
 
-      // Get the file from the upload component
-      const file = rejectionFileList[0]?.originFileObj;
-      if (!file) {
-        message.error("Invalid file selected");
-        return;
-      }
-
-      // Create FormData and append the file
-      const formData = new FormData();
-      formData.append("documentFiles", file);
-      formData.append("rejectionReason", values.rejectionReason || "");
-
-      // Use different API based on request type
-      if (projectRequest.requestType === 3) {
-        // Completion request
-        await rejectCompletionRequest({
-          requestId,
-          formData: formData,
-        }).unwrap();
-      } else {
-        // Other request types
-        await rejectProjectRequest({
-          requestId,
-          formData: formData,
-        }).unwrap();
-      }
-
-      message.success("Project request has been rejected successfully");
+      message.success("Your vote (Reject) has been submitted successfully");
       setRejectionModalVisible(false);
       rejectionForm.resetFields();
-      refetch();
+      refetch(); // Refetch project details (and implicitly votes via tags)
     } catch (err) {
-      console.error("Error rejecting project request:", err);
+      console.error("Error submitting rejection vote:", err);
       message.error(
         err.data?.message ||
-          "Failed to reject project request. Please try again."
+          "Failed to submit rejection vote. Please try again."
       );
     }
   };
@@ -310,11 +288,11 @@ const ProjectRequestDetail = () => {
       console.log("Permission debug info:");
       console.log("User role:", user.role);
       console.log("User groups:", user.groups);
-      console.log("Is user in council:", isUserInCouncil(user));
+      console.log("Is user in council:", showVoteButtons);
       console.log("Request type:", projectRequest.requestType);
       console.log("Request status:", projectRequest.approvalStatus);
     }
-  }, [projectRequest, user]);
+  }, [projectRequest, user, showVoteButtons]);
 
   if (isLoading) {
     return (
@@ -642,52 +620,38 @@ const ProjectRequestDetail = () => {
               </div>
             </div>
 
-            {projectRequest.approvalStatus === 0 ? (
-              // For fund disbursement requests, only show buttons to office/admin
-              // For other request types, show to lecturer/department who are in appropriate council
-              (projectRequest.requestType === 6 &&
-                (user?.role === "office" || user?.role === "admin")) ||
-              (projectRequest.requestType !== 6 &&
-                (user?.role === "lecturer" ||
-                  user?.role === "department" ||
-                  user?.role === "researcher") &&
-                isUserInCouncil(user)) ? (
-                <div className="mt-4 md:mt-0 flex gap-3">
-                  <Button
-                    type="primary"
-                    icon={<CheckOutlined />}
-                    onClick={handleApproveClick}
-                    size="large"
-                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-md"
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    type="primary"
-                    danger
-                    icon={<CloseOutlined />}
-                    onClick={handleRejectClick}
-                    size="large"
-                    className="shadow-md"
-                  >
-                    Reject
-                  </Button>
-                </div>
-              ) : // Show informational message for lecturers/department who aren't in council
-              (user?.role === "lecturer" ||
-                  user?.role === "department" ||
-                  user?.role === "researcher") &&
-                !isUserInCouncil(user) &&
-                projectRequest.requestType !== 6 ? (
-                <div className="mt-4 md:mt-0">
-                  {/* <Alert
-                    type="info"
-                    showIcon
-                    message="You need to be a Council Chairman or Secretary to approve or reject this request."
-                    className="border-blue-300 text-blue-700"
-                  /> */}
-                </div>
-              ) : null
+            {/* Updated Button Display Logic */}
+            {showVoteButtons ? (
+              <div className="mt-4 md:mt-0 flex gap-3">
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={handleApproveClick}
+                  size="large"
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-md"
+                >
+                  Cast Vote: Approve
+                </Button>
+                <Button
+                  type="primary"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={handleRejectClick}
+                  size="large"
+                  className="shadow-md"
+                >
+                  Cast Vote: Reject
+                </Button>
+              </div>
+            ) : voteMessage ? (
+              <div className="mt-4 md:mt-0">
+                <Alert
+                  type="info"
+                  showIcon
+                  message={voteMessage}
+                  className="border-blue-300 text-blue-700"
+                />
+              </div>
             ) : null}
           </div>
 
@@ -1391,6 +1355,114 @@ const ProjectRequestDetail = () => {
                 )}
               </Timeline>
             </Card>
+
+            {/* Votes Display Card - New */}
+            {projectRequest && ( // Only show if projectRequest is loaded
+              <Card
+                title={
+                  <div className="flex items-center">
+                    <TeamOutlined className="text-[#F2722B] mr-2" />
+                    <span className="font-semibold">Council Votes</span>
+                  </div>
+                }
+                className="shadow-md hover:shadow-lg transition-shadow duration-300 mt-6"
+              >
+                {votesLoading && <Spin tip="Loading votes..." />}
+                {votesError && (
+                  <Alert
+                    message="Error Loading Votes"
+                    description={
+                      votesApiError?.data?.message ||
+                      "Failed to load votes for this project request."
+                    }
+                    type="error"
+                    showIcon
+                  />
+                )}
+                {!votesLoading &&
+                  !votesError &&
+                  votesData &&
+                  votesData.length > 0 && (
+                    <div>
+                      <Descriptions
+                        bordered
+                        column={1}
+                        size="small"
+                        className="mb-4"
+                      >
+                        <Descriptions.Item label="Total Votes">
+                          <Tag color="blue">{votesData[0].totalVotes}</Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Approve Votes">
+                          <Tag color="green">{votesData[0].approveVotes}</Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Reject Votes">
+                          <Tag color="red">{votesData[0].rejectVotes}</Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Voting Status">
+                          <Tag
+                            color={
+                              votesData[0].isCompleted ? "green" : "orange"
+                            }
+                          >
+                            {votesData[0].isCompleted
+                              ? "Completed"
+                              : "In Progress"}
+                          </Tag>
+                        </Descriptions.Item>
+                      </Descriptions>
+                      <List
+                        itemLayout="horizontal"
+                        dataSource={votesData}
+                        renderItem={(vote) => (
+                          <List.Item>
+                            <List.Item.Meta
+                              avatar={<Avatar icon={<UserOutlined />} />}
+                              title={
+                                <Space>
+                                  <Text strong>{vote.voterName}</Text>
+                                  <Tag
+                                    color={
+                                      vote.voteStatus === 1
+                                        ? "success"
+                                        : "error"
+                                    }
+                                  >
+                                    {vote.statusName}
+                                  </Tag>
+                                </Space>
+                              }
+                              description={
+                                <>
+                                  <Text
+                                    type="secondary"
+                                    style={{
+                                      display: "block",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    Council: {vote.groupName}
+                                  </Text>
+                                  {vote.comment && (
+                                    <Paragraph italic>
+                                      "{vote.comment}"
+                                    </Paragraph>
+                                  )}
+                                </>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  )}
+                {!votesLoading &&
+                  !votesError &&
+                  (!votesData || votesData.length === 0) && (
+                    <Empty description="No votes recorded for this project request yet." />
+                  )}
+              </Card>
+            )}
           </Col>
         </Row>
 
@@ -1399,7 +1471,7 @@ const ProjectRequestDetail = () => {
           title={
             <div className="flex items-center">
               <CheckOutlined style={{ color: "#52c41a" }} className="mr-2" />
-              <span>Approve Project Request</span>
+              <span>Cast Vote: Approve Project Request</span>
             </div>
           }
           open={approvalModalVisible}
@@ -1411,53 +1483,25 @@ const ProjectRequestDetail = () => {
             <Button
               key="submit"
               type="primary"
-              loading={isApproving}
+              loading={isSubmittingVote}
               onClick={() => form.submit()}
               className="bg-green-600 hover:bg-green-700"
               disabled={!approvalConfirmed}
             >
-              Approve
+              Submit Approve Vote
             </Button>,
           ]}
           width={550}
         >
-          <Form form={form} onFinish={handleApprovalSubmit}>
+          <Form form={form} onFinish={handleApprovalSubmit} layout="vertical">
             <div>
-              {/* Approver Information (matched with rejection modal) */}
+              {/* Approver Information - Simplified */}
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
                 <div className="flex items-start">
                   <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
                   <div>
                     <p className="font-medium text-gray-800">
-                      You are approving as:{" "}
-                      <Tag color="blue">
-                        {(() => {
-                          // Find council group where user is Chairman or Secretary
-                          const councilGroup = user?.groups?.find(
-                            (group) =>
-                              group.groupType === 1 &&
-                              (group.role === 3 || group.role === 4)
-                          );
-
-                          if (councilGroup) {
-                            // Map role ID to role name
-                            let roleName = "";
-                            switch (councilGroup.role) {
-                              case 3:
-                                roleName = "Council Chairman";
-                                break;
-                              case 4:
-                                roleName = "Secretary";
-                                break;
-                              default:
-                                roleName = "Council Member";
-                            }
-                            return `${roleName} from ${councilGroup.groupName}`;
-                          } else {
-                            return "Not Authorized";
-                          }
-                        })()}
-                      </Tag>
+                      You are casting a vote as:
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
                       {user?.fullName || "User"} ({user?.email})
@@ -1513,28 +1557,26 @@ const ProjectRequestDetail = () => {
 
               <Divider />
 
-              {/* File Upload - add asterisk */}
-              <p className="text-sm font-medium mb-2">
-                Please upload an approval document:{" "}
-                <span className="text-red-500">*</span>
-              </p>
-              <Upload.Dragger
-                fileList={approvalFileList}
-                onChange={({ fileList }) => setApprovalFileList(fileList)}
-                beforeUpload={() => false}
-                maxCount={1}
-                onRemove={() => setApprovalFileList([])}
+              {/* Comment field for Approval */}
+              <Form.Item
+                name="comment"
+                label={
+                  <span>
+                    Comment <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a comment for your approval",
+                  },
+                ]}
               >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">
-                  Click or drag approval document to this area
-                </p>
-                <p className="ant-upload-hint">
-                  Support for PDF, DOC, DOCX files.
-                </p>
-              </Upload.Dragger>
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Provide any comments for your approval..."
+                />
+              </Form.Item>
 
               {/* Confirmation Checkbox */}
               <Form.Item
@@ -1546,9 +1588,8 @@ const ProjectRequestDetail = () => {
                 className="mt-4"
               >
                 <Checkbox onChange={handleApprovalCheckboxChange}>
-                  I confirm that I have reviewed this{" "}
-                  {projectRequest?.requestType === 3 ? "completion" : ""}{" "}
-                  request and approve it.{" "}
+                  I confirm that I have reviewed this request and wish to
+                  APPROVE it with the comment provided.{" "}
                   <span className="text-red-500">*</span>
                 </Checkbox>
               </Form.Item>
@@ -1561,7 +1602,7 @@ const ProjectRequestDetail = () => {
           title={
             <div className="flex items-center">
               <CloseOutlined style={{ color: "#f5222d" }} className="mr-2" />
-              <span>Reject Project Request</span>
+              <span>Cast Vote: Reject Project Request</span>
             </div>
           }
           open={rejectionModalVisible}
@@ -1574,51 +1615,27 @@ const ProjectRequestDetail = () => {
               key="submit"
               type="primary"
               danger
-              loading={isRejecting}
+              loading={isSubmittingVote}
               onClick={() => rejectionForm.submit()}
               disabled={!rejectionConfirmed}
             >
-              Reject
+              Submit Reject Vote
             </Button>,
           ]}
           width={550}
         >
-          <Form form={rejectionForm} onFinish={handleRejectionSubmit}>
-            {/* Rejecter Information (matched with approval modal) */}
+          <Form
+            form={rejectionForm}
+            onFinish={handleRejectionSubmit}
+            layout="vertical"
+          >
+            {/* Rejecter Information - Simplified */}
             <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-4">
               <div className="flex items-start">
                 <UserOutlined className="text-red-500 mt-1 mr-3 text-lg" />
                 <div>
                   <p className="font-medium text-gray-800">
-                    You are rejecting as:{" "}
-                    <Tag color="red">
-                      {(() => {
-                        // Find council group where user is Chairman or Secretary
-                        const councilGroup = user?.groups?.find(
-                          (group) =>
-                            group.groupType === 1 &&
-                            (group.role === 3 || group.role === 4)
-                        );
-
-                        if (councilGroup) {
-                          // Map role ID to role name
-                          let roleName = "";
-                          switch (councilGroup.role) {
-                            case 3:
-                              roleName = "Council Chairman";
-                              break;
-                            case 4:
-                              roleName = "Secretary";
-                              break;
-                            default:
-                              roleName = "Council Member";
-                          }
-                          return `${roleName} from ${councilGroup.groupName}`;
-                        } else {
-                          return "Not Authorized";
-                        }
-                      })()}
-                    </Tag>
+                    You are casting a vote as:
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     {user?.fullName || "User"} ({user?.email})
@@ -1674,44 +1691,21 @@ const ProjectRequestDetail = () => {
 
             <Divider />
 
-            {/* File Upload - add asterisk */}
-            <p className="text-sm font-medium mb-2">
-              Please upload a rejection document:{" "}
-              <span className="text-red-500">*</span>
-            </p>
-            <Upload.Dragger
-              fileList={rejectionFileList}
-              onChange={({ fileList }) => setRejectionFileList(fileList)}
-              beforeUpload={() => false}
-              maxCount={1}
-              onRemove={() => setRejectionFileList([])}
-            >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
-              </p>
-              <p className="ant-upload-text">
-                Click or drag rejection document to this area
-              </p>
-              <p className="ant-upload-hint">
-                Support for PDF, DOC, DOCX files.
-              </p>
-            </Upload.Dragger>
-
             {/* Rejection Reason already has required rule in Form.Item */}
             <Form.Item
               name="rejectionReason"
-              label={<span>Reason for Rejection</span>}
+              label={<span>Reason for Rejection / Comment</span>}
               rules={[
                 {
                   required: true,
-                  message: "Please provide a reason for rejection",
+                  message: "Please provide a comment for rejection",
                 },
               ]}
               className="mt-4"
             >
               <Input.TextArea
                 rows={3}
-                placeholder="Please explain why this project is being rejected..."
+                placeholder="Please explain why you are rejecting this project..."
               />
             </Form.Item>
 
@@ -1724,9 +1718,9 @@ const ProjectRequestDetail = () => {
               ]}
             >
               <Checkbox onChange={handleRejectionCheckboxChange}>
-                I confirm that I have reviewed this{" "}
-                {projectRequest?.requestType === 3 ? "completion" : ""} request
-                and reject it. <span className="text-red-500">*</span>
+                I confirm that I have reviewed this request and wish to REJECT
+                it with the reason provided.{" "}
+                <span className="text-red-500">*</span>
               </Checkbox>
             </Form.Item>
           </Form>

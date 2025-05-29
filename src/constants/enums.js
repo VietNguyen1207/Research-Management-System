@@ -90,6 +90,7 @@ export const APPROVAL_STATUS = {
   0: "Pending",
   1: "Approved",
   2: "Rejected",
+  3: "Assigned",
 };
 
 // Group Member Role enum mapping
@@ -116,6 +117,7 @@ export const STATUS_COLORS = {
   0: "gold", // Pending
   1: "green", // Approved
   2: "red", // Rejected
+  3: "cyan", // Assigned
 };
 
 // Color mappings for phase statuses
