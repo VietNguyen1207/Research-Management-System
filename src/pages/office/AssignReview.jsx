@@ -24,6 +24,7 @@ import {
   List,
   Avatar,
   Descriptions,
+  Result,
 } from "antd";
 import {
   TeamOutlined,
@@ -45,6 +46,7 @@ import {
   useAssignProjectsToCouncilMutation,
   useGetAllProjectRequestsQuery,
 } from "../../features/project/projectApiSlice";
+import { useLazyGetGroupMembersQuery } from "../../features/group/groupApiSlice";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -79,6 +81,14 @@ const AssignReview = () => {
   const [membersToShowInModal, setMembersToShowInModal] = useState([]);
   const [currentCouncilForModal, setCurrentCouncilForModal] = useState(null);
 
+  // New state for group members modal
+  const [isGroupMembersModalVisible, setIsGroupMembersModalVisible] =
+    useState(false);
+  const [groupMembersData, setGroupMembersData] = useState(null);
+  const [selectedGroupIdForModal, setSelectedGroupIdForModal] = useState(null);
+  const [isLoadingGroupMembers, setIsLoadingGroupMembers] = useState(false);
+  const [isValidatingConflict, setIsValidatingConflict] = useState(false);
+
   // Replace API queries with mock data variables
   // Comment out actual API hooks
   /*
@@ -106,6 +116,16 @@ const AssignReview = () => {
 
   const [assignProjectsToCouncil, { isLoading: isAssigning }] =
     useAssignProjectsToCouncilMutation();
+
+  // Hook for fetching group members - lazy query as it's triggered on click
+  const [
+    triggerGetGroupMembers,
+    {
+      data: fetchedGroupMembers,
+      isLoading: isFetchingGroupMembers,
+      error: groupMembersError,
+    },
+  ] = useLazyGetGroupMembersQuery();
 
   // Mock loading state for the assign action
   // const isAssigning = false;
@@ -209,7 +229,13 @@ const AssignReview = () => {
       key: "groupName",
       render: (text, record) => (
         <Space direction="vertical" size={0}>
-          <Text>{text}</Text>
+          <Button
+            type="link"
+            onClick={() => handleViewGroupMembers(record.groupId)}
+            style={{ padding: 0, height: "auto" }}
+          >
+            {text}
+          </Button>
           <Text type="secondary" style={{ fontSize: "12px" }}>
             Requester: {record.requesterName}
           </Text>
@@ -424,7 +450,80 @@ const AssignReview = () => {
 
   // Handle form submission
   const handleSubmit = async () => {
-    // Validation logic remains the same for first two steps - already handled by nextStep
+    // ---- CONFLICT VALIDATION (FINAL CHECK) ----
+    setIsValidatingConflict(true);
+    const conflicts = await validateProjectCouncilConflict(
+      selectedProjects,
+      selectedCouncil
+    );
+    setIsValidatingConflict(false);
+
+    if (conflicts.length > 0) {
+      Modal.error({
+        title: "Cannot Assign Review - Conflict Detected",
+        width: 700,
+        content: (
+          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+            <p className="mb-2">
+              The assignment cannot be completed due to member overlap:
+            </p>
+            {conflicts.map((conflict, idx) => (
+              <Card
+                key={idx}
+                style={{ marginBottom: 16 }}
+                bodyStyle={{ padding: "12px" }}
+              >
+                <Descriptions
+                  title={
+                    <Typography.Text strong>
+                      Project: {conflict.projectName} (ID: {conflict.projectId})
+                    </Typography.Text>
+                  }
+                  column={1}
+                  size="small"
+                >
+                  {conflict.errorFetchingGroup ? (
+                    <Descriptions.Item label="Validation Issue">
+                      <Alert
+                        message={conflict.errorMessage}
+                        type="warning"
+                        showIcon
+                      />
+                    </Descriptions.Item>
+                  ) : (
+                    conflict.conflictingPairs.map((pair, pairIdx) => (
+                      <Descriptions.Item
+                        key={pairIdx}
+                        label={`Conflict Pair ${pairIdx + 1}`}
+                      >
+                        <div className="bg-red-50 p-2 rounded border border-red-200">
+                          <Typography.Text strong>
+                            Council Member:{" "}
+                          </Typography.Text>{" "}
+                          {pair.councilMember.name} ({pair.councilMember.email},{" "}
+                          {pair.councilMember.role || "N/A"})<br />
+                          <Typography.Text strong>
+                            Is Also Project Group Member:{" "}
+                          </Typography.Text>{" "}
+                          {pair.projectGroupMember.name} (
+                          {pair.projectGroupMember.email},{" "}
+                          {pair.projectGroupMember.role || "N/A"})
+                        </div>
+                      </Descriptions.Item>
+                    ))
+                  )}
+                </Descriptions>
+              </Card>
+            ))}
+            <p className="mt-4">
+              Please revise your selections or resolve group memberships.
+            </p>
+          </div>
+        ),
+      });
+      return;
+    }
+    // ---- END CONFLICT VALIDATION (FINAL CHECK) ----
 
     // Ensure all data for submission is available (final check before API call)
     if (
@@ -510,39 +609,118 @@ const AssignReview = () => {
   };
 
   // Move to next step
-  const nextStep = () => {
+  const nextStep = async () => {
     if (currentStep === 0 && !selectedCouncil) {
       message.error("Please select a council for review");
       return;
     }
 
-    if (currentStep === 1 && selectedProjects.length === 0) {
-      message.error("Please select at least one project to review");
-      return;
+    if (currentStep === 1) {
+      if (selectedProjects.length === 0) {
+        message.error("Please select at least one project to review");
+        return;
+      }
+      if (!selectedCouncil) {
+        message.error(
+          "Please select a council first (should be handled in step 0, but good to double check)."
+        );
+        return;
+      }
+
+      setIsValidatingConflict(true);
+      const conflicts = await validateProjectCouncilConflict(
+        selectedProjects,
+        selectedCouncil
+      );
+      setIsValidatingConflict(false);
+
+      if (conflicts.length > 0) {
+        Modal.error({
+          title: "Project Assignment Conflict",
+          width: 700,
+          content: (
+            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+              <p className="mb-2">
+                The selected council cannot review the following project(s) due
+                to member overlap with the project's research group:
+              </p>
+              {conflicts.map((conflict, idx) => (
+                <Card
+                  key={idx}
+                  style={{ marginBottom: 16 }}
+                  bodyStyle={{ padding: "12px" }}
+                >
+                  <Descriptions
+                    title={
+                      <Typography.Text strong>
+                        Project: {conflict.projectName} (ID:{" "}
+                        {conflict.projectId})
+                      </Typography.Text>
+                    }
+                    column={1}
+                    size="small"
+                  >
+                    {conflict.errorFetchingGroup ? (
+                      <Descriptions.Item label="Validation Issue">
+                        <Alert
+                          message={conflict.errorMessage}
+                          type="warning"
+                          showIcon
+                        />
+                      </Descriptions.Item>
+                    ) : (
+                      conflict.conflictingPairs.map((pair, pairIdx) => (
+                        <Descriptions.Item
+                          key={pairIdx}
+                          label={`Conflict Pair ${pairIdx + 1}`}
+                        >
+                          <div className="bg-red-50 p-2 rounded border border-red-200">
+                            <Typography.Text strong>
+                              Council Member:{" "}
+                            </Typography.Text>{" "}
+                            {pair.councilMember.name} (
+                            {pair.councilMember.email},{" "}
+                            {pair.councilMember.role || "N/A"})<br />
+                            <Typography.Text strong>
+                              Is Also Project Group Member:{" "}
+                            </Typography.Text>{" "}
+                            {pair.projectGroupMember.name} (
+                            {pair.projectGroupMember.email},{" "}
+                            {pair.projectGroupMember.role || "N/A"})
+                          </div>
+                        </Descriptions.Item>
+                      ))
+                    )}
+                  </Descriptions>
+                </Card>
+              ))}
+              <p className="mt-4">
+                Please select different projects, a different council, or
+                resolve group memberships.
+              </p>
+            </div>
+          ),
+        });
+        return;
+      }
     }
 
-    // Validation for Step 2 (Schedule Review)
     if (currentStep === 2) {
-      form
-        .validateFields(["reviewDate", "location"]) // Validate only reviewDate and location
-        .then(() => {
-          if (
-            !reviewDate || // reviewTimeRange and projectDuration are now set programmatically
-            !location // Ensure location is also checked, though form.validateFields should cover it
-          ) {
-            message.error("Please ensure date and location are set.");
-            return;
-          }
-          setCurrentStep(currentStep + 1); // Proceed if form validation passes
-        })
-        .catch((info) => {
-          console.log("Validate Failed:", info);
-          message.error(
-            "Please correct the errors in the schedule information."
-          );
-          return; // Stay on current step if validation fails
-        });
-      return; // Important: nextStep logic for step 2 is handled by form validation promise
+      try {
+        await form.validateFields(["reviewDate", "location"]);
+        if (!reviewDate || !location) {
+          message.error("Please ensure date and location are set.");
+          return;
+        }
+        // Optional: Re-run conflict validation as a final check before confirmation screen if desired, though primary validation is now earlier.
+        // For now, we assume the earlier validation is sufficient before this step.
+        setCurrentStep(currentStep + 1);
+      } catch (info) {
+        console.log("Validate Failed:", info);
+        message.error("Please correct the errors in the schedule information.");
+        return;
+      }
+      return;
     }
 
     setCurrentStep(currentStep + 1);
@@ -568,6 +746,97 @@ const AssignReview = () => {
   const handleCouncilSelection = (record) => {
     console.log("Council selected (handleCouncilSelection):", record);
     setSelectedCouncil(record);
+  };
+
+  const validateProjectCouncilConflict = async (projectsToReview, council) => {
+    if (!council || !council.members || council.members.length === 0) {
+      return []; // No council members to conflict with
+    }
+    const councilMembers = council.members; // Get full council member objects
+    let allConflicts = [];
+
+    for (const project of projectsToReview) {
+      if (!project.groupId) {
+        console.warn(
+          `Project "${project.projectName}" missing groupId, skipping conflict validation for it.`
+        );
+        continue;
+      }
+
+      let projectGroupMembers = [];
+      try {
+        const groupMembersResult = await triggerGetGroupMembers(
+          project.groupId
+        ).unwrap();
+        projectGroupMembers = groupMembersResult?.data || [];
+      } catch (err) {
+        console.error(
+          `Failed to fetch members for project group ${project.groupId} (Project: "${project.projectName}"):`,
+          err
+        );
+        message.warning(
+          `Could not fetch members for project "${project.projectName}" to validate conflicts.`
+        );
+        // Decide if this should be a hard stop or allow proceeding with a warning.
+        // For now, we treat it as a potential issue and report it as a special conflict type or skip detailed check.
+        allConflicts.push({
+          projectName: project.projectName,
+          projectId: project.requestId,
+          errorFetchingGroup: true,
+          errorMessage: `Could not retrieve members for the research group of project "${project.projectName}".`,
+        });
+        continue; // Move to the next project
+      }
+
+      if (projectGroupMembers.length === 0) continue; // No project members to conflict with
+
+      const projectConflictingPairs = [];
+
+      for (const councilMember of councilMembers) {
+        const projectGroupEquivalent = projectGroupMembers.find(
+          (pgMember) => pgMember.userId === councilMember.userId
+        );
+        if (projectGroupEquivalent) {
+          projectConflictingPairs.push({
+            councilMember: {
+              name: councilMember.memberName,
+              email: councilMember.memberEmail,
+              role: councilMember.roleText, // Assuming roleText is available from council data
+            },
+            projectGroupMember: {
+              name: projectGroupEquivalent.memberName,
+              email: projectGroupEquivalent.memberEmail,
+              role: projectGroupEquivalent.roleString, // Assuming roleString from getGroupMembers transform
+            },
+          });
+        }
+      }
+
+      if (projectConflictingPairs.length > 0) {
+        allConflicts.push({
+          projectName: project.projectName,
+          projectId: project.requestId,
+          conflictingPairs: projectConflictingPairs,
+        });
+      }
+    }
+    return allConflicts;
+  };
+
+  const handleViewGroupMembers = async (groupId) => {
+    if (!groupId) return;
+    setSelectedGroupIdForModal(groupId);
+    setIsGroupMembersModalVisible(true);
+    setIsLoadingGroupMembers(true);
+    try {
+      const result = await triggerGetGroupMembers(groupId).unwrap();
+      setGroupMembersData(result?.data || []);
+    } catch (err) {
+      message.error("Failed to fetch group members.");
+      console.error("Error fetching group members:", err);
+      setGroupMembersData([]); // Set to empty array on error
+    }
+    setIsLoadingGroupMembers(false);
   };
 
   // Loading state
@@ -700,6 +969,90 @@ const AssignReview = () => {
           </Modal>
         )}
 
+        {/* MODAL FOR DISPLAYING GROUP MEMBERS - NEWLY ADDED */}
+        {selectedGroupIdForModal && (
+          <Modal
+            title={`Members of Group ID: ${selectedGroupIdForModal}`}
+            open={isGroupMembersModalVisible}
+            onCancel={() => {
+              setIsGroupMembersModalVisible(false);
+              setGroupMembersData(null); // Clear data on close
+              setSelectedGroupIdForModal(null);
+            }}
+            footer={[
+              <Button
+                key="close"
+                onClick={() => {
+                  setIsGroupMembersModalVisible(false);
+                  setGroupMembersData(null);
+                  setSelectedGroupIdForModal(null);
+                }}
+              >
+                Close
+              </Button>,
+            ]}
+            width={600}
+          >
+            {isLoadingGroupMembers ? (
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                <Spin size="large" />
+                <p>Loading members...</p>
+              </div>
+            ) : groupMembersError ? (
+              <Result
+                status="warning"
+                title="Could not load group members."
+                subTitle={
+                  groupMembersError?.data?.message || "Please try again."
+                }
+              />
+            ) : groupMembersData && groupMembersData.length > 0 ? (
+              <Table
+                dataSource={groupMembersData}
+                rowKey="groupMemberId"
+                columns={[
+                  {
+                    title: "Name",
+                    dataIndex: "memberName",
+                    key: "memberName",
+                    render: (name) => name || <Text type="secondary">N/A</Text>,
+                  },
+                  {
+                    title: "Email",
+                    dataIndex: "memberEmail",
+                    key: "memberEmail",
+                  },
+                  {
+                    title: "Role",
+                    dataIndex: "roleString", // Use the transformed field
+                    key: "roleString",
+                    render: (roleString) => (
+                      <Tag color="blue">{roleString}</Tag>
+                    ),
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "statusString", // Use the transformed field
+                    key: "statusString",
+                    render: (statusString, record) => {
+                      let color = "default";
+                      if (record.status === 1) color = "success"; // Accepted
+                      if (record.status === 0) color = "processing"; // Pending
+                      if (record.status === 3) color = "error"; // Rejected
+                      if (record.status === 2) color = "default"; // Inactive
+                      return <Tag color={color}>{statusString}</Tag>;
+                    },
+                  },
+                ]}
+                pagination={false}
+                size="small"
+              />
+            ) : (
+              <Empty description="No members found for this group." />
+            )}
+          </Modal>
+        )}
+
         {/* Step 0: Council Selection (Previously Step 1) */}
         {currentStep === 0 && (
           <Card className="shadow-md mb-8">
@@ -781,6 +1134,7 @@ const AssignReview = () => {
               <Button
                 type="primary"
                 onClick={nextStep}
+                loading={isValidatingConflict}
                 className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
               >
                 Next: Schedule Review
@@ -865,6 +1219,7 @@ const AssignReview = () => {
               <Button
                 type="primary"
                 onClick={nextStep}
+                loading={isValidatingConflict}
                 className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
               >
                 Next: Confirm Details
@@ -1118,7 +1473,7 @@ const AssignReview = () => {
               <Button
                 type="primary"
                 onClick={handleSubmit}
-                loading={isAssigning}
+                loading={isValidatingConflict}
                 className="bg-gradient-to-r from-[#F2722B] to-[#FFA500] border-none"
               >
                 Assign Review

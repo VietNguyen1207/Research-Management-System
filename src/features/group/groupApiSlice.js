@@ -96,6 +96,27 @@ export const groupApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["StudentGroups", "ResearchGroups", "UserGroups"],
     }),
+
+    getGroupMembers: builder.query({
+      query: (groupId) => `/groups/${groupId}/members`,
+      transformResponse: (response) => {
+        // Transform the response to include readable role and status names
+        if (response.data) {
+          return {
+            ...response,
+            data: response.data.map((member) => ({
+              ...member,
+              roleString: getRoleName(member.role),
+              statusString: getStatusName(member.status),
+            })),
+          };
+        }
+        return response;
+      },
+      providesTags: (result, error, groupId) => [
+        { type: "GroupMembers", id: groupId },
+      ],
+    }),
   }),
 });
 
@@ -171,4 +192,6 @@ export const {
   useGetCouncilGroupsQuery,
   useReInviteGroupMemberMutation,
   useGetUserResearchGroupsQuery,
+  useGetGroupMembersQuery,
+  useLazyGetGroupMembersQuery,
 } = groupApiSlice;
