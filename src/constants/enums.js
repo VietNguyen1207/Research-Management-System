@@ -41,10 +41,12 @@ export const DOCUMENT_TYPE = {
 
 // Fund Disbursement Type enum mapping
 export const FUND_DISBURSEMENT_TYPE = {
-  0: "Project Phase",
+  0: "Research Creation",
   1: "Conference Expense",
   2: "Conference Funding",
   3: "Journal Funding",
+  4: "Progress Report",
+  5: "Project Inspection",
 };
 
 // Project Phase Status enum mapping

@@ -78,8 +78,8 @@ const FundDisbursementRequest = () => {
     useRejectFundDisbursementMutation();
 
   // Handle view request details
-  const handleViewDetails = (record) => {
-    navigate(`/fund-disbursement-details/${record.fundDisbursementId}`);
+  const handleViewDetails = (request) => {
+    navigate(`/project-request/${request.requestId}`);
   };
 
   // Format date

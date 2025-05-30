@@ -53,6 +53,7 @@ import {
   useGetProjectRequestVotesQuery,
   useSubmitProjectVoteMutation,
 } from "../../features/project/projectApiSlice";
+import { useOfficeApproveFundDisbursementMutation } from "../../features/fund-disbursement/fundDisbursementApiSlice";
 import {
   DOCUMENT_TYPE,
   REQUEST_TYPE,
@@ -121,6 +122,13 @@ const ProjectRequestDetail = () => {
   const [approvalConfirmed, setApprovalConfirmed] = useState(false);
   const [rejectionConfirmed, setRejectionConfirmed] = useState(false);
 
+  // State for "Mark as Fund Disbursed" modal
+  const [markAsDisbursedModalVisible, setMarkAsDisbursedModalVisible] =
+    useState(false);
+  const [disbursementComment, setDisbursementComment] = useState("");
+  const [disbursementFileList, setDisbursementFileList] = useState([]);
+  const [disbursementForm] = Form.useForm(); // Form instance for the new modal
+
   // Fetch project request details
   const {
     data: response,
@@ -156,50 +164,151 @@ const ProjectRequestDetail = () => {
   const [submitVote, { isLoading: isSubmittingVote }] =
     useSubmitProjectVoteMutation();
 
+  // Hook for the new office approve disbursement mutation
+  const [
+    officeApproveDisbursement,
+    { isLoading: isMarkingAsDisbursed }, // Loading state for the button
+  ] = useOfficeApproveFundDisbursementMutation();
+
   // Extract project request data
   const projectRequest = response?.data;
 
   // --- Button Visibility Logic ---
   let showVoteButtons = false;
+  let showFundDisbursedButtonLocal = false;
   let voteMessage = "";
 
   if (isLoading || votesLoading) {
-    // If main data or votes data is loading, don't decide on buttons yet
-    // Or show a generic loading state for the button area if preferred
     voteMessage = "Loading project and vote information...";
   } else if (projectRequest && user) {
     const projectIsOpenForVoting =
       projectRequest.approvalStatus === 0 || // Pending
       projectRequest.approvalStatus === 3; // Assigned
 
-    if (projectIsOpenForVoting) {
-      let currentUserHasVoted = false;
-      if (votesData && votesData.length > 0 && user.full_name) {
-        currentUserHasVoted = votesData.some(
-          (vote) => vote.voterName === user.full_name
-        );
-      }
-
-      if (currentUserHasVoted) {
+    if (projectRequest.requestType === 6) {
+      if (user.role === "office") {
+        if (projectIsOpenForVoting) {
+          showFundDisbursedButtonLocal = true;
+          showVoteButtons = false;
+        } else {
+          showFundDisbursedButtonLocal = false;
+          showVoteButtons = false;
+          const statusName =
+            APPROVAL_STATUS[projectRequest.approvalStatus] ||
+            "its current state";
+          voteMessage = `This fund disbursement request is ${statusName} and not currently open for action.`;
+        }
+      } else {
+        showFundDisbursedButtonLocal = false;
         showVoteButtons = false;
         voteMessage =
-          "You have already cast your vote for this project request.";
-      } else {
-        // If project is open for voting and current user (by name) hasn't voted,
-        // show buttons. Backend will authorize if they *can* vote.
-        showVoteButtons = true;
+          "You do not have permission to take action on fund disbursement requests.";
       }
     } else {
-      showVoteButtons = false;
-      const statusName =
-        APPROVAL_STATUS[projectRequest.approvalStatus] || "its current state";
-      voteMessage = `This project request is ${statusName} and not currently open for new votes.`;
+      showFundDisbursedButtonLocal = false;
+      if (projectIsOpenForVoting) {
+        let currentUserHasVoted = false;
+        if (votesData && votesData.length > 0 && user.full_name) {
+          currentUserHasVoted = votesData.some(
+            (vote) => vote.voterName === user.full_name
+          );
+        }
+
+        if (currentUserHasVoted) {
+          showVoteButtons = false;
+          voteMessage =
+            "You have already cast your vote for this project request.";
+        } else {
+          showVoteButtons = true; // Backend will authorize if they *can* vote.
+        }
+      } else {
+        showVoteButtons = false;
+        const statusName =
+          APPROVAL_STATUS[projectRequest.approvalStatus] || "its current state";
+        voteMessage = `This project request is ${statusName} and not currently open for new votes.`;
+      }
     }
   } else if (isError) {
+    showFundDisbursedButtonLocal = false;
+    showVoteButtons = false;
     voteMessage =
       "Could not load project details to determine voting eligibility.";
   }
   // --- End Button Visibility Logic ---
+
+  // Handle "Mark as Fund Disbursed" modal
+  const showMarkAsDisbursedModal = () => {
+    disbursementForm.resetFields();
+    setDisbursementFileList([]);
+    setMarkAsDisbursedModalVisible(true);
+  };
+
+  const handleMarkAsDisbursedCancel = () => {
+    setMarkAsDisbursedModalVisible(false);
+  };
+
+  const handleMarkAsDisbursedSubmit = async (values) => {
+    if (disbursementFileList.length === 0) {
+      message.error("Please upload at least one disbursement proof document.");
+      return;
+    }
+
+    // Ensure projectRequest and projectRequest.fundDisbursementId are available
+    if (
+      !projectRequest ||
+      typeof projectRequest.fundDisbursementId === "undefined"
+    ) {
+      message.error("Fund Disbursement ID is missing. Cannot proceed.");
+      console.error(
+        "Project Request Data or FundDisbursementId is missing:",
+        projectRequest
+      );
+      return;
+    }
+
+    const formData = new FormData();
+
+    // Use the actual fundDisbursementId from the projectRequest data
+    formData.append("FundDisbursementId", projectRequest.fundDisbursementId);
+
+    disbursementFileList.forEach((file) => {
+      formData.append("documentFiles", file.originFileObj);
+    });
+
+    try {
+      console.log(
+        "Submitting Office Approve Disb.: ID -",
+        projectRequest.fundDisbursementId,
+        "FormData -",
+        formData
+      );
+      await officeApproveDisbursement({
+        disbursementId: projectRequest.fundDisbursementId, // Use the correct ID for the URL
+        formData,
+      }).unwrap();
+      message.success(
+        "Successfully marked as fund disbursed and document(s) uploaded!"
+      );
+      refetch();
+      setMarkAsDisbursedModalVisible(false);
+      disbursementForm.resetFields();
+      setDisbursementFileList([]);
+      window.location.reload();
+    } catch (err) {
+      console.error("Error marking fund as disbursed:", err);
+      message.error(
+        err.data?.message ||
+          "Failed to mark as fund disbursed. Please try again."
+      );
+    }
+  };
+
+  const handleDisbursementDocUpload = ({ fileList }) => {
+    // Allow multiple files to be accumulated in the list
+    setDisbursementFileList(fileList);
+    // Trigger validation again for the Form.Item if you want immediate feedback
+    // disbursementForm.validateFields(['disbursementDocument']);
+  };
 
   // Handle checkbox changes
   const handleApprovalCheckboxChange = (e) => {
@@ -621,7 +730,19 @@ const ProjectRequestDetail = () => {
             </div>
 
             {/* Updated Button Display Logic */}
-            {showVoteButtons ? (
+            {showFundDisbursedButtonLocal ? (
+              <div className="mt-4 md:mt-0 flex gap-3">
+                <Button
+                  type="primary"
+                  icon={<DollarOutlined />}
+                  onClick={showMarkAsDisbursedModal}
+                  size="large"
+                  className="bg-blue-600 hover:bg-blue-700 border-none shadow-md"
+                >
+                  Mark as Fund Disbursed
+                </Button>
+              </div>
+            ) : showVoteButtons ? (
               <div className="mt-4 md:mt-0 flex gap-3">
                 <Button
                   type="primary"
@@ -1722,6 +1843,97 @@ const ProjectRequestDetail = () => {
                 it with the reason provided.{" "}
                 <span className="text-red-500">*</span>
               </Checkbox>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Mark as Fund Disbursed Modal */}
+        <Modal
+          title={
+            <div className="flex items-center">
+              <DollarOutlined style={{ color: "#1890ff" }} className="mr-2" />
+              <span>Mark Project as Fund Disbursed</span>
+            </div>
+          }
+          open={markAsDisbursedModalVisible}
+          onCancel={handleMarkAsDisbursedCancel}
+          footer={[
+            <Button key="back" onClick={handleMarkAsDisbursedCancel}>
+              Cancel
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              loading={isMarkingAsDisbursed}
+              onClick={() => disbursementForm.submit()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Submit Disbursement Proof
+            </Button>,
+          ]}
+          width={550}
+        >
+          <Form
+            form={disbursementForm}
+            onFinish={handleMarkAsDisbursedSubmit}
+            layout="vertical"
+          >
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+              <div className="flex items-start">
+                <UserOutlined className="text-blue-500 mt-1 mr-3 text-lg" />
+                <div>
+                  <p className="font-medium text-gray-800">
+                    You are marking this project as fund disbursed:
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Project: {projectRequest?.projectName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Form.Item
+              name="disbursementDocs"
+              label="Disbursement Proof Document(s)"
+              rules={[
+                {
+                  required: true,
+                  message:
+                    "Please upload at least one disbursement proof document!",
+                },
+                () => ({
+                  validator(_, value) {
+                    if (disbursementFileList.length > 0) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error(
+                        "Please upload at least one disbursement proof document!"
+                      )
+                    );
+                  },
+                }),
+              ]}
+              help="Upload document(s) (e.g., PDF, DOC, DOCX) as proof of disbursement."
+            >
+              <Upload.Dragger
+                name="disbursementDocs"
+                fileList={disbursementFileList}
+                beforeUpload={() => false}
+                onChange={handleDisbursementDocUpload}
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                multiple={true}
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">
+                  Click or drag file to this area to upload disbursement proof
+                </p>
+                <p className="ant-upload-hint">
+                  Support for multiple files (PDF, Word, Image).
+                </p>
+              </Upload.Dragger>
             </Form.Item>
           </Form>
         </Modal>

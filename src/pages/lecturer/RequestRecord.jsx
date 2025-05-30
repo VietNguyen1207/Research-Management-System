@@ -67,6 +67,7 @@ const APPROVAL_STATUS = {
   0: "Pending",
   1: "Approved",
   2: "Rejected",
+  3: "Assigned",
 };
 
 // Document Type enum mapping
@@ -82,6 +83,7 @@ const STATUS_COLORS = {
   0: "gold", // Pending
   1: "green", // Approved
   2: "red", // Rejected
+  3: "cyan", // Assigned
 };
 
 // Request options for filter
@@ -102,6 +104,7 @@ const STATUS_OPTIONS = [
   { value: "0", label: "Pending" },
   { value: "1", label: "Approved" },
   { value: "2", label: "Rejected" },
+  { value: "3", label: "Assigned" },
 ];
 
 // Add Fund Disbursement Type enum mapping
@@ -375,7 +378,10 @@ const RequestRecord = () => {
           <Button
             type="default"
             icon={<InfoCircleOutlined />}
-            onClick={() => handleViewDetails(record)}
+            onClick={() => {
+              console.log("View Details - Record for this row:", record);
+              handleViewDetails(record);
+            }}
             className="w-full bg-gradient-to-r from-[#F2722B] to-[#FFA500] hover:from-[#E65D1B] hover:to-[#FF9500] text-white border-none"
           >
             View Details
