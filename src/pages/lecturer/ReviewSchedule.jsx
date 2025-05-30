@@ -17,6 +17,11 @@ import {
   Alert,
   Timeline,
   Divider,
+  Modal,
+  List,
+  Avatar,
+  Descriptions,
+  message,
 } from "antd";
 import {
   CalendarOutlined,
@@ -26,13 +31,18 @@ import {
   SearchOutlined,
   InfoCircleOutlined,
   EnvironmentOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
-import { useGetAssignedProjectsForCouncilQuery } from "../../features/project/projectApiSlice";
+import {
+  useGetAssignedProjectsForCouncilQuery,
+  useGetProjectRequestVotesQuery,
+  useFinalizeProjectVotingMutation,
+} from "../../features/project/projectApiSlice";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -45,6 +55,8 @@ const ReviewSchedule = () => {
   const [searchText, setSearchText] = useState("");
   const [dateRange, setDateRange] = useState(null);
   const [filteredReviews, setFilteredReviews] = useState([]);
+  const [isVoteModalVisible, setIsVoteModalVisible] = useState(false);
+  const [currentVoteRequestId, setCurrentVoteRequestId] = useState(null);
 
   const queryParams = new URLSearchParams(location.search);
   const councilGroupId = queryParams.get("councilGroupId");
@@ -205,6 +217,16 @@ const ReviewSchedule = () => {
     }
   };
 
+  const showVoteModal = (projectRequestId) => {
+    setCurrentVoteRequestId(projectRequestId);
+    setIsVoteModalVisible(true);
+  };
+
+  const handleVoteModalCancel = () => {
+    setIsVoteModalVisible(false);
+    setCurrentVoteRequestId(null);
+  };
+
   const columns = [
     {
       title: "Review Session (Project)",
@@ -278,15 +300,24 @@ const ReviewSchedule = () => {
       title: "Action",
       key: "action",
       render: (_, record) => (
-        <Button
-          type="primary"
-          size="small"
-          onClick={() =>
-            navigate(`/project-request/${record.projectRequestId}`)
-          }
-        >
-          Review Projects
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() =>
+              navigate(`/project-request/${record.projectRequestId}`)
+            }
+          >
+            Review Project
+          </Button>
+          <Button
+            type="default"
+            size="small"
+            onClick={() => showVoteModal(record.projectRequestId)}
+          >
+            Vote Progress
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -435,7 +466,219 @@ const ReviewSchedule = () => {
           All times are displayed in your local timezone.
         </div>
       </div>
+
+      {currentVoteRequestId && (
+        <VoteProgressModal
+          visible={isVoteModalVisible}
+          onCancel={handleVoteModalCancel}
+          projectRequestId={currentVoteRequestId}
+        />
+      )}
     </div>
+  );
+};
+
+const VoteProgressModal = ({ visible, onCancel, projectRequestId }) => {
+  const navigate = useNavigate();
+  const {
+    data: votesData,
+    isLoading: votesLoading,
+    isError: votesError,
+    error: votesApiError,
+    refetch: refetchVotes,
+  } = useGetProjectRequestVotesQuery(projectRequestId, {
+    skip: !projectRequestId,
+  });
+
+  const [finalizeVoting, { isLoading: isFinalizing }] =
+    useFinalizeProjectVotingMutation();
+
+  const handleFinalizeVoting = async () => {
+    if (!votesData || votesData.length === 0) {
+      message.error("Vote data is not available to finalize.");
+      return;
+    }
+    const councilId = votesData[0].groupId;
+    if (!councilId) {
+      message.error("Council ID is missing, cannot finalize.");
+      return;
+    }
+
+    try {
+      const result = await finalizeVoting({
+        projectRequestId,
+        councilId,
+      }).unwrap();
+      message.success(
+        result.message || "Voting results have been finalized successfully!"
+      );
+      refetchVotes();
+      onCancel();
+      navigate(`/project-request/${projectRequestId}`);
+    } catch (err) {
+      message.error(
+        err.data?.message || "Failed to finalize voting. Please try again."
+      );
+      console.error("Finalization error:", err);
+    }
+  };
+
+  let canFinalize = false;
+  if (votesData && votesData.length > 0) {
+    const firstVote = votesData[0];
+    const totalSubmittedVotes = firstVote.approveVotes + firstVote.rejectVotes;
+    if (
+      !firstVote.isCompleted &&
+      firstVote.totalVotes === 5 &&
+      totalSubmittedVotes === 5
+    ) {
+      canFinalize = true;
+    }
+  }
+
+  const modalFooter = [
+    <Button key="close" onClick={onCancel}>
+      Close
+    </Button>,
+  ];
+
+  if (canFinalize) {
+    modalFooter.push(
+      <Button
+        key="finalize"
+        type="primary"
+        loading={isFinalizing}
+        onClick={handleFinalizeVoting}
+        danger
+      >
+        Finalize Voting Results
+      </Button>
+    );
+  }
+
+  return (
+    <Modal
+      title="Vote Progress"
+      open={visible}
+      onCancel={onCancel}
+      footer={modalFooter}
+      width={700}
+    >
+      {votesLoading && (
+        <div className="text-center py-8">
+          <Spin size="large" tip="Loading votes..." />
+        </div>
+      )}
+      {votesError && (
+        <Alert
+          message="Error Loading Votes"
+          description={
+            votesApiError?.data?.message ||
+            "Failed to load votes for this project request."
+          }
+          type="error"
+          showIcon
+          className="mb-4"
+        />
+      )}
+      {!votesLoading && !votesError && votesData && votesData.length > 0 && (
+        <div>
+          <Descriptions bordered column={1} size="small" className="mb-6">
+            <Descriptions.Item label="Project Name">
+              <Text strong>{votesData[0].projectName}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Council Name">
+              {votesData[0].groupName}
+            </Descriptions.Item>
+            {/* <Descriptions.Item label="Total Council Members">
+              <Tag color="blue">{votesData[0].totalVotes}</Tag>
+            </Descriptions.Item> */}
+            <Descriptions.Item label="Votes Submitted">
+              <Tag color="geekblue">
+                {
+                  votesData.filter(
+                    (v) => v.voteStatus !== null && v.voteStatus !== undefined
+                  ).length
+                }
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Approve Votes">
+              <Tag color="green">{votesData[0].approveVotes}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Reject Votes">
+              <Tag color="red">{votesData[0].rejectVotes}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Voting Status">
+              <Tag color={votesData[0].isCompleted ? "green" : "orange"}>
+                {votesData[0].isCompleted ? "Completed" : "In Progress"}
+              </Tag>
+            </Descriptions.Item>
+          </Descriptions>
+          <Title level={5} className="mb-3">
+            Individual Votes
+          </Title>
+          <List
+            itemLayout="horizontal"
+            dataSource={votesData}
+            renderItem={(vote) => (
+              <List.Item className="border-b px-0 py-3">
+                <List.Item.Meta
+                  avatar={<Avatar icon={<UserOutlined />} />}
+                  title={
+                    <Space>
+                      <Text strong>{vote.voterName}</Text>
+                      {vote.voteStatus !== null &&
+                      vote.voteStatus !== undefined ? (
+                        <Tag
+                          color={vote.voteStatus === 1 ? "success" : "error"}
+                        >
+                          {vote.statusName}
+                        </Tag>
+                      ) : (
+                        <Tag color="default">Pending</Tag>
+                      )}
+                    </Space>
+                  }
+                  description={
+                    <>
+                      <Text
+                        type="secondary"
+                        style={{ display: "block", fontSize: "12px" }}
+                      >
+                        Council: {vote.groupName}
+                      </Text>
+                      {vote.comment ? (
+                        <Paragraph italic className="text-sm mt-1 mb-0">
+                          "{vote.comment}"
+                        </Paragraph>
+                      ) : (
+                        vote.voteStatus !== null &&
+                        vote.voteStatus !== undefined && (
+                          <Text
+                            type="secondary"
+                            italic
+                            className="text-sm mt-1 mb-0"
+                          >
+                            No comment provided.
+                          </Text>
+                        )
+                      )}
+                    </>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </div>
+      )}
+      {!votesLoading &&
+        !votesError &&
+        (!votesData || votesData.length === 0) && (
+          <div className="text-center py-8">
+            <Empty description="No votes recorded for this project request yet, or voting has not started." />
+          </div>
+        )}
+    </Modal>
   );
 };
 

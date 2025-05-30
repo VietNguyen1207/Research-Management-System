@@ -75,6 +75,19 @@ export const fundDisbursementApiSlice = apiSlice.injectEndpoints({
         "FundDisbursements",
       ],
     }),
+    officeApproveFundDisbursement: builder.mutation({
+      query: ({ disbursementId, formData }) => ({
+        url: `/fund-disbursements/${disbursementId}/office-approve`,
+        method: "POST",
+        body: formData,
+        formData: true, // Ensure Content-Type is set to multipart/form-data
+      }),
+      invalidatesTags: (result, error, { disbursementId }) => [
+        { type: "FundDisbursements", id: disbursementId },
+        "PendingFundDisbursements", // To refresh the pending list
+        "FundDisbursements", // To refresh any general list of disbursements
+      ],
+    }),
   }),
 });
 
@@ -86,4 +99,5 @@ export const {
   useUploadDisbursementDocumentMutation,
   useApproveFundDisbursementMutation,
   useRejectFundDisbursementMutation,
+  useOfficeApproveFundDisbursementMutation,
 } = fundDisbursementApiSlice;

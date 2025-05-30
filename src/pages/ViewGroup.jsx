@@ -42,6 +42,7 @@ import {
   SearchOutlined,
   BankOutlined,
   LinkOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import {
@@ -1370,16 +1371,21 @@ const ViewGroup = () => {
                           group.groupType === 3 || // Inspection Council
                           group.groupType === 4) && // Assessment Council
                           null, // Removed the button from actions
-                        group.groupType === 1 ||
-                        group.groupType === 3 ||
+                        group.groupType === 1 || // Review Council
+                        group.groupType === 3 || // Inspection Council
                         group.groupType === 4 ? (
                           <Button
                             type="primary"
-                            onClick={() => handleReviewProject(group)} // This likely navigates to a page to manage/review specific projects for that council
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none"
-                            icon={<BookOutlined />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(
+                                `/council-reviewed-requests/${group.groupId}`
+                              );
+                            }}
+                            className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 border-none"
+                            icon={<FolderOpenOutlined />}
                           >
-                            Review Projects
+                            Requests Record
                           </Button>
                         ) : null,
                       ].filter(Boolean)}

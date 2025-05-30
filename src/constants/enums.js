@@ -41,10 +41,12 @@ export const DOCUMENT_TYPE = {
 
 // Fund Disbursement Type enum mapping
 export const FUND_DISBURSEMENT_TYPE = {
-  0: "Project Phase",
+  0: "Research Creation",
   1: "Conference Expense",
   2: "Conference Funding",
   3: "Journal Funding",
+  4: "Progress Report",
+  5: "Project Inspection",
 };
 
 // Project Phase Status enum mapping
@@ -90,6 +92,7 @@ export const APPROVAL_STATUS = {
   0: "Pending",
   1: "Approved",
   2: "Rejected",
+  3: "Assigned",
 };
 
 // Group Member Role enum mapping
@@ -116,6 +119,7 @@ export const STATUS_COLORS = {
   0: "gold", // Pending
   1: "green", // Approved
   2: "red", // Rejected
+  3: "cyan", // Assigned
 };
 
 // Color mappings for phase statuses

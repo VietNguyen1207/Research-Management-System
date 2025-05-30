@@ -40,6 +40,7 @@ import {
   UserSwitchOutlined,
   SearchOutlined,
   BankOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
 import {
   useGetCouncilGroupsQuery,
@@ -887,6 +888,32 @@ const ManageCouncil = () => {
                       >
                         View Details
                       </Button>,
+                      <Tooltip title="Review Schedule">
+                        <Button
+                          type="text"
+                          icon={
+                            <CalendarOutlined className="text-blue-500 text-lg" />
+                          }
+                          onClick={() =>
+                            navigate(
+                              `/review-schedule?councilGroupId=${council.groupId}`
+                            )
+                          }
+                        />
+                      </Tooltip>,
+                      <Tooltip title="Reviewed Requests">
+                        <Button
+                          type="text"
+                          icon={
+                            <FolderOpenOutlined className="text-green-500 text-lg" />
+                          }
+                          onClick={() =>
+                            navigate(
+                              `/council-reviewed-requests/${council.groupId}`
+                            )
+                          }
+                        />
+                      </Tooltip>,
                     ]}
                   >
                     <div className="space-y-4">
