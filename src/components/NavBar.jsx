@@ -44,7 +44,7 @@ const ROUTE_MAPPINGS = {
   "Pending Request": "/pending-request",
   "Department Quota": "/department-quota",
   "Quota Management": "/quota-management",
-  "Fund Disbursement": "/fund-disbursement",
+  "Fund Disbursement": "/pending-disbursements",
   "Request Record": "/request-record",
   "Timeline Management": "/timeline-management",
   "User Management": "/admin/users",

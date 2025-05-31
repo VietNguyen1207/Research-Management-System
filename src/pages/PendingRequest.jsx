@@ -303,20 +303,16 @@ const PendingRequest = () => {
       key: "status",
       width: "15%",
       render: (_, record) => {
-        // Now use the approval status instead
-        return (
-          <Tag
-            color={
-              record.approvalStatus === 0
-                ? "gold"
-                : record.approvalStatus === 1
-                ? "green"
-                : "red"
-            }
-          >
-            {record.statusName || APPROVAL_STATUS[record.approvalStatus]}
-          </Tag>
-        );
+        // Prefer statusName if available, otherwise use approvalStatus to get text
+        // Ensure a fallback text like 'Unknown' to prevent errors if both are unexpectedly undefined
+        const statusLabel =
+          record.statusName ||
+          APPROVAL_STATUS[record.approvalStatus] ||
+          "Unknown";
+        const statusKey = statusLabel.toLowerCase(); // Normalize for STATUS_COLORS lookup
+        const color = STATUS_COLORS[statusKey] || "default"; // Use 'default' if statusKey not in map
+
+        return <Tag color={color}>{statusLabel}</Tag>;
       },
     },
     {

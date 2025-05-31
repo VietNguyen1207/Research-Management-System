@@ -40,7 +40,7 @@ import {
   ExperimentOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
-import { useGetQuotasQuery } from "../../features/quota/quotaApiSlice";
+import { useGetDepartmentQuotaDetailsQuery } from "../../features/quota/quotaApiSlice";
 import { useNavigate, useParams } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
@@ -60,77 +60,119 @@ const ProjectQuota = () => {
 
   // Fetch quota data from API
   const {
-    data: quotasData,
+    data: departmentQuotaDetails,
     isLoading,
     isError,
     error,
     refetch,
-  } = useGetQuotasQuery();
+  } = useGetDepartmentQuotaDetailsQuery(departmentId);
 
   // Force a refetch when the component mounts
   useEffect(() => {
     // Immediately refetch data when component mounts
     refetch();
-  }, [refetch]);
+  }, [refetch, departmentId]);
 
   // Filter and transform API data for the specific department
   useEffect(() => {
-    if (quotasData && departmentId) {
-      const deptProjects = quotasData.filter(
-        (quota) => quota.departmentId.toString() === departmentId.toString()
+    if (departmentQuotaDetails && departmentId) {
+      // The data is already filtered by departmentId by the API
+      // We need to separate department-level quota from project-specific quotas
+
+      const departmentLevelQuota = departmentQuotaDetails.find(
+        (quota) => quota.projectId === null && quota.quotaYear !== null
       );
 
-      if (deptProjects.length > 0) {
-        // Set department info
+      const projectSpecificQuotas = departmentQuotaDetails.filter(
+        (quota) => quota.projectId !== null
+      );
+
+      if (departmentLevelQuota) {
         setDepartmentInfo({
-          id: deptProjects[0].departmentId,
-          name: deptProjects[0].departmentName,
-          totalBudget: deptProjects.reduce(
-            (sum, project) => sum + project.projectApprovedBudget,
+          id: departmentLevelQuota.departmentId,
+          name: departmentLevelQuota.departmentName,
+          // Sum projectApprovedBudget from all project-specific quotas for this department
+          totalBudget: projectSpecificQuotas.reduce(
+            (sum, project) => sum + (project.projectApprovedBudget || 0),
             0
           ),
-          usedBudget: deptProjects.reduce(
-            (sum, project) => sum + project.projectSpentBudget,
+          // Sum projectSpentBudget from all project-specific quotas for this department
+          usedBudget: projectSpecificQuotas.reduce(
+            (sum, project) => sum + (project.projectSpentBudget || 0),
             0
           ),
-          projectCount: deptProjects.length,
+          projectCount: projectSpecificQuotas.length, // Count of actual projects
+          quotaYear: departmentLevelQuota.quotaYear,
+          numProjectsAllowed: departmentLevelQuota.numProjects, // From department's own quota
+          numberConferenceAllowed: departmentLevelQuota.numberConference,
+          numberPaperAllowed: departmentLevelQuota.numberPaper,
         });
-
-        // Format projects data
-        const projects = deptProjects.map((project) => ({
-          key: project.projectId,
-          id: project.projectId,
-          name: project.projectName,
-          group: project.groupName,
-          type: project.projectTypeName,
-          approvedBudget: project.projectApprovedBudget,
-          spentBudget: project.projectSpentBudget,
-          remainingBudget:
-            project.projectApprovedBudget - project.projectSpentBudget,
-          disbursedAmount:
-            typeof project.disbursedAmount === "number"
-              ? project.disbursedAmount
-              : 0,
-          pendingDisbursement:
-            project.projectApprovedBudget -
-            (typeof project.disbursedAmount === "number"
-              ? project.disbursedAmount
-              : 0),
-          allocatedBy: project.allocatorName,
-          createdAt: new Date(project.createdAt).toLocaleDateString(),
-          status: project.status === 0 ? "Active" : "Completed",
-          quotaId: project.quotaId,
-          allocatedBudget: project.allocatedBudget,
-          departmentId: project.departmentId,
-          departmentName: project.departmentName,
-          groupId: project.groupId,
-          rawData: project, // Store the raw data for later use
-        }));
-
-        setProjectsData(projects);
+      } else if (projectSpecificQuotas.length > 0) {
+        // Fallback if no specific department-level quota entry is found,
+        // but project quotas exist. This might indicate partial data.
+        // We'll use the first project's department details.
+        setDepartmentInfo({
+          id: projectSpecificQuotas[0].departmentId,
+          name: projectSpecificQuotas[0].departmentName,
+          totalBudget: projectSpecificQuotas.reduce(
+            (sum, project) => sum + (project.projectApprovedBudget || 0),
+            0
+          ),
+          usedBudget: projectSpecificQuotas.reduce(
+            (sum, project) => sum + (project.projectSpentBudget || 0),
+            0
+          ),
+          projectCount: projectSpecificQuotas.length,
+          // These might be null or irrelevant if no direct department quota row is present
+          quotaYear: null,
+          numProjectsAllowed: null,
+          numberConferenceAllowed: null,
+          numberPaperAllowed: null,
+        });
       }
+
+      // Format projects data from projectSpecificQuotas
+      const projects = projectSpecificQuotas.map((project) => ({
+        key: project.projectId,
+        id: project.projectId,
+        name: project.projectName,
+        group: project.groupName || "N/A",
+        type: project.projectTypeName || "N/A",
+        approvedBudget: project.projectApprovedBudget || 0,
+        spentBudget: project.projectSpentBudget || 0,
+        remainingBudget:
+          (project.projectApprovedBudget || 0) -
+          (project.projectSpentBudget || 0),
+        disbursedAmount:
+          typeof project.disbursedAmount === "number"
+            ? project.disbursedAmount
+            : 0,
+        pendingDisbursement:
+          (project.projectApprovedBudget || 0) -
+          (typeof project.disbursedAmount === "number"
+            ? project.disbursedAmount
+            : 0),
+        allocatedBy: project.allocatorName || "N/A",
+        createdAt: project.createdAt
+          ? new Date(project.createdAt).toLocaleDateString()
+          : "N/A",
+        status: project.status === 0 ? "Active" : "Completed", // Assuming 0 is Active for projects as well
+        quotaId: project.quotaId,
+        // These fields below were from the old structure, ensure they are what you need or remove
+        allocatedBudget: project.allocatedBudget, // This is department's total allocation in the raw data, might be confusing here
+        departmentId: project.departmentId,
+        departmentName: project.departmentName,
+        groupId: project.groupId,
+        rawData: project,
+      }));
+
+      setProjectsData(projects);
+    } else {
+      // Reset if no data
+      setDepartmentInfo(null);
+      setProjectsData([]);
     }
-  }, [quotasData, departmentId]);
+  }, [departmentQuotaDetails, departmentId]);
 
   const columns = [
     {

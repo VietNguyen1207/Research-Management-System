@@ -67,102 +67,73 @@ const OfficeQuota = () => {
   // Transform API data to our component format
   useEffect(() => {
     if (quotasData) {
-      // Add console log to debug the API response
-      console.log("API Quota Data:", quotasData);
-
-      // Group quotas by department
+      // Step 1: Create a map to hold the primary department-level quota information
+      // and placeholders for aggregated project budgets.
       const deptMap = new Map();
 
-      quotasData.forEach((quota) => {
-        // Debug the exact values coming from the API for this quota
-        console.log(`Quota ${quota.quotaId} values:`, {
-          numberConference: quota.numberConference,
-          numberPaper: quota.numberPaper,
-          type: {
-            numberConference: typeof quota.numberConference,
-            numberPaper: typeof quota.numberPaper,
-          },
-        });
+      // Filter for department-level allocations first (projectId is null, quotaYear is present)
+      const departmentAllocations = quotasData.filter(
+        (q) => q.projectId === null && q.quotaYear !== null
+      );
 
-        if (!deptMap.has(quota.departmentId)) {
+      // Populate deptMap with the most relevant department allocation
+      departmentAllocations.forEach((quota) => {
+        if (
+          !deptMap.has(quota.departmentId) ||
+          deptMap.get(quota.departmentId).quotaYear < quota.quotaYear ||
+          (deptMap.get(quota.departmentId).quotaYear === quota.quotaYear &&
+            new Date(deptMap.get(quota.departmentId).createdAt) <
+              new Date(quota.createdAt))
+        ) {
           deptMap.set(quota.departmentId, {
             key: quota.departmentId,
             name: quota.departmentName,
-            email: "department@university.edu", // Default values since API doesn't provide these
-            phone: "+84 123 456 789", // Default values
+            email: "department@university.edu", // Default or find a way to source this if available
+            phone: "+84 123 456 789", // Default or find a way to source this if available
             department: quota.departmentName,
-            title: "Department",
-            quotaYear: quota.quotaYear || new Date().getFullYear(),
+            title: "Department", // This seems static
+            quotaYear: quota.quotaYear,
             numProjects: quota.numProjects || 0,
-            // Be more explicit about handling these values
-            numberConference:
-              quota.numberConference !== null &&
-              quota.numberConference !== undefined
-                ? Number(quota.numberConference)
-                : 0,
-            numberPaper:
-              quota.numberPaper !== null && quota.numberPaper !== undefined
-                ? Number(quota.numberPaper)
-                : 0,
-            totalBudget: quota.allocatedBudget || 0,
-            usedBudget: quota.projectSpentBudget || 0,
-            disbursedAmount: quota.disbursedAmount || 0,
-            status: quota.status === 0 ? "Active" : "Inactive",
-            createdAt: quota.createdAt,
-            updateAt: quota.updateAt,
-            allocatedBy: quota.allocatedBy,
+            numberConference: Number(quota.numberConference) || 0,
+            numberPaper: Number(quota.numberPaper) || 0,
+            totalBudget: quota.allocatedBudget || 0, // This is the department's own allocated budget
             allocatorName: quota.allocatorName,
-            quotaId: quota.quotaId,
+            quotaId: quota.quotaId, // The ID of this department-level quota entry
+            createdAt: quota.createdAt, // For tie-breaking if multiple entries for the same year
+            updateAt: quota.updateAt,
+            status: quota.status === 0 ? "Active" : "Inactive", // Status of the department's quota
+
+            // Initialize accumulators for project-specific values
+            projectSpentBudgetTotal: 0,
+            disbursedAmountTotal: 0,
+            // Add any other fields you need to initialize from the department-level quota
           });
-        } else {
-          // If we have multiple quotas for the same department, update the values
-          const dept = deptMap.get(quota.departmentId);
-
-          // Only update if this quota entry is newer
-          if (new Date(quota.createdAt) > new Date(dept.createdAt)) {
-            dept.totalBudget = quota.allocatedBudget || dept.totalBudget;
-            dept.quotaYear = quota.quotaYear || dept.quotaYear;
-            dept.numProjects = quota.numProjects || dept.numProjects;
-
-            // Be more explicit with the conference and journal values
-            if (
-              quota.numberConference !== null &&
-              quota.numberConference !== undefined
-            ) {
-              dept.numberConference = Number(quota.numberConference);
-            }
-
-            if (quota.numberPaper !== null && quota.numberPaper !== undefined) {
-              dept.numberPaper = Number(quota.numberPaper);
-            }
-
-            dept.updateAt = quota.updateAt;
-            dept.quotaId = quota.quotaId;
-          }
-
-          // Always add to the used budget and disbursed amount
-          if (quota.projectSpentBudget) {
-            dept.usedBudget += quota.projectSpentBudget;
-          }
-          if (quota.disbursedAmount) {
-            dept.disbursedAmount += quota.disbursedAmount;
-          }
         }
       });
 
-      // After processing all data, log the department map for debugging
-      console.log(
-        "Department data after processing:",
-        Array.from(deptMap.values())
-      );
-
-      // Calculate remaining budget
-      deptMap.forEach((dept) => {
-        dept.remainingBudget = dept.totalBudget - dept.usedBudget;
-        dept.pendingDisbursement = dept.totalBudget - dept.disbursedAmount;
+      // Step 2: Iterate through all quotas again to sum up project-specific spent and disbursed amounts
+      quotasData.forEach((quota) => {
+        if (quota.projectId !== null && deptMap.has(quota.departmentId)) {
+          const deptSummary = deptMap.get(quota.departmentId);
+          deptSummary.projectSpentBudgetTotal += quota.projectSpentBudget || 0;
+          deptSummary.disbursedAmountTotal += quota.disbursedAmount || 0;
+        }
       });
 
-      setDepartmentData(Array.from(deptMap.values()));
+      // Step 3: Finalize department data for display
+      const aggregatedDepartmentData = Array.from(deptMap.values()).map(
+        (dept) => {
+          return {
+            ...dept,
+            usedBudget: dept.projectSpentBudgetTotal, // usedBudget should reflect sum of projects' spent budget
+            disbursedAmount: dept.disbursedAmountTotal, // disbursedAmount reflects sum of projects' disbursed
+            remainingBudget: dept.totalBudget - dept.projectSpentBudgetTotal, // Remaining from dept's own allocation
+            // pendingDisbursement could be dept.totalBudget - dept.disbursedAmountTotal, if that's the desired logic
+          };
+        }
+      );
+
+      setDepartmentData(aggregatedDepartmentData);
     }
   }, [quotasData]);
 
@@ -245,7 +216,7 @@ const OfficeQuota = () => {
                 </Tag>
               </Tooltip>
             </div>
-            <Progress
+            {/* <Progress
               percent={Math.round(usagePercentage)}
               strokeColor={{
                 "0%": "#F2722B",
@@ -253,7 +224,7 @@ const OfficeQuota = () => {
               }}
               size="small"
               format={() => `${Math.round(usagePercentage)}% Used`}
-            />
+            /> */}
             <Progress
               percent={Math.round(disbursementPercentage)}
               strokeColor={{
@@ -264,11 +235,11 @@ const OfficeQuota = () => {
               format={() => `${Math.round(disbursementPercentage)}% Disbursed`}
             />
             <div className="grid grid-cols-1 gap-1 text-sm">
-              <Tooltip title="Used Budget">
+              {/* <Tooltip title="Used Budget">
                 <div className="text-blue-600">
                   Used: ₫{record.usedBudget.toLocaleString()}
                 </div>
-              </Tooltip>
+              </Tooltip> */}
               <Tooltip title="Disbursed Amount">
                 <div className="text-green-600">
                   Disbursed: ₫{record.disbursedAmount.toLocaleString()}

@@ -44,6 +44,8 @@ import AssignReview from "../pages/office/AssignReview";
 import CreateAssessmentCouncil from "../pages/office/CreateAssessmentCouncil";
 import CreateInspectionCouncil from "../pages/office/CreateInspectionCouncil";
 import CouncilReviewedRequests from "../pages/lecturer/CouncilReviewedRequests";
+import AssignAssessment from "../pages/office/AssignAssessment";
+import AssignInspection from "../pages/office/AssignInspection";
 
 // Component for role-based redirection
 const RoleBasedRedirect = () => {
@@ -242,6 +244,8 @@ export const routes = [
             element: <TimelineSequenceManagement />,
           },
           { path: "assign-review", element: <AssignReview /> },
+          { path: "assign-assessment", element: <AssignAssessment /> },
+          { path: "assign-inspection", element: <AssignInspection /> },
         ],
       },
       {

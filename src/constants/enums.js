@@ -163,3 +163,12 @@ export const RESOURCE_STATUS_COLORS = {
   4: "gray", // Cancelled
   5: "blue", // Completed
 };
+
+// Group Type enum mapping
+export const GROUP_TYPE = {
+  STUDENT: 0,
+  RESEARCH_COUNCIL: 1,
+  RESEARCH: 2,
+  INSPECTION_COUNCIL: 3,
+  ASSESSMENT_COUNCIL: 4,
+};

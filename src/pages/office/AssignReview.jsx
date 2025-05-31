@@ -37,16 +37,18 @@ import {
   InfoCircleOutlined,
   PlusOutlined,
   UserOutlined,
+  SolutionOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
-// Remove or comment out API imports that don't exist yet
 import { useGetCouncilGroupsQuery } from "../../features/group/groupApiSlice";
 import {
   useAssignProjectsToCouncilMutation,
   useGetAllProjectRequestsQuery,
 } from "../../features/project/projectApiSlice";
 import { useLazyGetGroupMembersQuery } from "../../features/group/groupApiSlice";
+import { GROUP_TYPE } from "../../constants/enums";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -173,7 +175,19 @@ const AssignReview = () => {
   } = useGetCouncilGroupsQuery();
 
   // Use mock data directly
-  const councils = councilsData?.data || [];
+  const [allCouncils, setAllCouncils] = useState([]);
+
+  useEffect(() => {
+    if (councilsData?.data) {
+      const researchCouncils = councilsData.data.filter(
+        (council) => council.groupType === GROUP_TYPE.RESEARCH_COUNCIL
+      );
+      setAllCouncils(researchCouncils);
+    } else {
+      setAllCouncils([]);
+    }
+  }, [councilsData]);
+
   const projects = (allProjectRequestsData?.data || [])
     .slice() // Create a shallow copy to avoid mutating the cached data
     .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)); // Sort by requestedAt descending
@@ -198,14 +212,14 @@ const AssignReview = () => {
   );
 
   // Filter councils based on search text
-  const filteredCouncils = councils.filter(
+  const filteredCouncils = allCouncils.filter(
     (council) =>
-      (council.name ?? "")
-        .toLowerCase()
-        .includes(councilSearchText.toLowerCase()) ||
-      (council.departmentName ?? "")
-        .toLowerCase()
-        .includes(councilSearchText.toLowerCase())
+      (council.groupName?.toLowerCase() || "").includes(
+        councilSearchText.toLowerCase()
+      ) ||
+      (council.departmentName?.toLowerCase() || "").includes(
+        councilSearchText.toLowerCase()
+      )
   );
 
   // Project selection table columns
@@ -885,6 +899,30 @@ const AssignReview = () => {
           </p>
         </div>
 
+        {/* Navigation to other assignment types */}
+        <Card className="mb-8 shadow-sm">
+          <div className="flex flex-wrap justify-center gap-4 p-4">
+            <Button
+              type="primary"
+              ghost
+              onClick={() => navigate("/assign-assessment")}
+              icon={<SolutionOutlined />}
+              className="border-purple-500 text-purple-500 hover:border-purple-700 hover:text-purple-700"
+            >
+              Go to Assign Assessment
+            </Button>
+            <Button
+              type="primary"
+              ghost
+              onClick={() => navigate("/assign-inspection")}
+              icon={<SafetyCertificateOutlined />}
+              className="border-blue-500 text-blue-500 hover:border-blue-700 hover:text-blue-700"
+            >
+              Go to Assign Inspection
+            </Button>
+          </div>
+        </Card>
+
         {/* Steps */}
         <Card className="mb-8 shadow-sm">
           <Steps current={currentStep} className="px-8">
@@ -1085,6 +1123,7 @@ const AssignReview = () => {
                 onSelect: (record) => handleCouncilSelection(record),
               }}
               pagination={{ pageSize: 5 }}
+              locale={{ emptyText: "No Research Councils found or available." }}
             />
 
             <div className="flex justify-end mt-6">
